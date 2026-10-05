@@ -1,0 +1,6 @@
+# Flutter outputs; keep routed Markdown and agent instructions tracked.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+**/flutter/ephemeral/
