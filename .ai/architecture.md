@@ -1,88 +1,78 @@
 # Architecture and technical boundaries
 
-## Status
+## Status and chosen MVP stack
 
-These are chosen directions and conceptual boundaries, not a description of implemented code. Interface names and entity lists below are illustrative; they do not prescribe exact Dart APIs or schemas.
+These are chosen directions and conceptual boundaries, not implemented code. Entity and interface names do not prescribe exact APIs or database schemas.
 
-## Chosen MVP stack
+- **C#/.NET:** main application and core services. A strong fit for filesystem/process handling, async and background work, cancellation, IPC, local services, and future system integrations.
+- **Avalonia UI:** cross-platform desktop UI while keeping the main application in C#. The application is fundamentally a desktop project/work orchestration tool.
+- **SQLite:** local application-owned structured state, queryable independently of the agent.
+- **OpenCode:** initial autonomous agent runtime behind a generic runtime boundary, not the product or the domain model.
 
-- **Flutter desktop:** prioritize a custom creative interaction experience over deep native infrastructure. Supports playful UI, transitions, experiment cards, animated activity, artifact previews, and future mobile reuse. Desktop performance is sufficient for this product.
-- **Dart:** handle child processes, filesystem access/watching, HTTP, WebSocket, Git commands, runtime communication, and local persistence in the MVP. Do not add a second backend runtime without a concrete need.
-- **SQLite:** persist application-specific state, not a duplicate of Git-owned repository state.
-- **OpenCode:** first agent runtime implementation, behind a generic abstraction.
+Use normal .NET capabilities where suitable: `Process`, `FileSystemWatcher`, `CancellationToken`, `IAsyncEnumerable<T>`, `Channel<T>`, and `HttpClient`, alongside SQLite. These are available tools, not a mandate to use all of them. Keep one desktop application for the MVP; introduce a separate daemon only for a concrete technical need.
 
 ## Layering
 
 ```text
-Flutter UI
+Avalonia UI
     ↓
 Application / Core
     ↓
+Project services
+Task / scheduling services
+Document services
 Agent runtime abstraction
-Project adapters
-Experiment service
-Git service
 Persistence
     ↓
-OpenCode / Git / filesystem / processes
+OpenCode / filesystem / processes / SQLite
 ```
 
-Keep strong boundaries around Project, Experiment, AgentRuntime, AgentSession, AgentActivity, Artifact, and ProjectAdapter. Flutter widgets must not directly depend on OpenCode-specific APIs.
+UI consumes application/domain operations and must not directly depend on OpenCode-specific APIs. Application services coordinate project context, jobs, review, and persistence; infrastructure handles runtime communication, files, processes, and storage.
 
-## Agent runtime
+## Core domain and services
 
-A conceptual `IAgentRuntime` boundary owns integration with the agent runtime. Initial implementation: `OpenCodeAgentRuntime`. Potential future implementations: `CodexAgentRuntime`, `ClaudeCodeAgentRuntime`.
+- **Project:** company/project name, stage, status, owner, important contacts/dates, notes, open questions, and current state. A project is an investment/portfolio work context, not a software repository.
+- **ProjectDocument:** project association, file reference and metadata, category, and context needed to track expected/present documents. Initial categories include pitch deck, financial plan / FP, cap table, board structure, shareholder documents, investment memo, contracts, KPI/reporting files, and other supporting material; allow additional categories.
+- **Task:** project association, title, status, and deadline. Keep agent proposals separate from committed tasks until user approval.
+- **Milestone / ProjectEvent:** internal scheduling concepts for deadlines, meetings, expected responses, reporting dates, recurring reviews, and other milestones. Exact relationship and recurrence model remain open.
+- **ProjectState:** explicit, persisted/queryable current state supporting overviews and attention queries, including open questions and follow-ups. Derived counts should reflect stored records rather than opaque LLM output.
+- **AgentJob:** project-scoped delegated request/workflow, lifecycle, result/history, and proposals/review state.
+- **AgentRuntime:** infrastructure capability accessed through `IAgentRuntime`, not a user-facing project object.
 
-Keep runtime sessions/events/permissions behind this boundary. Product concepts and UI should not be modeled as OpenCode-specific concepts. Freedom modes must translate into real runtime permissions; if the runtime cannot enforce a mode, do not silently pretend it can.
+Project services own metadata and state operations; task/scheduling services own workload and date queries; document services own file association, categorization, expected-document visibility, and eventual extraction. Do not finalize parsers or introduce software-repository adapters here.
 
-## Project adapters
+## Agent runtime boundary
 
-Project-specific behavior belongs behind a conceptual `IProjectAdapter`. Potential capabilities: `detect`, `run`, `build`, `preview`, `getArtifacts`. Expose detected/supported capabilities rather than assuming all projects support every operation.
+`IAgentRuntime` owns runtime integration; the first implementation is OpenCode-backed (conceptually `OpenCodeAgentRuntime`). Keep runtime sessions, transport, events, permissions, authentication, and cancellation behind this boundary. Product requests and results should describe analysis, monitoring, preparation, and task suggestions rather than coding sessions.
 
-Initial adapters:
+Assemble relevant project metadata, documents, tasks, deadlines, state, and previous results for a job. Distinguish unavailable/unreadable content from content actually inspected. Determine access and tool permissions explicitly; never assume a coding runtime's defaults are suitable for sensitive finance work or that it enforces restrictions it cannot support.
 
-| Adapter | Scope |
-| --- | --- |
-| Generic | Basic repository detection, configured commands, file changes, Git diff, agent execution |
-| Android | Gradle detection, debug build, APK discovery |
+The user intends to use a Codex subscription through OpenCode **where supported**. Confirm actual provider/subscription support and authentication when implementing integration; this is not an assumed compatibility guarantee.
 
-Potential future adapters: Vite/web, Nuxt, Flutter, Node, React Native, games, or other specialized environments. Do not implement them prematurely. FinApp-specific assumptions must not leak into generic core behavior.
+Potential future runtimes include Codex CLI and Claude Code. Do not build a plugin framework or excessive cross-runtime abstraction before a concrete need exists. The transport/API and exact runtime contract remain implementation decisions.
 
-## Experiments and Git
+## Jobs, approval, and cancellation
 
-The Experiment service exposes creative operations while the Git service owns technical repository operations. Branches/worktrees are possible isolation mechanisms, not a settled implementation contract.
+Run long-lived work without blocking UI interaction. Model job progress and completed, failed, and cancelled outcomes explicitly; use .NET async/process/cancellation capabilities as appropriate.
 
-Experiments must be safely isolated. Keep/discard behavior must protect existing work and be trustworthy. Design lifecycle handling, recovery, conflicts, and cancellation before claiming reversible operation. Git isolation does not itself undo installed dependencies, external services, or other side effects outside the isolated repository.
+Analysis results are not automatically authoritative state. Application services own review and application of proposed updates. Agent-generated tasks require user approval before persistence as committed tasks. Define how concurrent user edits and stale job context are handled before applying updates; raw runtime output must not silently overwrite project truth.
+
+A visible Stop action must reach actual runtime/process cancellation. Decide cancellation propagation, termination escalation, partial-result handling, restart recovery, and persistence behavior before promising reliable stopping. Cancellation is not rollback of already completed effects. Protect original files and unrelated work; do not grant destructive or external-communication capabilities merely because the runtime supports them.
 
 ## Activity translation
 
-Treat translation as a first-class subsystem, not scattered UI conditionals:
+Treat translation as a first-class boundary rather than scattered UI conditionals:
 
 ```text
-Raw agent/tool event → ActivityTranslator → Human-friendly AgentActivity
+Raw agent/tool event → ActivityTranslator → Project-oriented activity
 ```
 
-Conceptual activity fields: `type`, `title`, `description`, `technicalDetails`, `risk`, `status`.
+Examples: Reading pitch deck, Reviewing financial plan, Comparing board information, Preparing due-diligence summary, Checking open tasks. Preserve raw details in a secondary view. Titles, descriptions, status, evidence, and uncertainty must reflect actual activity; do not fabricate progress, explanations, or safety claims.
 
-Preserve raw technical actions for Show details while translating intent for the main UI. Support summaries of files viewed/changed, commands executed, dependency changes, database/schema touches, and approximate risk. Distinguish observed facts from inference; do not fabricate explanations or assert unaffected data without evidence.
+## Persistence and scheduling
 
-## Persistence
+SQLite stores application-owned structured state: projects, project documents/metadata, tasks, milestones/events, project state, agent jobs, results/history, and settings. Filesystem content and LLM output are not the only source of truth.
 
-Potential SQLite entities: `projects`, `experiments`, `agent_sessions`, `activity_events`, `settings`.
+Attention dashboards, project overviews, and internal upcoming-work views query persisted state and derived workload/date information without an LLM call for every view. Scheduling is first-class but external calendars are outside MVP scope.
 
-Persist product state, including lightweight history and session associations. Git remains authoritative for repository state. Exact schemas, persistence library, retention rules, and migration strategy are not yet selected.
-
-## Future core extraction
-
-Only if system-level complexity warrants it, the architecture may evolve to:
-
-```text
-Flutter UI → local IPC → Native/Core daemon
-                         ├ Agent runtime (initially OpenCode)
-                         ├ Git
-                         ├ Process management / PTY
-                         ├ Filesystem
-                         └ Project adapters
-```
-
-C#/.NET is a strong future daemon candidate for process, filesystem, async, IPC, and desktop tooling capabilities. This is not an MVP dependency or authorization to introduce the split now.
+Exact schemas, data-access library, migrations, document copy-versus-reference strategy, retention, backup/recovery, recurrence/time-zone rules, and urgency ranking remain open. Separate runtime session metadata from application-owned job history. No cloud hosting or multi-user infrastructure is required by this architecture.

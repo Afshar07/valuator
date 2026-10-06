@@ -2,74 +2,60 @@
 
 ## Validation goal
 
-Prove that a non-engineer can open a real software project, describe an idea, let a capable autonomous coding agent work, understand what it is doing, and safely keep or discard the result.
+Prove that an overloaded VC/finance professional can organize multiple investment/portfolio projects, see what needs attention, and delegate useful analysis, preparation, and monitoring while retaining oversight.
 
-Keep scope tied to this validation: **Describe → Agent works → Understand → Preview → Keep or discard.** This document describes intended scope, not current implementation status.
+Validate: **Define project → Add documents and information → Track tasks and deadlines → Agent understands → Identifies work, risks, and gaps → Performs delegated work → User reviews → Project state and tasks are updated.** This is intended scope, not current implementation status.
 
-## Required workflow
+The chosen MVP stack is **C#/.NET, Avalonia UI, SQLite, and OpenCode behind `IAgentRuntime`**. Start with a single desktop application, not a separate daemon.
 
-### Open project
+## Required scope
 
-Select a local software repository. Detect basic project information, locate existing agent instructions, understand the Git repository, and determine supported capabilities.
+1. **Project creation and metadata:** company/project name, stage/status, owner, contacts, important dates, notes, open questions, and current state; optional expected document types.
+2. **Project document management/categorization:** add files to projects and categorize them. Initial VC document categories are examples, not a closed list.
+3. **Missing-document visibility:** show which expected document types are present or missing. File presence is not proof that its content is adequate or verified.
+4. **Tasks and deadlines:** project-associated tasks with title, status, and deadline. Internal scheduling covers deadlines, meetings, expected responses, reporting dates, recurring reviews, and milestones; exact recurrence behavior remains to be specified.
+5. **Project overview/current state:** explicit stage/status, next milestone/date, open questions, missing documents, follow-ups, and overdue work. Query structured state without requiring an LLM call for each view.
+6. **Attention dashboard:** prioritize overdue tasks, upcoming deadlines, missing documents, unresolved work, pending follow-ups, and upcoming meetings/milestones across projects; support a lightweight internal upcoming-work view, not an external calendar dependency.
+7. **Agent access to project context:** metadata, available document content, tasks, deadlines, current state, and previous relevant agent results. Surface unreadable or unsupported documents; parsing/extraction details are not decided here.
+8. **Freeform agent prompt:** delegate project work in ordinary finance/project language, including “What can you take off my plate?”
+9. **Useful predefined agent workflows:** project summary, missing information/documents, document comparison, inconsistency detection, action-item extraction, meeting/board brief, due-diligence summary, attention suggestions, and delegable-work suggestions.
+10. **Visible agent activity and Stop:** finance/project-oriented activity, clear running/completed/failed/cancelled outcomes, optional technical details, and a visible Stop action while running.
+11. **Agent-proposed tasks requiring approval:** proposals are distinct from committed tasks. Review results and proposed project-state updates; an agent task proposal must not silently become an approved task.
+12. **Lightweight agent job/result history:** retain project association, request/workflow, status, timestamps, result, and proposal/review outcome where applicable. Runtime session identifiers are implementation metadata, not the primary experience.
 
-Relevant context includes `.ai/`, `AGENTS.md`, `README.md`, and project-specific agent rules. Support existing routed `.ai` structures naturally; do not assume every context file should be loaded indiscriminately.
+## Oversight and safety
 
-### Describe and run
-
-Prominent creative prompt, Build it / Explore ideas actions, and Guided / Independent / Playground modes. Use OpenCode initially while keeping product concepts runtime-independent.
-
-Let the agent do real development work under the selected permissions. Translate activity into understandable states, retain access to real technical actions, and expose What's happening? summaries.
-
-### Stop and safety
-
-- A clearly visible Stop action is always available during agent work.
-- Each major run is an Experiment, safely isolated so ambitious work feels disposable.
-- Keep and discard must be reliable. Discard must return the project to its prior state without losing unrelated user work.
-- Isolation mechanics and exact stop behavior must be resolved during implementation; UI wording alone does not establish safety.
-- Do not claim repository isolation also reverses external effects. Permission decisions must account for significant external and destructive actions.
-
-### Results and artifacts
-
-Show a concise completion state, actual build/check outcomes, changed-file count, supported artifacts, and Open preview / Keep / Remix / Discard actions.
-
-Provide plain-language change summaries, including relevant areas not changed when evidence supports that claim. Example changed areas: shared bank card component, animation state, spacing tokens. Example unchanged areas: transaction storage, database schema, networking.
-
-Technical diffs remain available through Show details. Build/check success must not be shown when a check failed or was not run.
-
-Support meaningful results for selected project types:
-
-- Initial Android support: debug build and APK discovery. Emulator/device preview is eventual, not an MVP requirement.
-- Generic support: configured commands, repository changes, diffs, and agent execution.
-- Web examples: local preview, browser screenshot, dev server. These do not require immediate implementation of all web adapters.
-
-### Experiments and history
-
-User-facing experiment concepts include Keep, Remix, Discard, Compare, Archive, without requiring Git knowledge. Keep / Remix / Discard are the primary result actions; advanced comparison is excluded below. Detailed Compare / Archive behavior is not yet specified.
-
-Maintain lightweight history recording prompt, status, creation time, result, disposition (kept, remixed, discarded, archived), and associated agent session. Do not turn history into project management.
+- Keep delegated analysis/preparation separate from user decisions and approval of structured-state changes.
+- Protect source documents and unrelated user files; do not treat agent access as authorization for destructive edits.
+- Distinguish missing information, unsupported extraction, inferred conclusions, and verified facts. Report actual job outcomes and provenance rather than assuming success.
+- Stop must initiate real cancellation. Resolve process termination, partial results, failure recovery, and state-write behavior before claiming reliable cancellation; cancellation does not automatically undo prior effects.
+- Sensitive finance documents require explicit decisions about runtime access, provider transmission, credentials, and retention before implementation at those boundaries.
+- Internal follow-up tracking and preparation do not include automatic external communication.
 
 ## Explicit exclusions
 
-Do not build these unless necessary for core validation:
+- Email integration.
+- Google Calendar or other external calendar integration.
+- Slack and CRM integrations.
+- Automatic external communication.
+- Portfolio-wide financial analytics.
+- Editing complex financial models.
+- Collaboration/multi-user features.
+- Advanced workflow automation.
+- Multi-agent orchestration.
+- Broad project-management functionality beyond this focused workflow.
+- Cloud hosting requirements unless implementation later demonstrates a concrete need.
 
-- Embedded code editor or full terminal emulator.
-- GitHub issue management or CI/CD configuration UI.
-- Figma integration or visual screenshot annotation.
-- Multi-agent orchestration or complex agent teams.
-- Plugin or theme marketplaces.
-- Cloud hosting, collaboration, or mobile companion app.
-- Automatic visual regression or advanced screenshot comparison.
-- Sophisticated generated variations.
-- Broad project-management functionality.
-
-Do not prematurely add every platform adapter or a separate backend/native daemon.
+Do not introduce software-repository adapters, build/preview workflows, or a separate daemon as MVP requirements.
 
 ## Success criteria
 
-1. **Non-engineer usability:** a designer completes the core workflow without understanding Git branches/worktrees, shell commands, Gradle, terminal usage, or runtime internals.
-2. **Genuine agent freedom:** a developer inspecting underlying actions recognizes a real CLI-style autonomous agent, not a constrained no-code builder.
-3. **More experimentation:** the user intentionally tries more ambitious or unusual ideas because attempts feel cheap, reversible, understandable, and safe. This behavior matters more than feature count.
+1. A VC/finance user can create projects, attach/categorize documents, define expected documents, and track tasks and internal dates without runtime knowledge.
+2. The dashboard answers what needs attention across projects from stored structured state, not a fresh LLM request per view.
+3. The agent produces useful project analysis or preparation from relevant context, with visible activity, source references where available, uncertainty, and truthful outcomes.
+4. The user can stop a job, review its result, approve or reject proposed tasks, and understand resulting state changes through lightweight history.
+5. The loop demonstrably reduces the user's mental project-tracking and preparation burden rather than adding administrative work.
 
 ## Decisions still needed before implementation
 
-The summary does not settle precise permission mappings, experiment/Git lifecycle mechanics (including existing uncommitted work and keep conflicts), Stop/process cancellation semantics, Explore ideas behavior, Remix semantics, or basic Compare/Archive interactions. Resolve these at the relevant boundary rather than treating illustrative labels as complete contracts.
+Resolve exact field/status models, document storage and extraction/format support, scheduling/recurrence and urgency rules, runtime transport/authentication/capabilities, permissions and sensitive-data handling, Stop/recovery semantics, approval and state-update mechanics, and SQLite schemas/migrations/retention at their respective boundaries. These open implementation contracts do not reopen the chosen stack or expand MVP scope.

@@ -2,83 +2,93 @@
 
 ## Working concept
 
-A creative development harness for non-engineers.
+A **desktop project-operations assistant for an overloaded VC/finance professional**.
 
-> Serious engineering underneath, playful creative experience on top.
+> Let the user define structured VC/finance projects, attach the relevant documents and information, then delegate project-monitoring, analysis, preparation, and follow-up work to an autonomous AI agent while retaining clear oversight and control.
 
-Preserve the freedom and capability developers get from CLI coding agents without requiring users to think like developers. This is not another IDE, coding chatbot, no-code builder, or prettier OpenCode GUI. OpenCode is an implementation, not the product.
+OpenCode is infrastructure, not the product. The user experiences project analysis, delegated work, summaries, monitoring, preparation, and task suggestions—not coding-agent sessions or shell operations. These documents describe intended requirements, not implemented features.
 
-FinApp is the first real-world validation project. Keep the product generic rather than baking FinApp behavior into the harness.
+## Primary user and outcome
 
-## Initial user
+The initial user works in VC finance, manages many investment/portfolio projects simultaneously, and carries too much project state mentally. Work is document-heavy, with deadlines, open questions, follow-ups, meetings, reviews, boards, and investment decisions to prepare for.
 
-The initial test user is a highly creative designer with strong product and visual ideas who is comfortable describing desired outcomes and already uses Codex Cloud to build a native Android app. They do not have deep engineering or infrastructure knowledge.
+Reduce cognitive load by offloading analysis, organization, preparation, and monitoring. Do not make the user operate a complicated project-management system or understand runtime internals.
 
-Do not try to turn this user into a developer. They should not need to understand branches, worktrees, Gradle, terminals, CI, shell commands, or architecture internals. Show enough agent reasoning and activity to make the process understandable and trustworthy.
+## Core workflow
 
-## Product philosophy
+Define project → Add documents and important information → Track tasks and deadlines → Agent understands the project → Agent identifies work / risks / missing information → Agent performs delegated analysis or preparation → User reviews the result → Project state and tasks are updated.
 
-Avoid both extremes: a restricted chat wrapper that hides autonomy, and a developer environment that overwhelms non-engineers.
+Structured project state, not chat history or a folder alone, anchors the experience. Use project vocabulary: Project, Document, Task, Deadline, Milestone, Open question, Follow-up, Brief, Agent job, Result, and Review.
 
-The experience should feel like experimenting, creating, remixing, exploring, and watching something being built—not operating Git, reviewing terminal output, or configuring infrastructure. Real development tools remain underneath.
+## Main experiences
 
-## Core interaction
+### Define and organize a project
 
-Idea → Explore → Agent works autonomously → Working result → Preview / Build → Keep / Remix / Discard.
+Create a project with company/project name, stage, status, owner, important contacts and dates, notes, open questions, and current state. Optionally specify expected document types.
 
-Use product vocabulary: Idea, Experiment, Build, Preview, Keep, Remix, Undo, Discard, Compare, Archive. Developer terminology remains optional in progressive technical details. Vocabulary and future concepts do not automatically expand MVP scope.
+Add and categorize project files, and distinguish expected documents that are present from those that are missing. Initial category examples include pitch deck, financial plan / FP, cap table, board structure, shareholder documents, investment memo, contracts, KPI/reporting files, and other supporting material. Categories must be extensible rather than a hardcoded exhaustive list.
 
-The main prompt is **What do you want to make?** Users describe outcomes in ordinary design/product language, for example: “Make the bank cards feel more physical and playful.” Primary actions are **Build it** and **Explore ideas**.
+### Understand current state
 
-The artifact/result is the primary object; chat must not dominate the interface.
+Each project has an explicit overview, for example:
 
-## Freedom modes
+```text
+Investment stage: Due diligence
+Next milestone: IC review
+Due: Oct 14
 
-- **Guided:** asks before consequential actions.
-- **Independent:** can inspect, edit, run builds, install dependencies, and use Git locally; interrupts for significant external or destructive actions.
-- **Playground:** explicit broad freedom inside an isolated experiment. Communicate: “Try something ambitious. It is safe to throw away.”
+Open questions: 4
+Missing documents: 2
+Pending follow-ups: 3
+Overdue tasks: 1
+```
 
-These modes must map to actual runtime permissions, not cosmetic UI states. Exact permission rules are an implementation decision constrained by safety requirements.
+These are illustrative values, not defaults. Structured state must remain queryable without an LLM call for every dashboard view. Show when information is missing or stale rather than inventing certainty.
 
-## Transparency and trust
+### Know what needs attention
 
-Translate technical activity into human-readable intent, with **Show details** always providing access to real actions:
+The home screen answers **What needs my attention?** Prioritize workload and urgency: overdue tasks, upcoming deadlines, missing documents, unresolved project work, pending follow-ups, and upcoming meetings/milestones. Raw file browsing is secondary.
 
-| Technical activity | Human-friendly presentation |
-| --- | --- |
-| Reading `HomeScreen.kt` | Understanding the current screen |
-| Searching for `BankCard` | Finding the shared bank card component |
-| `./gradlew assembleDebug` | Building the Android app |
+Tasks belong to projects and minimally have title, status, deadline, and project association. Agent-generated tasks start as proposals requiring user approval before commitment to project state.
 
-Typical states: Understanding the project, Exploring the current implementation, Finding the relevant component, Editing the design, Running checks, Building the application, Checking the result.
+### Schedule work
 
-**What's happening?** is a core differentiator. Explain the approach, not just activity volume. Example: “The agent found that all bank cards use one shared component. It is updating that component instead of changing each screen separately.”
+Scheduling is first-class. Projects can contain deadlines, meetings, expected responses, reporting dates, recurring reviews, and other milestones. Support an eventual internal agenda such as:
 
-Expose files viewed/changed, commands executed, dependency changes, database/schema touches, and approximate risk. Statements such as “Stored data has not been modified” or “Risk: Low” require supporting evidence; they are examples, not defaults.
+```text
+THIS WEEK
+Mon — Nova financial plan review
+Tue — Atlas founder follow-up
+Wed — Orbit IC preparation
+Thu — Atlas board review
+```
 
-Keep **Stop** clearly visible while work is running. Autonomy feels safer when users can immediately interrupt it. Keep/discard must be trustworthy.
+External calendar integration is not required for the MVP.
 
-## Visual direction
+### Delegate useful work
 
-Prefer a large creative prompt, clear agent state, artifact previews, experiment cards, simple decision buttons, smooth transitions, understandable statuses, and optional technical detail. Put the result above chat in the visual hierarchy.
+The key prompt is **What can you take off my plate?** Support freeform requests and useful predefined workflows: summarize a project, identify missing documents/information, compare documents, detect inconsistencies, extract action items, prepare a meeting/board brief or due-diligence summary, suggest what needs attention, and suggest delegable work.
 
-Avoid dense file trees, persistent terminal panels, IDE chrome, Git terminology in the main flow, raw log spam, and configuration-heavy screens.
+The agent works from metadata, documents, tasks, deadlines, project state, and previous relevant results. It should eventually distinguish work it can perform autonomously, work requiring approval, and decisions only the user can make. Analysis and preparation may be delegated; investment decisions remain with the user. Follow-up preparation and internal tracking do not authorize external communication.
 
-Illustrative primary screen elements:
+## Visible autonomy and trust
 
-- Project name and readiness state.
-- Creative prompt with Build it / Explore ideas.
-- Guided / Independent / Playground selector.
-- Activity progression and current state.
-- What's happening? explanation, risk, viewed/changed/command counts.
-- Show details and a clearly visible Stop action.
+Translate real activity into project-oriented intent rather than presenting raw technical actions as the main UX:
 
-Illustrative result: Experiment complete; build/check outcomes; changed-file count; Open preview; Keep / Remix / Discard. Report actual outcomes rather than assuming success.
+```text
+✓ Reading pitch deck
+✓ Reviewing financial plan
+✓ Comparing board information
+● Preparing due-diligence summary
+○ Checking open tasks
+```
 
-## Long-term direction, not MVP commitments
+Explain what is happening and why, distinguish observed facts from inference, and expose supporting documents and uncertainty in results. Do not fabricate progress, conclusions, or claims about unaffected data. Technical details remain available through a secondary **Show details** view.
 
-A creative interface for autonomous software development for designers, founders, product people, and other non-engineers with strong ideas.
+Keep **Stop** clearly visible during agent work. Cancellation behavior must be trustworthy; do not claim work has stopped while it continues. Review results before applying proposed changes to structured project state; task proposals always require approval. Retain lightweight job/result history so the user can understand what was delegated and what happened.
 
-Potential capabilities: visual variations, screenshot feedback, drawing/annotation over UI, before/after previews, experiment comparison, “What if?” idea generation, creative agent personalities, design critique, automatic phone/emulator preview, remote mobile companion, and richer project adapters.
+## Experience principles and long-term boundary
 
-Possible future agent roles: Builder, Critic, Simplifier, Chaos, Engineer. Do not implement these merely because they are listed here.
+Prefer a calm attention dashboard, concise project overviews, actionable results, clear approval controls, and understandable activity over chat-heavy screens, dense file trees, raw logs, or configuration-heavy workflows.
+
+The long-term generic assistant idea may remain, but the MVP is specifically VC/finance project operations. Broader use cases do not justify software-building workflows, broad project-management features, or premature automation in this MVP.

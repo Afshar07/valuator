@@ -3,8 +3,8 @@
 
 ## Purpose
 
-A creative development harness for non-engineers: serious engineering underneath, a playful creative experience on top. Built initially as a Flutter/Dart desktop app, it preserves real autonomous coding-agent freedom while translating developer workflows into understandable product concepts.
+A desktop project-operations assistant for an overloaded VC/finance professional managing many investment and portfolio projects. Reduce cognitive load by organizing project information, documents, tasks, deadlines, and follow-ups, then delegating analysis, preparation, and monitoring to an autonomous AI agent with clear user oversight.
 
-FinApp is the first real-world test case, not a product-specific dependency. The harness must remain generic.
+The MVP validates the VC/finance project workflow, not software development. The chosen stack is C#/.NET with Avalonia UI, SQLite for application-owned structured state, and OpenCode behind a generic agent runtime boundary. A broader generic product remains a possible long-term direction, not MVP scope.
 
 Shared context belongs in this root. Project-specific implementation detail belongs in the owning project's local index.

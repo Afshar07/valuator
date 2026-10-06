@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "target": "opencode",
+  "overrides": [],
+  "installed": {
+    "lead": {
+      "source": "toolkit",
+      "version": "2026.10.5",
+      "hash": "48f268fb69ecb1a0cb1c3a4c30e298964dbb5c139dace54cd2119d4166cfdbe0"
+    },
+    "researcher": {
+      "source": "toolkit",
+      "version": "2026.10.5",
+      "hash": "d5e10bb281f9c022d4bd3eb6bde0acee7d02bde136a9cf9d5b8b78c6fadf91be"
+    },
+    "external-researcher": {
+      "source": "toolkit",
+      "version": "2026.10.5",
+      "hash": "6eadc9588dd686e46548f10cdd8a372456a3dd5d79fafb711fac62a2fd78c185"
+    },
+    "coder": {
+      "source": "toolkit",
+      "version": "2026.10.5",
+      "hash": "91f5fcd237360511e468dcdba044cb92cf1d2237eceeff701c718e7c13817642"
+    }
+  }
+}

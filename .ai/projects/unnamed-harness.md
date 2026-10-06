@@ -7,13 +7,15 @@ Primary project in this workspace.
 
 ## Durable guardrails
 
-- Build a creative interface for autonomous software development, not an IDE, coding chatbot, no-code builder, or prettier OpenCode GUI.
-- Validate the core loop first: Describe → Agent works → Understand → Preview → Keep or discard.
-- Flutter/Dart desktop is the chosen MVP stack. SQLite stores application state; Git remains the source of repository state.
-- OpenCode is the first runtime implementation, behind a generic runtime boundary. Project-specific behavior belongs in adapters; FinApp is only the initial test case.
-- Preserve genuine autonomy and optional access to technical details. Translate engineering activity rather than concealing it.
-- Isolation, a visible Stop action, and trustworthy keep/discard behavior are core requirements, not polish.
-- Start with a single Dart application. A separate local daemon is a future option only if concrete system complexity justifies it.
+- Build a desktop project-operations assistant for an overloaded VC/finance professional, not a coding interface or a broad project-management suite. Reduce cognitive load rather than adding administrative complexity.
+- Validate: Define project → Add documents and information → Track tasks and deadlines → Agent understands → Identifies work, risks, and gaps → Performs delegated analysis or preparation → User reviews → Project state and tasks are updated.
+- C#/.NET and Avalonia UI are the chosen MVP stack. SQLite owns structured application state; files and LLM output are not the sole source of project truth.
+- OpenCode is the first runtime implementation behind `IAgentRuntime`. UI and product concepts must not depend on OpenCode-specific APIs or session terminology.
+- Keep projects, documents, tasks, milestones/events, project state, and agent jobs explicit. Dashboard views must be queryable without an LLM call for every view.
+- Scheduling is first-class; start with internal dates, meetings, deadlines, expected responses, reporting dates, and recurring reviews, not external calendar integration.
+- Preserve visible autonomy, project-oriented activity, optional technical details, and trustworthy Stop/cancellation. Agent-generated tasks are proposals requiring user approval before commitment.
+- Start with one .NET desktop application. Add a separate daemon only if a concrete technical need appears; do not prematurely generalize runtimes or workflows.
+- Scope validation to investment/portfolio project operations. Broader generic use cases are not MVP requirements.
 
 ## Focused context
 

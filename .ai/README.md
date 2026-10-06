@@ -10,9 +10,9 @@ step 7, then follow the route exactly in order.
 | --- | --- |
 | `ongoing/README.md` | continuing an in-progress task; read only the matching task document |
 | `technical-debt/README.md` | locating unresolved technical debt relevant to the current work; read only the matching record |
-| `product.md` | working on product direction, user experience, creative interaction, or terminology |
+| `product.md` | working on VC/finance product direction, project-operations experience, or terminology |
 | `mvp.md` | implementing or verifying the core workflow, safety, scope, or acceptance criteria |
-| `architecture.md` | working on runtime integration, adapters, experiments, Git, activity translation, persistence, or infrastructure |
+| `architecture.md` | working on project/domain services, scheduling, documents, runtime integration, activity translation, persistence, or infrastructure |
 
 ## Rules
 
@@ -25,7 +25,7 @@ step 7, then follow the route exactly in order.
 - Continuing in-progress work: `ongoing/README.md` → only the matching task document → source.
 - Product / UX: `product.md` → `mvp.md` → source.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
-- Runtime / adapters / Git / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
+- Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
 - When an ongoing task crosses one of these boundaries, read that boundary's route before source unless the task document already includes it.
 - Add focused task routes here when another real project boundary appears.
 - Route format: `local-context.md` → optional shared/domain context → source.
