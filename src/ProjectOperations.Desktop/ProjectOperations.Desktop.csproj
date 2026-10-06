@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <AvaloniaResource Include="Assets/Fonts/**/*.ttf" />
     <EmbeddedResource Include="Localization/Resources/*.json" WithCulture="false" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />

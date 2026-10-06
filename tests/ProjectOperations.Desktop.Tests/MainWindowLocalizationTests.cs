@@ -23,6 +23,7 @@ public sealed class MainWindowLocalizationTests
         await fixture.InitializeAsync();
         var window = fixture.Window;
         window.Show();
+        var englishFont = window.FontFamily;
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "Create project" && button.IsEffectivelyEnabled));
         Click(window, "Create project");
         var inputs = Controls<TextBox>(window).Where(input => input.IsEffectivelyEnabled && !input.IsReadOnly).ToList();
@@ -34,6 +35,13 @@ public sealed class MainWindowLocalizationTests
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
         Assert.Equal(FlowDirection.RightToLeft, inputs[0].FlowDirection);
+        Assert.Equal("IRANYekanX", window.FontFamily.Name);
+        Assert.Equal("IRANYekanX", new Typeface(window.FontFamily).GlyphTypeface.FamilyName);
+        Assert.Contains("IRANYekanX", new Typeface(window.FontFamily, weight: FontWeight.Bold).GlyphTypeface.FamilyName);
+        Assert.Equal(window.FontFamily, inputs[0].FontFamily);
+        Assert.Equal(window.FontFamily, Controls<TextBlock>(window).Single(block => block.Text == "نام پروژه *").FontFamily);
+        foreach (var weight in new[] { "Regular", "Bold" })
+            Assert.True(Avalonia.Platform.AssetLoader.Exists(new Uri($"avares://ProjectOperations.Desktop/Assets/Fonts/IRANYekanX/IRANYekanX-{weight}.ttf")));
         Assert.Equal(TextAlignment.Start, inputs[0].TextAlignment);
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
         Assert.Equal(ProjectStage.DueDiligence, stage.SelectedItem);
@@ -43,6 +51,8 @@ public sealed class MainWindowLocalizationTests
         language.SelectedIndex = 0;
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
         Assert.Equal(FlowDirection.LeftToRight, inputs[0].FlowDirection);
+        Assert.Equal(englishFont, window.FontFamily);
+        Assert.Equal(englishFont, inputs[0].FontFamily);
         Assert.Contains(Controls<TextBlock>(window), block => block.Text == "Project name *");
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
         window.Close();

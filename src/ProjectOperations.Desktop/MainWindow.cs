@@ -40,7 +40,7 @@ public sealed class MainWindow : Window
         _localized.Bind(_error, control => control.Text = _errorKey.Length == 0 ? "" : _text.Get(_errorKey));
         _locale.Changed += LocaleChanged;
         _localized.Bind(this, window => window.Title = _text.Get("app.title"));
-        FlowDirection = _locale.FlowDirection;
+        ApplyLocalePresentation();
         Width = 1280; Height = 860; MinWidth = 800; MinHeight = 600;
         Background = PresentationTheme.Brush("BackgroundApp");
         _navigation = new AppSidebar(_context, DashboardAsync, ProjectsAsync);
@@ -77,7 +77,15 @@ public sealed class MainWindow : Window
         catch (OperationCanceledException) { ShowError("validation.operationCancelled"); }
         catch (Exception) { ShowError("validation.operationFailed"); }
     }
-    private void LocaleChanged(object? sender, EventArgs e) => FlowDirection = _locale.FlowDirection;
+    private void LocaleChanged(object? sender, EventArgs e) => ApplyLocalePresentation();
+    private void ApplyLocalePresentation()
+    {
+        FlowDirection = _locale.FlowDirection;
+        if (_locale.LanguageCode == "fa")
+            FontFamily = PresentationTheme.PersianFontFamily;
+        else
+            ClearValue(FontFamilyProperty);
+    }
     private void ShowError(string message) { _errorKey = message; _error.Text = _text.Get(message); _error.IsVisible = true; }
     private async Task ActAsync(Button button, Func<Task> action)
     {

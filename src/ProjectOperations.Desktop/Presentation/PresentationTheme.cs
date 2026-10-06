@@ -13,6 +13,8 @@ namespace ProjectOperations.Desktop;
 /// </summary>
 internal static class PresentationTheme
 {
+    public static readonly FontFamily PersianFontFamily = new("avares://ProjectOperations.Desktop/Assets/Fonts/IRANYekanX#IRANYekanX");
+
     private static readonly IReadOnlyDictionary<string, string> Colors = new Dictionary<string, string>
     {
         ["BackgroundApp"] = "#F5F7F8",
