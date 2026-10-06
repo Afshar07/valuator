@@ -13,6 +13,7 @@ step 7, then follow the route exactly in order.
 | `product.md` | working on VC/finance product direction, project-operations experience, or terminology |
 | `mvp.md` | implementing or verifying the core workflow, safety, scope, or acceptance criteria |
 | `architecture.md` | working on project/domain services, scheduling, documents, runtime integration, activity translation, persistence, or infrastructure |
+| `testing.md` | writing or running native .NET domain, persistence, runtime, or desktop tests |
 
 ## Rules
 
@@ -26,6 +27,7 @@ step 7, then follow the route exactly in order.
 - Product / UX: `product.md` → `mvp.md` → source.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
 - Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
+- Native tests / verification: `testing.md` → `mvp.md` → `architecture.md` → source.
 - When an ongoing task crosses one of these boundaries, read that boundary's route before source unless the task document already includes it.
 - Add focused task routes here when another real project boundary appears.
 - Route format: `local-context.md` → optional shared/domain context → source.

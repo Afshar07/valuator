@@ -4,3 +4,17 @@
 .flutter-plugins-dependencies
 build/
 **/flutter/ephemeral/
+
+# .NET build outputs and local/sensitive application state.
+**/bin/
+**/obj/
+**/TestResults/
+.vs/
+*.user
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env

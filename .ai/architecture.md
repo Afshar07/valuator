@@ -2,7 +2,10 @@
 
 ## Status and chosen MVP stack
 
-These are chosen directions and conceptual boundaries, not implemented code. Entity and interface names do not prescribe exact APIs or database schemas.
+The first MVP now implements these boundaries in `src/ProjectOperations.Core`,
+`src/ProjectOperations.Infrastructure` and `src/ProjectOperations.Desktop`.
+The broader concepts below remain direction rather than a claim that every future
+scheduling or document-analysis capability exists.
 
 - **C#/.NET:** main application and core services. A strong fit for filesystem/process handling, async and background work, cancellation, IPC, local services, and future system integrations.
 - **Avalonia UI:** cross-platform desktop UI while keeping the main application in C#. The application is fundamentally a desktop project/work orchestration tool.
@@ -75,4 +78,45 @@ SQLite stores application-owned structured state: projects, project documents/me
 
 Attention dashboards, project overviews, and internal upcoming-work views query persisted state and derived workload/date information without an LLM call for every view. Scheduling is first-class but external calendars are outside MVP scope.
 
-Exact schemas, data-access library, migrations, document copy-versus-reference strategy, retention, backup/recovery, recurrence/time-zone rules, and urgency ranking remain open. Separate runtime session metadata from application-owned job history. No cloud hosting or multi-user infrastructure is required by this architecture.
+The first-MVP choices below resolve its schema, data-access, migration, file-reference
+and date rules. Retention controls, backup/recovery, recurrence and richer urgency
+ranking remain future decisions. Separate runtime session metadata from
+application-owned job history. No cloud hosting or multi-user infrastructure is required.
+
+## First MVP implementation contracts
+
+- .NET 10, Avalonia 11.3, Microsoft.Data.Sqlite 10.0; native xUnit tests.
+  See `.ai/testing.md` and `docs/verification.md` for verification boundaries.
+- Core owns project aggregates, the built-in `VC Investment Review` template,
+  requirement definitions/statuses, task/milestone/state models, deterministic
+  summaries, agent contracts and application-level proposal approval. UI does not
+  reference runtime DTOs. OpenCode-specific construction stays in the composition root.
+- Readiness counts **Complete only**. Missing/NeedsReview need attention; Provided
+  is supplied but not verified. File association never changes status automatically.
+- Active tasks are Todo/InProgress. Overdue is strictly before the supplied instant;
+  upcoming is inclusive from now through seven days. Done/Cancelled tasks and
+  Completed/Archived projects do not contribute to dashboard deadline attention.
+- UTC/offset instants are persisted losslessly. UI accepts local dates with an
+  explicit format and rejects ambiguous/nonexistent daylight-saving times.
+- SQLite schema version 1 uses transactional `PRAGMA user_version` migration,
+  normalized aggregate tables, foreign keys, WAL and optimistic project revisions.
+  Agent job snapshots live in a project-associated table. Approved tasks and their
+  proposal review outcomes commit atomically. Native SQLite work runs off the UI thread.
+- Files stay in their original locations. Persist references, size and timestamps;
+  removal only deletes the association. No extraction, OCR or managed storage layer.
+- Agent context is a snapshot of the selected project only, including values/notes,
+  dates, file paths and up to three recent completed result excerpts (12,000 characters
+  each). Prior output is labeled unverified history, not current fact. Every request
+  requires a context preview and consent to the exact displayed snapshot.
+  Runtime/provider transmission is explicit, not a local-only inference promise.
+- `IAgentRuntime` exposes awaited Run and Cancel operations with native models and
+  cancellation tokens. OpenCode V2 HTTP/SSE stays in Infrastructure; a dedicated
+  explicitly configured loopback runtime, deny-tool policy and isolated deployment
+  are required. `docs/agent-runtime.md` is the exact protocol/deployment contract.
+- Running jobs retain partial text and final outcomes. Stop waits for independently
+  acknowledged backend interruption/idle; unconfirmed stop is failure, not Cancelled.
+  Stale running history becomes Interrupted, without claiming the backend stopped.
+- Task proposals use a bounded `task-proposals` JSON block. Approval reloads current
+  project state, never overwrites metadata from the agent snapshot, and is idempotent.
+- Settings currently come from environment variables; there is no accounts/settings
+  platform. Backup, encryption and transcript-retention controls are not implemented.
