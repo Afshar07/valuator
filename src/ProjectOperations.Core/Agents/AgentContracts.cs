@@ -3,6 +3,7 @@ namespace ProjectOperations.Core.Agents;
 public enum AgentJobStatus { Running, Completed, Failed, Cancelled, Interrupted }
 public enum ProposalReviewStatus { Pending, Approved, Rejected }
 public enum AgentEventKind { Activity, ResultDelta, Detail }
+public enum AgentResponseLanguage { English, Persian }
 
 public sealed class AgentRequest
 {
@@ -10,12 +11,14 @@ public sealed class AgentRequest
     public Guid ProjectId { get; init; }
     public string Prompt { get; init; } = "";
     public string Context { get; init; } = "";
+    public string SystemInstructions { get; init; } = AgentPrompts.BuildOutputInstructions(AgentResponseLanguage.English);
 }
 
 public sealed class AgentEvent
 {
     public AgentEventKind Kind { get; init; }
     public string Message { get; init; } = "";
+    public string? ActivityKey { get; init; }
 }
 
 public sealed class AgentResult

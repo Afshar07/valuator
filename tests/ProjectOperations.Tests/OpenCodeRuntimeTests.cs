@@ -22,6 +22,9 @@ public sealed class OpenCodeRuntimeTests
         Assert.Equal(handler.Result, string.Concat(progress.Items.Where(x => x.Kind == AgentEventKind.ResultDelta).Select(x => x.Message)));
         Assert.Equal(new[] { "Reading project information", "Preparing response" },
             progress.Items.Where(x => x.Kind == AgentEventKind.Activity).Select(x => x.Message));
+        Assert.Equal(new[] { "agent.activity.readingProjectInformation", "agent.activity.preparingResponse" },
+            progress.Items.Where(x => x.Kind == AgentEventKind.Activity).Select(x => x.ActivityKey));
+        Assert.All(progress.Items.Where(x => x.Kind != AgentEventKind.Activity), x => Assert.Null(x.ActivityKey));
         Assert.DoesNotContain(progress.Items.Where(x => x.Kind == AgentEventKind.Detail), x => x.Message.Contains("Opted-in context"));
         using var create = JsonDocument.Parse(handler.CreateBody!);
         Assert.Equal(new[] { "id", "title", "agent", "permissions" }, create.RootElement.EnumerateObject().Select(x => x.Name));
@@ -37,6 +40,27 @@ public sealed class OpenCodeRuntimeTests
         Assert.True(prompt.RootElement.GetProperty("resume").GetBoolean());
         Assert.All(handler.Authorization, x => Assert.Equal("Bearer fixture-token", x));
         Assert.DoesNotContain(handler.Paths, x => x.StartsWith("/session", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(AgentResponseLanguage.English)]
+    [InlineData(AgentResponseLanguage.Persian)]
+    public async Task LanguageInstructionsAreSentWithoutChangingTheWireSchema(AgentResponseLanguage language)
+    {
+        using var handler = new FixtureHandler();
+        using var runtime = Runtime(handler);
+        var instructions = AgentPrompts.BuildOutputInstructions(language);
+        await runtime.RunAsync(new AgentRequest
+        {
+            Prompt = "Prepare brief",
+            Context = "Opted-in context",
+            SystemInstructions = instructions
+        }, new Events(), CancellationToken.None);
+        using var prompt = JsonDocument.Parse(handler.PromptBody!);
+        Assert.Equal(new[] { "id", "text", "files", "agents", "skills", "resume" },
+            prompt.RootElement.EnumerateObject().Select(x => x.Name));
+        Assert.Equal(instructions + "\n\nProject context:\nOpted-in context\n\nUser request:\nPrepare brief",
+            prompt.RootElement.GetProperty("text").GetString());
     }
 
     [Theory]

@@ -31,6 +31,21 @@ public sealed class TaskProposalParserTests
     }
 
     [Fact]
+    public void PersianProseIsPreservedUnderTheSameStructuredContract()
+    {
+        var proposal = Assert.Single(TaskProposalParser.Parse("""
+            اقدامات پیشنهادی:
+            ```task-proposals
+            {"tasks":[{"title":"درخواست پیش‌بینی مالی","description":"اطلاعات مالی موجود نیست","dueAt":"2030-01-15T09:30:00+03:30"}]}
+            ```
+            """));
+        Assert.Equal("درخواست پیش‌بینی مالی", proposal.Title);
+        Assert.Equal("اطلاعات مالی موجود نیست", proposal.Description);
+        Assert.Equal(ProposalReviewStatus.Pending, proposal.ReviewStatus);
+        Assert.Equal(new DateTimeOffset(2030, 1, 15, 9, 30, 0, TimeSpan.FromHours(3.5)), proposal.DueAt);
+    }
+
+    [Fact]
     public void DeadlineWithoutTimezoneIsNotAssumed()
     {
         var proposal = Assert.Single(TaskProposalParser.Parse("""

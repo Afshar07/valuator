@@ -118,5 +118,27 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   Stale running history becomes Interrupted, without claiming the backend stopped.
 - Task proposals use a bounded `task-proposals` JSON block. Approval reloads current
   project state, never overwrites metadata from the agent snapshot, and is idempotent.
-- Settings currently come from environment variables; there is no accounts/settings
-  platform. Backup, encryption and transcript-retention controls are not implemented.
+- Runtime settings come from environment variables; the desktop language preference
+  is stored locally in `settings.json` in the application data directory. There is no
+  accounts/settings platform. Backup, encryption and transcript-retention controls
+  are not implemented.
+
+## Desktop localization
+
+- Desktop localization services own embedded English (`en`) and Persian (`fa`)
+  resources, stable presentation keys, domain display mapping, and date formatting.
+  Views do not load resource files. Missing translations fall back to English, then
+  a visible key marker. English is the deterministic default.
+- Domain enums, identifiers, stored template definitions, database values, runtime
+  protocol fields and structured proposal JSON keys remain language-neutral. Map
+  built-in template labels by stable identifiers at the presentation boundary;
+  preserve user-authored content and custom labels.
+- Localization owns inherited window RTL/LTR (Persian RTL, English LTR). Language
+  switching updates the existing controls without discarding unsaved form values.
+  Technical previews, paths and date-entry fields remain readable in LTR.
+- Persist dates as timezone-safe `DateTimeOffset` instants. Format display dates
+  according to locale; date entry remains explicit Gregorian `yyyy-MM-dd HH:mm`.
+  Jalali display is deferred and belongs in the presentation date formatter.
+- Agent response language is an explicit preference derived from the selected
+  locale, separate from stable internal instructions, action identifiers and the
+  structured output contract. Never translate structured JSON after generation.

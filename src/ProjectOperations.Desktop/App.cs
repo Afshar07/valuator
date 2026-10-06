@@ -4,6 +4,7 @@ using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
+using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Infrastructure.Agents;
 using ProjectOperations.Infrastructure.Persistence;
 
@@ -30,12 +31,16 @@ public sealed class App : Application
             var options = OpenCodeRuntimeOptions.FromEnvironment();
             var runtime = new OpenCodeAgentRuntime(options);
             var agents = new AgentService(projects, runtime, new SqliteAgentJobRepository(database));
-            var configuration = options.IsConfigured && Uri.TryCreate(options.Url, UriKind.Absolute, out var endpoint)
-                && endpoint.IsLoopback && endpoint.UserInfo.Length == 0
-                ? $"Agent endpoint: {endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}. Context is sent to this dedicated runtime and its configured model provider. Provider processing/retention is not local-only."
-                : "Agent not configured. Set PROJECTOPS_OPENCODE_URL and PROJECTOPS_OPENCODE_CONFIG_DIR for a dedicated finance runtime as described in docs/agent-runtime.md. No model request will succeed until setup is complete.";
+            var locale = new LocaleContext(Path.Combine(directory, "settings.json"));
+            var localization = new LocalizationService(locale);
+            Uri.TryCreate(options.Url, UriKind.Absolute, out var endpoint);
+            var endpointConfigured = options.IsConfigured && endpoint is not null
+                && endpoint.IsLoopback && endpoint.UserInfo.Length == 0;
+            string ConfigurationText() => endpointConfigured
+                ? localization.Format("agent.configuration.endpoint", $"\u2066{endpoint!.Scheme}://{endpoint.Host}:{endpoint.Port}\u2069")
+                : localization.Get("agent.configuration.missing");
             desktop.MainWindow = new MainWindow(projects, agents, () => repository.InitializeAsync(),
-                configuration);
+                ConfigurationText(), locale, ConfigurationText);
             desktop.Exit += (_, _) => runtime.Dispose();
         }
         base.OnFrameworkInitializationCompleted();

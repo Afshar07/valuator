@@ -40,9 +40,11 @@ public sealed class AgentService(ProjectService projects, IAgentRuntime runtime,
     }
 
     public async Task<AgentJob> RunAsync(Project project, string prompt, IProgress<AgentEvent> progress,
-        CancellationToken cancellationToken, IReadOnlyList<AgentJob>? previousJobs = null)
+        CancellationToken cancellationToken, IReadOnlyList<AgentJob>? previousJobs = null,
+        AgentResponseLanguage responseLanguage = AgentResponseLanguage.English)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        var systemInstructions = AgentPrompts.BuildOutputInstructions(responseLanguage);
         var job = new AgentJob
         {
             ProjectId = project.Id,
@@ -61,7 +63,8 @@ public sealed class AgentService(ProjectService projects, IAgentRuntime runtime,
                 JobId = job.Id,
                 ProjectId = job.ProjectId,
                 Prompt = job.Prompt,
-                Context = job.ContextSnapshot
+                Context = job.ContextSnapshot,
+                SystemInstructions = systemInstructions
             }, forwarded, cancellationToken);
             job.ResultText = result.Text;
             job.Proposals = result.Proposals;

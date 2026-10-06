@@ -18,6 +18,13 @@ Application records are stored under the current user's local application data
 directory in `ProjectOperations/projects.db`. Set `PROJECTOPS_DATA_DIR` to use a
 different directory (for example, an isolated verification directory).
 
+Choose **English** or **فارسی** in the language selector. Labels and layout direction
+switch live (English LTR, Persian RTL), without changing project data. The selection
+is saved in `settings.json` in the same data directory. Agent responses use the
+selected language; structured proposal fields remain unchanged. Date entry uses
+Gregorian `yyyy-MM-dd HH:mm` in both languages; Jalali display is deferred.
+See [localization boundaries and extension guidance](docs/localization.md).
+
 ## Workflow
 
 1. Create a project using **VC Investment Review**. Its 16 requirements are

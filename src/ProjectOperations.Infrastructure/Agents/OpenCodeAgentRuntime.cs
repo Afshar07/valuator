@@ -65,7 +65,7 @@ public sealed class OpenCodeAgentRuntime : IAgentRuntime, IDisposable
             }
             Report(progress, AgentEventKind.Detail, "OpenCode V2 session admitted; tools denied.");
             if (!string.IsNullOrWhiteSpace(request.Context))
-                Report(progress, AgentEventKind.Activity, "Reading project information");
+                Report(progress, AgentEventKind.Activity, "Reading project information", "agent.activity.readingProjectInformation");
             job.Stop.Token.ThrowIfCancellationRequested();
             using (var admission = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
             {
@@ -74,7 +74,7 @@ public sealed class OpenCodeAgentRuntime : IAgentRuntime, IDisposable
                     using var prompt = await JsonAsync(HttpMethod.Post, $"api/session/{job.SessionId}/prompt", new
                     {
                         id = job.PromptId,
-                        text = AgentPrompts.OutputInstructions + "\n\nProject context:\n" + request.Context
+                        text = request.SystemInstructions + "\n\nProject context:\n" + request.Context
                             + "\n\nUser request:\n" + request.Prompt,
                         files = Array.Empty<object>(),
                         agents = Array.Empty<object>(),
@@ -89,7 +89,7 @@ public sealed class OpenCodeAgentRuntime : IAgentRuntime, IDisposable
                     throw new InvalidOperationException("OpenCode input admission timed out; outcome is unknown, not a confirmed cancellation.");
                 }
             }
-            Report(progress, AgentEventKind.Activity, "Preparing response");
+            Report(progress, AgentEventKind.Activity, "Preparing response", "agent.activity.preparingResponse");
             var text = await ReadEventsAsync(reader, job.SessionId, progress, job.Stop.Token);
             await WaitAsync(job.SessionId, job.Stop.Token);
             job.Stop.Token.ThrowIfCancellationRequested();
@@ -352,8 +352,8 @@ public sealed class OpenCodeAgentRuntime : IAgentRuntime, IDisposable
                 : $"OpenCode request failed (HTTP {(int)response.StatusCode}); check dedicated runtime configuration and V2 API support.");
     }
 
-    private static void Report(IProgress<AgentEvent> progress, AgentEventKind kind, string message)
-        => progress.Report(new AgentEvent { Kind = kind, Message = message });
+    private static void Report(IProgress<AgentEvent> progress, AgentEventKind kind, string message, string? activityKey = null)
+        => progress.Report(new AgentEvent { Kind = kind, Message = message, ActivityKey = activityKey });
 
     public void Dispose() => client.Dispose();
 

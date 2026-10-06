@@ -25,6 +25,7 @@ step 7, then follow the route exactly in order.
 
 - Continuing in-progress work: `ongoing/README.md` → only the matching task document → source.
 - Product / UX: `product.md` → `mvp.md` → source.
+- Desktop localization / presentation boundaries: `product.md` → `mvp.md` → `architecture.md` → source.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
 - Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
 - Native tests / verification: `testing.md` → `mvp.md` → `architecture.md` → source.

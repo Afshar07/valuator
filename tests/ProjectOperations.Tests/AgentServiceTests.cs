@@ -9,6 +9,31 @@ namespace ProjectOperations.Tests;
 
 public sealed class AgentServiceTests
 {
+    [Theory]
+    [InlineData(AgentResponseLanguage.English)]
+    [InlineData(AgentResponseLanguage.Persian)]
+    public async Task ResponseLanguageOnlyChangesInstructionsNotTheConsentedContextOrPrompt(AgentResponseLanguage language)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "Owner", "یادداشت");
+        AgentRequest? sent = null;
+        var service = new AgentService(fixture.Projects, new TestRuntime((request, _, _) =>
+        {
+            sent = request;
+            return Task.FromResult(new AgentResult());
+        }), new MemoryJobs());
+        var history = new List<AgentJob>();
+        var consentedContext = AgentService.BuildContext(project, history);
+        var job = await service.RunAsync(project, "Prepare brief", new NoProgress(), CancellationToken.None,
+            history, language);
+        Assert.Equal(AgentJobStatus.Completed, job.Status);
+        Assert.NotNull(sent);
+        Assert.Equal(AgentPrompts.BuildOutputInstructions(language), sent.SystemInstructions);
+        Assert.Equal(consentedContext, sent.Context);
+        Assert.Equal(consentedContext, job.ContextSnapshot);
+        Assert.Equal("Prepare brief", sent.Prompt);
+    }
+
     [Fact]
     public void PreviousResultsAreBoundedUnverifiedAndScopedToTheSelectedProject()
     {
@@ -50,6 +75,7 @@ public sealed class AgentServiceTests
         var job = await service.RunAsync(selected, "Summarize", new NoProgress(), CancellationToken.None);
         Assert.Equal(AgentJobStatus.Completed, job.Status);
         Assert.NotNull(sent);
+        Assert.Equal(AgentPrompts.BuildOutputInstructions(AgentResponseLanguage.English), sent.SystemInstructions);
         Assert.Contains("ATLAS_NOTE", sent.Context);
         Assert.DoesNotContain("OTHER_SECRET", sent.Context);
         Assert.Equal(selected.Id, sent.ProjectId);

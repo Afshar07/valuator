@@ -7,6 +7,7 @@ using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Infrastructure.Persistence;
+using ProjectOperations.Desktop.Localization;
 using Xunit;
 
 namespace ProjectOperations.Desktop.Tests;
@@ -52,15 +53,15 @@ public sealed class MainWindowTests
         Input(window, "Task title *").Text = "Request financial plan";
         Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "2030-01-15 09:30";
         Click(window, "Save task");
-        await UntilAsync(() => Buttons(window).Any(b => b.Content is string text && text.StartsWith("Request financial plan · Todo")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => Buttons(window).Any(b => b.Content is string text && text.StartsWith("Request financial plan · To do")) && Button(window, "All projects").IsEffectivelyEnabled);
         project = (await fixture.Projects.ListAsync()).Single();
         Assert.Equal("2030-01-15 09:30", project.Tasks.Single().DueAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
         Controls<TabControl>(window).Single().SelectedIndex = 2;
-        ClickPrefix(window, "Request financial plan · Todo");
+        ClickPrefix(window, "Request financial plan · To do");
         Input(window, "Notes").Text = "Synthetic task note";
         Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "";
         Click(window, "Save task");
-        await UntilAsync(() => Buttons(window).Any(b => Equals(b.Content, "Request financial plan · Todo · No date")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => Buttons(window).Any(b => Equals(b.Content, "Request financial plan · To do · No date")) && Button(window, "All projects").IsEffectivelyEnabled);
         var updatedTask = (await fixture.Projects.ListAsync()).Single().Tasks.Single();
         Assert.Equal("Synthetic task note", updatedTask.Description);
         Assert.Null(updatedTask.DueAt);
@@ -189,6 +190,7 @@ public sealed class MainWindowTests
         await UntilAsync(() => fixture.Runtime.Calls == 1);
         Assert.All(tabs.Items.OfType<TabItem>().Take(3), tab => Assert.False(tab.IsEnabled));
         Assert.False(Button(window, "All projects").IsEffectivelyEnabled);
+        Assert.False(Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
         Assert.Contains(Controls<TextBox>(window), box => box.Text!.Contains("Synthetic live delta"));
         Click(window, "Stop");
         await UntilAsync(() => fixture.Runtime.CancelRequested.Task.IsCompleted);
@@ -291,13 +293,14 @@ public sealed class MainWindowTests
         Click(window, "Run with approved context");
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "opencode", "projectops-desktop-" + Guid.NewGuid().ToString("N"));
         public ProjectService Projects { get; }
         public AgentService Agents { get; }
         public ControlledRuntime Runtime { get; } = new();
         public MainWindow Window { get; }
+        public LocaleContext Locale { get; }
         private readonly SqliteProjectRepository _repository;
         public Fixture()
         {
@@ -307,7 +310,8 @@ public sealed class MainWindowTests
             _repository = repository;
             Projects = new ProjectService(repository);
             Agents = new AgentService(Projects, Runtime, new SqliteAgentJobRepository(database));
-            Window = new MainWindow(Projects, Agents, () => repository.InitializeAsync(), "Synthetic test runtime — no network or provider requests.");
+            Locale = new LocaleContext(Path.Combine(_directory, "settings.json"));
+            Window = new MainWindow(Projects, Agents, () => repository.InitializeAsync(), "Synthetic test runtime — no network or provider requests.", Locale);
         }
         public Task InitializeAsync() => _repository.InitializeAsync();
         public string CreateSourceFile()
@@ -325,16 +329,18 @@ public sealed class MainWindowTests
         }
     }
 
-    private sealed class ControlledRuntime : IAgentRuntime
+    internal sealed class ControlledRuntime : IAgentRuntime
     {
         public int Calls { get; private set; }
+        public AgentRequest? LastRequest { get; private set; }
         public TaskCompletionSource CancelRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public AgentResult Result { get; set; } = new() { Text = "Synthetic result" };
         public Exception? Failure { get; set; }
         public async Task<AgentResult> RunAsync(AgentRequest request, IProgress<AgentEvent> progress, CancellationToken cancellationToken)
         {
             Calls++;
+            LastRequest = request;
             progress.Report(new AgentEvent { Kind = AgentEventKind.Activity, Message = "Reviewing synthetic project facts" });
             progress.Report(new AgentEvent { Kind = AgentEventKind.ResultDelta, Message = "Synthetic live delta" });
             using var registration = cancellationToken.Register(() => CancelRequested.TrySetResult());
