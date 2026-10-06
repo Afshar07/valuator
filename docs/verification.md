@@ -7,7 +7,7 @@ Verified on 2026-10-06 with .NET SDK 10.0.300 on Windows:
 | Check | Result |
 | --- | --- |
 | `dotnet build ProjectOperations.slnx --no-restore --nologo` | Passed; zero warnings/errors |
-| `dotnet test ProjectOperations.slnx --no-restore --nologo` | 107 passed: 83 domain/application/SQLite/runtime tests + 24 desktop/localization tests (including Avalonia Headless) |
+| `dotnet test ProjectOperations.slnx --no-restore --nologo` | 114 passed: 83 domain/application/SQLite/runtime tests + 31 desktop/localization/presentation tests (including Avalonia Headless) |
 | `dotnet format ProjectOperations.slnx --no-restore --verify-no-changes` | Passed |
 | `dotnet list ProjectOperations.slnx package --vulnerable --include-transitive` | No known vulnerable packages reported |
 | `git diff --check` | Passed |
@@ -35,8 +35,11 @@ been configured for a live test**, so authentication, live model output and live
 Stop remain unverified. Installed OpenCode 2.0.24 and its published protocol/types
 were inspected; the shared user runtime was not used for finance requests.
 
-Native visual rendering and file-picker interaction were not manually verified;
-RTL/LTR layout and switching were verified through Avalonia Headless.
+Native desktop-window rendering and file-picker interaction were not manually verified.
+RTL/LTR layout and switching were verified through Avalonia Headless structural
+assertions. Setting `PROJECTOPS_UI_CAPTURE_DIR` when running the desktop tests also
+renders Dashboard, Project Overview, requirement editor, Tasks and Delegation frames
+(English/Persian at 1440 and 800 px) with the headless Skia renderer for visual review.
 
 ## Please verify the desktop workflow
 

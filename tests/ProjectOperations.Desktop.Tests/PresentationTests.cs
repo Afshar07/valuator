@@ -1,0 +1,211 @@
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Avalonia.Headless;
+using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
+using Avalonia.Media;
+using Avalonia.Threading;
+using ProjectOperations.Core.Agents;
+using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Localization;
+using Xunit;
+
+namespace ProjectOperations.Desktop.Tests;
+
+public sealed class PresentationTests
+{
+    [AvaloniaTheory]
+    [InlineData("en", 1440)]
+    [InlineData("fa", 1440)]
+    [InlineData("en", 800)]
+    [InlineData("fa", 800)]
+    public async Task Designed_screens_remain_navigable_at_desktop_sizes(string language, int width)
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        var project = await fixture.Projects.CreateAsync("Atlas اطلس", "Synthetic Capital", ProjectStage.DueDiligence, ProjectStatus.Active, "Local owner", "Synthetic project notes");
+        project.Requirements[0].Status = RequirementStatus.Complete;
+        project.Requirements[1].Status = RequirementStatus.Provided;
+        project.Requirements[2].Status = RequirementStatus.NeedsReview;
+        project.Tasks.Add(new ProjectTask { ProjectId = project.Id, Title = "Review updated financial model", DueAt = DateTimeOffset.Now.AddDays(-1) });
+        project.Tasks.Add(new ProjectTask { ProjectId = project.Id, Title = "Prepare IC brief", DueAt = DateTimeOffset.Now.AddDays(2) });
+        project.Milestones.Add(new Milestone { ProjectId = project.Id, Title = "IC review", DueAt = DateTimeOffset.Now.AddDays(3) });
+        project.State.Summary = "Reviewing supplied information";
+        project.State.OpenQuestions.Add("Confirm board composition");
+        project.State.FollowUps.Add("Request updated forecast");
+        await fixture.Projects.SaveAsync(project);
+        fixture.Locale.SetLanguage(language);
+        var text = new LocalizationService(fixture.Locale);
+        var window = fixture.Window;
+        window.Width = width;
+        window.Height = width == 800 ? 600 : 1000;
+        window.Show();
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
+        Capture("dashboard");
+        ClickPrefix(window, project.Name + " · Synthetic Capital");
+        await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == text.Get("navigation.projects")).IsEffectivelyEnabled);
+        var tabs = Controls<TabControl>(window).Single();
+        Assert.Equal(4, tabs.Items.Count);
+        Assert.Equal(0, tabs.SelectedIndex);
+        Assert.Equal(fixture.Locale.FlowDirection, tabs.FlowDirection);
+        await Task.Delay(100); Dispatcher.UIThread.RunJobs();
+        Capture("overview");
+        tabs.SelectedIndex = 1;
+        Dispatcher.UIThread.RunJobs();
+        var requirement = new DomainDisplay(text).Requirement(project.Requirements[0]);
+        ClickPrefix(window, requirement + " ·");
+        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == text.Get("requirement.save"));
+        Capture("requirement-editor");
+        tabs.SelectedIndex = 2;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == text.Get("task.new"));
+        Capture("tasks");
+        tabs.SelectedIndex = 3;
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(Buttons(window).Single(button => MainWindowTests.ButtonText(button) == text.Get("agent.run")).IsEnabled);
+        Capture("delegation");
+        Assert.Equal(0, fixture.Runtime.Calls);
+        window.Close();
+
+        void Capture(string screen)
+        {
+            window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            var directory = Environment.GetEnvironmentVariable("PROJECTOPS_UI_CAPTURE_DIR");
+            if (string.IsNullOrWhiteSpace(directory)) return;
+            Directory.CreateDirectory(directory);
+            for (var tick = 0; tick < 3; tick++) { AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
+            using var frame = window.CaptureRenderedFrame();
+            Assert.NotNull(frame);
+            frame.Save(Path.Combine(directory, $"{screen}-{language}-{width}.png"));
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Dashboard_stats_use_stored_data_and_future_navigation_is_disabled()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        var active = await fixture.Projects.CreateAsync("Synthetic active", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        active.Requirements[0].Status = RequirementStatus.Complete;
+        active.Requirements[1].Status = RequirementStatus.Provided;
+        active.Requirements[2].Status = RequirementStatus.NeedsReview;
+        active.Tasks.Add(new ProjectTask { ProjectId = active.Id, Title = "Overdue", DueAt = DateTimeOffset.Now.AddDays(-2) });
+        active.Tasks.Add(new ProjectTask { ProjectId = active.Id, Title = "Already done", DueAt = DateTimeOffset.Now.AddDays(-2), Status = ProjectTaskStatus.Done });
+        active.Milestones.Add(new Milestone { ProjectId = active.Id, Title = "Upcoming", DueAt = DateTimeOffset.Now.AddDays(2) });
+        await fixture.Projects.SaveAsync(active);
+        var completed = await fixture.Projects.CreateAsync("Synthetic completed", "Company", ProjectStage.Screening, ProjectStatus.Completed, "", "");
+        foreach (var requirement in completed.Requirements) requirement.Status = RequirementStatus.Complete;
+        completed.Tasks.Add(new ProjectTask { ProjectId = completed.Id, Title = "Excluded deadline", DueAt = DateTimeOffset.Now.AddDays(-2) });
+        await fixture.Projects.SaveAsync(completed);
+
+        var window = fixture.Window;
+        window.Show();
+        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "DashboardOverdueStat"));
+        string Value(string name) => Controls<Control>(window).Single(control => control.Name == name)
+            .GetLogicalDescendants().OfType<TextBlock>().Single(block => block.Name == "StatValue").Text!;
+        Assert.Equal("1", Value("DashboardOverdueStat"));
+        Assert.Equal("13", Value("DashboardMissingStat"));
+        Assert.Equal("1", Value("DashboardMilestonesStat"));
+        Assert.Equal("1", Value("DashboardActiveStat"));
+        foreach (var name in new[] { "NavigationCalendar", "NavigationDocuments", "NavigationDelegation", "NavigationSettings", "GlobalSearch" })
+            Assert.False(Controls<Control>(window).Single(control => control.Name == name).IsEffectivelyEnabled);
+        Assert.Equal(0, fixture.Runtime.Calls);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Quick_actions_only_populate_request_and_requirement_edits_survive_language_switch()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        var project = await fixture.Projects.CreateAsync("Mixed Atlas اطلس", "Company", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
+        var window = fixture.Window;
+        window.Show();
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
+        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
+        var tabs = Controls<TabControl>(window).Single();
+        tabs.SelectedIndex = 1;
+        Dispatcher.UIThread.RunJobs();
+        ClickPrefix(window, "Pitch deck · Document");
+        var value = LabeledInput(window, "Value / information (Document)");
+        value.Text = "Unsaved English / فارسی";
+        fixture.Locale.SetLanguage("fa");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Unsaved English / فارسی", value.Text);
+        Assert.Equal(FlowDirection.RightToLeft, value.FlowDirection);
+        Assert.Equal(1, tabs.SelectedIndex);
+        Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Requirements[0].Value);
+
+        fixture.Locale.SetLanguage("en");
+        tabs.SelectedIndex = 3;
+        Dispatcher.UIThread.RunJobs();
+        var text = new LocalizationService(fixture.Locale);
+        var prompt = Controls<TextBox>(window).Single(box => box.Name == "AgentPrompt");
+        foreach (var preset in AgentPrompts.Actions)
+        {
+            Click(window, text.Get("agent.action." + preset.Id));
+            Assert.Equal(preset.Prompt, prompt.Text);
+            Assert.Equal(0, fixture.Runtime.Calls);
+            Assert.False(Buttons(window).Single(button => MainWindowTests.ButtonText(button) == text.Get("agent.run")).IsEnabled);
+        }
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Milestones_can_be_created_edited_completed_and_deleted_in_task_workspace()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        var project = await fixture.Projects.CreateAsync("Milestone project", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var window = fixture.Window;
+        window.Show();
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
+        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
+        Controls<TabControl>(window).Single().SelectedIndex = 2;
+        Dispatcher.UIThread.RunJobs();
+        var text = new LocalizationService(fixture.Locale);
+        Click(window, text.Get("milestone.new"));
+        LabeledInput(window, text.Get("milestone.title")).Text = "Synthetic review";
+        LabeledInput(window, text.Get("milestone.date")).Text = "2030-01-15 09:30";
+        Click(window, text.Get("milestone.save"));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Synthetic review ·") && button.IsEffectivelyEnabled));
+        Assert.Single((await fixture.Projects.GetAsync(project.Id))!.Milestones);
+        ClickPrefix(window, "Synthetic review ·");
+        LabeledInput(window, text.Get("milestone.title")).Text = "Reviewed milestone";
+        Controls<CheckBox>(window).Single(check => Equals(check.Content, text.Get("milestone.complete"))).IsChecked = true;
+        Click(window, text.Get("milestone.save"));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Reviewed milestone ·") && button.IsEffectivelyEnabled));
+        Assert.True((await fixture.Projects.GetAsync(project.Id))!.Milestones.Single().IsComplete);
+        ClickPrefix(window, "Reviewed milestone ·");
+        Click(window, text.Get("milestone.delete"));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == text.Get("milestone.new")) && Buttons(window).First(button => MainWindowTests.ButtonText(button) == text.Get("navigation.projects")).IsEffectivelyEnabled);
+        Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Milestones);
+        window.Close();
+    }
+
+    private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
+    private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
+    private static TextBox LabeledInput(Window window, string label)
+    {
+        var block = Controls<TextBlock>(window).Last(block => block.Text == label);
+        var parent = Assert.IsType<StackPanel>(block.Parent);
+        return Assert.IsType<TextBox>(parent.Children[parent.Children.IndexOf(block) + 1]);
+    }
+    private static void Click(Window window, string text) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button) == text));
+    private static void ClickPrefix(Window window, string prefix) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button).StartsWith(prefix)));
+    private static void ClickButton(Button button)
+    {
+        Assert.True(button.IsEffectivelyEnabled);
+        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Dispatcher.UIThread.RunJobs();
+    }
+    private static async Task UntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition() && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10); }
+        Assert.True(condition(), "UI did not reach the expected presentation state.");
+    }
+}

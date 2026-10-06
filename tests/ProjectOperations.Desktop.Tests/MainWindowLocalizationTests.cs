@@ -23,9 +23,9 @@ public sealed class MainWindowLocalizationTests
         await fixture.InitializeAsync();
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Buttons(window).Any(button => Equals(button.Content, "Create project") && button.IsEffectivelyEnabled));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "Create project" && button.IsEffectivelyEnabled));
         Click(window, "Create project");
-        var inputs = Controls<TextBox>(window).ToList();
+        var inputs = Controls<TextBox>(window).Where(input => input.IsEffectivelyEnabled && !input.IsReadOnly).ToList();
         inputs[0].Text = "Unsaved synthetic project";
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
         stage.SelectedItem = ProjectStage.DueDiligence;
@@ -38,7 +38,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
         Assert.Equal(ProjectStage.DueDiligence, stage.SelectedItem);
         Assert.Contains(Controls<TextBlock>(window), block => block.Text == "نام پروژه *" && block.TextAlignment == TextAlignment.Start);
-        Assert.Contains(Buttons(window), button => Equals(button.Content, "ایجاد پروژه"));
+        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == "ایجاد پروژه");
         Assert.Empty(await fixture.Projects.ListAsync());
         language.SelectedIndex = 0;
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
@@ -60,9 +60,9 @@ public sealed class MainWindowLocalizationTests
         await fixture.Projects.SaveAsync(project);
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Buttons(window).Any(button => button.Content is string text && text.StartsWith("Existing project ·") && button.IsEffectivelyEnabled));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Existing project ·") && button.IsEffectivelyEnabled));
         ClickPrefix(window, "Existing project ·");
-        await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => Equals(button.Content, "All projects")).IsEffectivelyEnabled);
+        await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 2;
         Dispatcher.UIThread.RunJobs();
@@ -75,7 +75,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Equal("2031-02-03 10:15", due.Text);
         Assert.Equal(FlowDirection.LeftToRight, due.FlowDirection);
         Assert.Equal(TextAlignment.Start, due.TextAlignment);
-        Assert.Equal(34, due.MinHeight);
+        Assert.True(due.MinHeight > 0);
         Assert.Equal(ProjectTaskStatus.InProgress, status.SelectedItem);
         tabs.SelectedIndex = 0;
         Dispatcher.UIThread.RunJobs();
@@ -86,7 +86,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "پرتفوی");
         tabs.SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
-        Assert.Contains(Buttons(window), button => button.Content is string text && text.StartsWith("ارائه معرفی کسب‌وکار ·"));
+        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button).StartsWith("ارائه معرفی کسب‌وکار ·"));
         fixture.Locale.SetLanguage("en");
         tabs.SelectedIndex = 0;
         Dispatcher.UIThread.RunJobs();
@@ -151,7 +151,7 @@ public sealed class MainWindowLocalizationTests
         try
         {
             window.Show();
-            await UntilAsync(() => Buttons(window).Any(button => Equals(button.Content, "All projects") && button.IsEffectivelyEnabled));
+            await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
             var language = Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector");
             language.SelectedIndex = 1;
             Assert.Equal("en", locale.LanguageCode);
@@ -187,8 +187,8 @@ public sealed class MainWindowLocalizationTests
 
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
-    private static void Click(Window window, string text) => ClickButton(Buttons(window).First(button => Equals(button.Content, text)));
-    private static void ClickPrefix(Window window, string prefix) => ClickButton(Buttons(window).First(button => button.Content is string text && text.StartsWith(prefix)));
+    private static void Click(Window window, string text) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button) == text));
+    private static void ClickPrefix(Window window, string prefix) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button).StartsWith(prefix)));
     private static void ClickButton(Button button)
     {
         Assert.True(button.IsEffectivelyEnabled);

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Automation;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
@@ -30,7 +31,7 @@ public sealed class MainWindowTests
         Click(window, "Create project", last: true);
         await UntilAsync(() => HasText(window, "Synthetic investment") && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Single(await fixture.Projects.ListAsync());
-        Assert.True(HasText(window, "Pitch deck · Missing"));
+        Assert.True(HasText(window, "Pitch deck") && HasText(window, "Missing"));
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 1;
         ClickPrefix(window, "Pitch deck · Document");
@@ -39,7 +40,7 @@ public sealed class MainWindowTests
         var status = LabeledControl<ComboBox>(window, "Status (explicitly reviewed by you)");
         status.SelectedItem = RequirementStatus.Provided;
         Click(window, "Save requirement");
-        await UntilAsync(() => HasText(window, "Readiness · 0/16 complete (0%)") && !Buttons(window).Any(b => Equals(b.Content, "Save requirement")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => HasText(window, "Readiness · 0/16 complete (0%)") && !Buttons(window).Any(b => ButtonText(b) == "Save requirement") && Button(window, "All projects").IsEffectivelyEnabled);
         var project = (await fixture.Projects.ListAsync()).Single();
         Assert.Equal("Awaiting revised deck", project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Value);
         Assert.Equal(RequirementStatus.Provided, project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Status);
@@ -53,7 +54,7 @@ public sealed class MainWindowTests
         Input(window, "Task title *").Text = "Request financial plan";
         Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "2030-01-15 09:30";
         Click(window, "Save task");
-        await UntilAsync(() => Buttons(window).Any(b => b.Content is string text && text.StartsWith("Request financial plan · To do")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan · To do")) && Button(window, "All projects").IsEffectivelyEnabled);
         project = (await fixture.Projects.ListAsync()).Single();
         Assert.Equal("2030-01-15 09:30", project.Tasks.Single().DueAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
         Controls<TabControl>(window).Single().SelectedIndex = 2;
@@ -61,16 +62,16 @@ public sealed class MainWindowTests
         Input(window, "Notes").Text = "Synthetic task note";
         Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "";
         Click(window, "Save task");
-        await UntilAsync(() => Buttons(window).Any(b => Equals(b.Content, "Request financial plan · To do · No date")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => Buttons(window).Any(b => ButtonText(b) == "Request financial plan · To do · No date") && Button(window, "All projects").IsEffectivelyEnabled);
         var updatedTask = (await fixture.Projects.ListAsync()).Single().Tasks.Single();
         Assert.Equal("Synthetic task note", updatedTask.Description);
         Assert.Null(updatedTask.DueAt);
         Click(window, "Complete");
-        await UntilAsync(() => Buttons(window).Any(b => b.Content is string text && text.StartsWith("Request financial plan · Done")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan · Done")) && Button(window, "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 2;
         ClickPrefix(window, "Request financial plan · Done");
         Click(window, "Delete task");
-        await UntilAsync(() => !Buttons(window).Any(b => b.Content is string text && text.StartsWith("Request financial plan ·"))
+        await UntilAsync(() => !Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan ·"))
             && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Empty((await fixture.Projects.ListAsync()).Single().Tasks);
         window.Close();
@@ -101,7 +102,7 @@ public sealed class MainWindowTests
         ClickPrefix(window, "Pitch deck · Document");
         Assert.Contains(Controls<TextBox>(window), box => box.IsReadOnly && box.Text!.Contains("bytes · Added") && box.Text.Contains(path));
         Click(window, "Remove association");
-        await UntilAsync(() => !Buttons(window).Any(button => Equals(button.Content, "Remove association")) && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => !Buttons(window).Any(button => ButtonText(button) == "Remove association") && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Requirements.Single(r => r.DefinitionId == "pitch-deck").Files);
         Assert.True(File.Exists(path));
         Assert.Equal("Synthetic source contents", await File.ReadAllTextAsync(path));
@@ -191,7 +192,7 @@ public sealed class MainWindowTests
         Assert.All(tabs.Items.OfType<TabItem>().Take(3), tab => Assert.False(tab.IsEnabled));
         Assert.False(Button(window, "All projects").IsEffectivelyEnabled);
         Assert.False(Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
-        Assert.Contains(Controls<TextBox>(window), box => box.Text!.Contains("Synthetic live delta"));
+        Assert.Contains(Controls<TextBox>(window), box => box.Text?.Contains("Synthetic live delta") == true);
         Click(window, "Stop");
         await UntilAsync(() => fixture.Runtime.CancelRequested.Task.IsCompleted);
         Assert.True(HasText(window, "Stopping — waiting for the agent to finish cancellation…"));
@@ -247,8 +248,10 @@ public sealed class MainWindowTests
 
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
-    private static Button Button(Window window, string text) => Buttons(window).First(b => Equals(b.Content, text));
-    private static bool HasText(Window window, string text) => Controls<TextBlock>(window).Any(block => block.Text == text);
+    internal static string ButtonText(Button button) => AutomationProperties.GetName(button) is { Length: > 0 } name ? name : button.Content as string ?? "";
+    private static Button Button(Window window, string text) => Buttons(window).First(b => ButtonText(b) == text);
+    private static bool HasText(Window window, string text) => Controls<TextBlock>(window).Any(block => block.Text == text)
+        || Buttons(window).Any(button => ButtonText(button) == text);
     private static TextBox Input(Window window, string label) => LabeledControl<TextBox>(window, label);
     private static T LabeledControl<T>(Window window, string label) where T : Control
     {
@@ -258,7 +261,7 @@ public sealed class MainWindowTests
     }
     private static void Click(Window window, string text, bool last = false)
     {
-        var matches = Buttons(window).Where(b => Equals(b.Content, text));
+        var matches = Buttons(window).Where(b => ButtonText(b) == text);
         var button = last ? matches.Last() : matches.First();
         Assert.True(button.IsEffectivelyEnabled);
         button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
@@ -266,7 +269,7 @@ public sealed class MainWindowTests
     }
     private static void ClickPrefix(Window window, string prefix)
     {
-        var button = Buttons(window).First(b => b.Content is string text && text.StartsWith(prefix));
+        var button = Buttons(window).First(b => ButtonText(b).StartsWith(prefix));
         Assert.True(button.IsEffectivelyEnabled);
         button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();

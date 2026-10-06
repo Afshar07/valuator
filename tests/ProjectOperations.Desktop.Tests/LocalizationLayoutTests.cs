@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Threading;
+using ProjectOperations.Desktop.Localization;
 using Xunit;
 
 namespace ProjectOperations.Desktop.Tests;
@@ -18,27 +19,28 @@ public sealed class LocalizationLayoutTests
         var window = fixture.Window;
         window.Show();
         var deadline = DateTime.UtcNow.AddSeconds(10);
-        Button Find(string text) => window.GetLogicalDescendants().OfType<Button>().Single(button => Equals(button.Content, text));
+        Button Find(string text) => window.GetLogicalDescendants().OfType<Button>().Single(button => MainWindowTests.ButtonText(button) == text);
         while (!Find("All projects").IsEffectivelyEnabled && DateTime.UtcNow < deadline)
         {
             Dispatcher.UIThread.RunJobs();
             await Task.Delay(10);
         }
         Assert.True(Find("All projects").IsEffectivelyEnabled);
-        double Position(Button button) => button.TranslatePoint(new Point(button.Bounds.Width / 2, 0), window)!.Value.X;
+        double Position(Control control) => control.TranslatePoint(new Point(control.Bounds.Width / 2, 0), window)!.Value.X;
+        TextBlock Heading(string text) => window.GetLogicalDescendants().OfType<TextBlock>().Single(block => block.Text == text);
         void Layout() { window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
 
         Layout();
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
-        Assert.True(Position(Find("Attention")) < Position(Find("All projects")));
+        Assert.True(Position(Find("All projects")) < Position(Heading("What needs your attention?")));
         fixture.Locale.SetLanguage("fa");
         Layout();
         Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
-        Assert.True(Position(Find("نیازمند توجه")) > Position(Find("همهٔ پروژه‌ها")));
+        Assert.True(Position(Find("همهٔ پروژه‌ها")) > Position(Heading(new LocalizationService(fixture.Locale).Get("dashboard.title"))));
         fixture.Locale.SetLanguage("en");
         Layout();
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
-        Assert.True(Position(Find("Attention")) < Position(Find("All projects")));
+        Assert.True(Position(Find("All projects")) < Position(Heading("What needs your attention?")));
         window.Close();
     }
 }

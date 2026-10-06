@@ -142,3 +142,19 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 - Agent response language is an explicit preference derived from the selected
   locale, separate from stable internal instructions, action identifiers and the
   structured output contract. Never translate structured JSON after generation.
+
+## Desktop presentation system
+
+- Figma file `fZ9yGw5Nzv6n5OTl1O9PZx` is the MVP visual source of truth;
+  Dashboard (`4:2`) and Project Detail (`4:157`) establish the visual system.
+- Desktop presentation uses reusable semantic color, spacing, radius and
+  typography resources. Adapt the reference to real stored data; design examples
+  are not application defaults or new domain capabilities.
+- `MainWindow` owns the application shell, navigation and lifetime coordination;
+  focused views/components own screen construction and existing editing flows.
+  This split does not introduce a separate MVVM framework or change service boundaries.
+- RTL/LTR remains localization-owned and inherited by presentation layouts.
+  Live language switching updates controls in place, not by rebuilding screens.
+  Paths, explicit date entries and technical/context previews stay LTR.
+- Unsupported navigation and global search remain visibly disabled. Delegation
+  shortcuts populate a request; context preview and explicit consent still gate Run.
