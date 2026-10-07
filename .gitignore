@@ -1,9 +1,5 @@
-# Flutter outputs; keep routed Markdown and agent instructions tracked.
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
+# Build outputs; keep routed Markdown and agent instructions tracked.
 build/
-**/flutter/ephemeral/
 
 # .NET build outputs and local/sensitive application state.
 **/bin/
