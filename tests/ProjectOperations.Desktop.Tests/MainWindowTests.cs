@@ -284,7 +284,7 @@ public sealed class MainWindowTests
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (!condition() && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10); }
-        Assert.True(condition(), "UI did not reach the expected state within 10 seconds.");
+        Assert.True(condition(), "UI did not reach the expected state within 10 seconds." + Fixture.DescribeLastWindow());
     }
 
     private static async Task StartDelegationAsync(Window window, string projectName)
@@ -311,6 +311,15 @@ public sealed class MainWindowTests
         public MainWindow Window { get; }
         public LocaleContext Locale { get; }
         private readonly SqliteProjectRepository _repository;
+        private static MainWindow? _last;
+        /// <summary>Failure context for timeouts: the hidden exception behind the generic error banner and the visible text.</summary>
+        internal static string DescribeLastWindow()
+        {
+            if (_last is not { } window) return "";
+            var text = window.GetLogicalDescendants().OfType<TextBlock>().Where(b => b.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(b.Text))
+                .Select(b => b.Text!.Replace("\n", " ")).Distinct().Take(60);
+            return $"{Environment.NewLine}LastFailure: {window.LastFailure?.ToString() ?? "none"}{Environment.NewLine}Visible text: {string.Join(" | ", text)}";
+        }
         public Fixture()
         {
             Directory.CreateDirectory(_directory);
@@ -321,6 +330,7 @@ public sealed class MainWindowTests
             Agents = new AgentService(Projects, Runtime, new SqliteAgentJobRepository(database));
             Locale = new LocaleContext(Path.Combine(_directory, "settings.json"));
             Window = new MainWindow(Projects, Agents, () => repository.InitializeAsync(), "Synthetic test runtime — no network or provider requests.", Locale);
+            _last = Window;
         }
         public Task InitializeAsync() => _repository.InitializeAsync();
         public string CreateSourceFile()

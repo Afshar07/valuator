@@ -115,8 +115,10 @@ public sealed class MainWindow : Window, IShell
         if (clearError) HideError();
         try { await action(); }
         catch (OperationCanceledException) { ShowError("validation.operationCancelled"); }
-        catch (Exception) { ShowError("validation.operationFailed"); }
+        catch (Exception exception) { LastFailure = exception; ShowError("validation.operationFailed"); }
     }
+    /// <summary>The most recent exception reported to the user as a generic failure; retained for diagnostics and tests.</summary>
+    public Exception? LastFailure { get; private set; }
     private void LocaleChanged(object? sender, EventArgs e) => ApplyLocalePresentation();
     private void AppearanceChanged(object? sender, EventArgs e)
     {
