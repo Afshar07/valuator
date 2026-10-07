@@ -1,7 +1,8 @@
 # Desktop localization
 
 English (`en`) is the deterministic default; Persian (`fa`) uses RTL. The desktop
-locale context persists the language in `settings.json` under the app data directory.
+locale context persists the language in `settings.json` under the app data directory
+(the theme preference shares that file under its own key).
 The selector updates existing controls live, preserving unsaved edits. Switching is
 disabled during agent work to keep the request language fixed for that job.
 

@@ -1,30 +1,38 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-/// <summary>Project workspace: header, supported tabs (Overview, Requirements, Tasks, Delegate).</summary>
+/// <summary>Project workspace: header, then Overview, Requirements & files, Tasks & dates, and Delegate & review tabs.</summary>
 internal sealed class ProjectDetailView : PresentationView
 {
+    public const int DelegateTab = 3;
     private readonly Project _project;
     public TabControl Tabs { get; } = new() { Name = "ProjectTabs" };
-    public ProjectDetailView(PresentationContext context, Project project) : base(context) { _project = project; Spacing = 20; }
+    public ProjectDetailView(PresentationContext context, Project project) : base(context) { _project = project; Spacing = 16; }
 
     public async Task LoadAsync(int selectedTab)
     {
-        var delegation = new DelegationView(Context); await delegation.LoadAsync(_project);
+        var jobs = await _agents.HistoryAsync(_project.Id);
         Children.Add(Header());
         Tabs.ItemsSource = new[]
         {
-            Tab("tabs.overview", new OverviewView(Context, _project, prompt => { delegation.SetPrompt(prompt); Tabs.SelectedIndex = 3; }, tab => Tabs.SelectedIndex = tab)),
+            Tab("tabs.overview", new OverviewView(Context, _project)),
             Tab("tabs.requirements", new RequirementsView(Context, _project)),
-            Tab("tabs.tasks", new TasksView(Context, _project)),
-            Tab("tabs.delegate", delegation)
+            Tab("tabs.tasks", new TasksView(Context, _project, jobs)),
+            Tab("tabs.delegate", new DelegationView(Context, _project, jobs))
         };
-        Tabs.SelectedIndex = selectedTab; Children.Add(Tabs);
+        Tabs.SelectedIndex = selectedTab;
+        Tabs.SelectionChanged += (_, _) => { if (Tabs.SelectedIndex == DelegateTab) Context.Shell.SetAssistantOpen(true); };
+        // The tab strip's baseline rule sits behind the selected underline.
+        var host = new Panel();
+        host.Children.Add(new Border { Height = 1, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 35, 0, 0) }.Paint(Border.BackgroundProperty, "BorderDefault"));
+        host.Children.Add(Tabs);
+        Children.Add(host);
     }
 
     private TabItem Tab(string key, Control content)
@@ -35,29 +43,42 @@ internal sealed class ProjectDetailView : PresentationView
     private Control Header()
     {
         var summary = ProjectSummaries.Summarize(_project, DateTimeOffset.Now);
-        var header = new StackPanel { Spacing = 12, Name = "ProjectHeader" };
-        var breadcrumb = Label(() => $"{T("navigation.projects")}  ›  {_project.Name}", "Caption", "TextTertiary");
-        header.Children.Add(breadcrumb);
-        var identity = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 14 };
-        identity.Children.Add(new Avatar(_project.Name, size: 44));
-        var names = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        names.Children.Add(Label(() => _project.Name, "HeadingLarge"));
-        names.Children.Add(Label(() => _project.CompanyName, "Caption", "TextTertiary"));
-        Grid.SetColumn(names, 1); identity.Children.Add(names); header.Children.Add(identity);
+        var header = new StackPanel { Spacing = 10, Name = "ProjectHeader" };
+        var back = Context.IconAction("navigation.projects", _locale.LanguageCode == "fa" ? Icons.ArrowRight : Icons.ArrowLeft, () => Context.Shell.NavigateAsync("projects"), "link");
+        Bind(back, control => ((TextBlock)((StackPanel)control.Content!).Children[0]).Text = _locale.LanguageCode == "fa" ? Icons.ArrowRight : Icons.ArrowLeft);
+        header.Children.Add(back);
 
-        var meta = new WrapPanel { Orientation = Orientation.Horizontal };
-        meta.Children.Add(Meta("project.stage", new StatusPill(Context, () => EnumText(_project.Stage), "BrandPrimary")));
-        meta.Children.Add(Meta("field.status", new StatusPill(Context, () => EnumText(_project.Status), StatusPill.Tone(_project.Status))));
-        meta.Children.Add(Meta("project.owner", Label(() => string.IsNullOrWhiteSpace(_project.Owner) ? T("date.notSet") : _project.Owner, "Label")));
-        meta.Children.Add(Meta("presentation.nextMilestone", Label(() => summary.NextMilestone is null ? T("overview.noMilestone")
-            : $"{summary.NextMilestone.Title} · {Due(summary.NextMilestone.DueAt)}", "Label")));
-        header.Children.Add(meta);
+        // Identity on the start side; readiness and the assistant toggle on the end side, dropping below together when narrow.
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 16 };
+        var identity = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Bottom };
+        var titleLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        var title = Label(() => _project.Name, "Title"); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis; title.Name = "ProjectTitle";
+        titleLine.Children.Add(title);
+        var stage = Ui.Pill(Context, () => EnumText(_project.Stage), Tone.Accent); titleLine.Children.Add(stage);
+        // Long names end in an ellipsis instead of wrapping; the stage pill stays beside the title.
+        identity.SizeChanged += (_, e) => title.MaxWidth = Math.Max(80, e.NewSize.Width - stage.DesiredSize.Width - titleLine.Spacing);
+        identity.Children.Add(titleLine);
+        identity.Children.Add(Label(() => string.Join(" · ", new[] { _project.CompanyName, _project.Owner, EnumText(_project.Status) }.Where(part => !string.IsNullOrWhiteSpace(part))), "Body", "TextSecondary"));
+        row.Children.Add(identity);
+
+        var end = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Bottom };
+        var readiness = new StackPanel { Spacing = 6, Width = 220, VerticalAlignment = VerticalAlignment.Center, Name = "ReadinessSummary" };
+        var line = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        line.Children.Add(Label("project.column.readiness", "Caption", "TextSecondary"));
+        var ratio = Label(() => $"{N(summary.CompleteRequirements)}/{N(summary.TotalRequirements)}", "CaptionMedium"); ratio.Name = "ReadinessRatio";
+        Bind(ratio, control => ToolTip.SetTip(control, F("overview.readiness", summary.CompleteRequirements, summary.TotalRequirements, summary.CompletionPercentage)));
+        ratio.FontWeight = FontWeight.SemiBold; ratio.TextWrapping = TextWrapping.NoWrap; Grid.SetColumn(ratio, 1); line.Children.Add(ratio);
+        readiness.Children.Add(line); readiness.Children.Add(Ui.Progress(summary.CompletionPercentage, 6));
+        end.Children.Add(readiness);
+        end.Children.Add(AssistantButton());
+        Grid.SetColumn(end, 1); row.Children.Add(end);
+        row.SizeChanged += (_, e) =>
+        {
+            var narrow = e.NewSize.Width < 680;
+            Grid.SetColumn(end, narrow ? 0 : 1); Grid.SetRow(end, narrow ? 1 : 0);
+            end.Margin = new Thickness(0, narrow ? 12 : 0, 0, 0); end.HorizontalAlignment = narrow ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        };
+        header.Children.Add(row);
         return header;
-    }
-
-    private Control Meta(string labelKey, Control value)
-    {
-        var item = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 32, 8) };
-        item.Children.Add(Label(labelKey, "Caption", "TextTertiary")); value.HorizontalAlignment = HorizontalAlignment.Left; item.Children.Add(value); return item;
     }
 }

@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
@@ -14,7 +13,6 @@ public sealed class App : Application
 {
     public override void Initialize()
     {
-        RequestedThemeVariant = ThemeVariant.Light;
         Styles.Add(new FluentTheme());
     }
 
@@ -32,6 +30,7 @@ public sealed class App : Application
             var runtime = new OpenCodeAgentRuntime(options);
             var agents = new AgentService(projects, runtime, new SqliteAgentJobRepository(database));
             var locale = new LocaleContext(Path.Combine(directory, "settings.json"));
+            var appearance = new AppearanceContext(Path.Combine(directory, "settings.json"));
             var localization = new LocalizationService(locale);
             Uri.TryCreate(options.Url, UriKind.Absolute, out var endpoint);
             var endpointConfigured = options.IsConfigured && endpoint is not null
@@ -39,8 +38,11 @@ public sealed class App : Application
             string ConfigurationText() => endpointConfigured
                 ? localization.Format("agent.configuration.endpoint", $"\u2066{endpoint!.Scheme}://{endpoint.Host}:{endpoint.Port}\u2069")
                 : localization.Get("agent.configuration.missing");
+            var environment = new DesktopEnvironment(endpointConfigured,
+                endpointConfigured ? $"{endpoint!.Scheme}://{endpoint.Host}:{endpoint.Port}" : null,
+                string.IsNullOrWhiteSpace(options.ConfigDirectory) ? null : options.ConfigDirectory, database);
             desktop.MainWindow = new MainWindow(projects, agents, () => repository.InitializeAsync(),
-                ConfigurationText(), locale, ConfigurationText);
+                ConfigurationText(), locale, ConfigurationText, appearance, environment);
             desktop.Exit += (_, _) => runtime.Dispose();
         }
         base.OnFrameworkInitializationCompleted();

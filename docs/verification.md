@@ -41,6 +41,20 @@ assertions. Setting `PROJECTOPS_UI_CAPTURE_DIR` when running the desktop tests a
 renders Dashboard, Project Overview, requirement editor, Tasks and Delegation frames
 (English/Persian at 1440 and 800 px) with the headless Skia renderer for visual review.
 
+### Valuator redesign (2026-10-07)
+
+Verified on 2026-10-07 with .NET SDK 10.0.112 on Linux (cloud container, headless only):
+build with zero warnings/errors; `dotnet test` **121 passed** (85 domain/application/SQLite/runtime
++ 36 desktop/localization/presentation); `dotnet format --verify-no-changes` passed; no
+vulnerable packages; `git diff --check` passed. New coverage: schedule/next-deadline
+queries, theme persistence beside the language key, Calendar/Documents/Settings rendering
+from stored data in light and dark, the new-project dialog (blank template disabled), the
+pending-proposal banner leading to the assistant review tray, and the not-configured
+assistant offering no Run. With `PROJECTOPS_UI_CAPTURE_DIR` set, `DesignedSectionsTests`
+also captures dashboard, calendar, documents, settings, projects, new-project and review
+frames (`en`/light/1440, `fa`/dark/1440, `en`/dark/800). The native window, real OS
+theme following (Auto), file launching and the file picker were **not** exercised here.
+
 ## Please verify the desktop workflow
 
 For a manual visual check, run:
@@ -49,8 +63,8 @@ For a manual visual check, run:
 dotnet run --project src/ProjectOperations.Desktop
 ```
 
-1. **Create project:** create `Atlas` with company, owner and notes; choose
-   `VC Investment Review`. Reopen it from All projects. Check the four localized groups
+1. **Create project:** in All projects choose **New project**, create `Atlas` with
+   company and owner (`VC Investment Review`; Blank is disabled). Add notes in Overview. Reopen it from All projects. Check the four localized groups
    contain **6 / 6 / 3 / 1** requirements (16 total).
 2. **Requirements & files:** open Pitch deck, add a local file reference and notes.
    Check its name/path/size/added time. Remove an association and confirm the original
@@ -95,3 +109,11 @@ Language changes must not modify project names, notes, stored enum values, file
 paths, timestamps or task/proposal data. Agent prose follows the selected language,
 but action identifiers, `task-proposals`, JSON field names and ISO deadlines retain
 their stable contract. Changing language is unavailable while an agent job runs.
+
+## Appearance verification
+
+Switch Light, Dark and Auto from the sidebar or Settings. Colors change live without
+reloading screens; Auto follows the operating system. Restart and confirm the theme is
+restored while the language preference in the same `settings.json` is unchanged. Check
+AI surfaces (assistant panel, proposal tray, pending-proposal banner) stay violet and
+visually distinct from committed tasks in both themes and both directions.

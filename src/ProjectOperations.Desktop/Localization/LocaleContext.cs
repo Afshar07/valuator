@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Avalonia.Media;
 using ProjectOperations.Core.Agents;
 
@@ -28,35 +27,15 @@ public sealed class LocaleContext : ILocaleContext
     public LocaleContext(string? settingsPath = null)
     {
         this.settingsPath = settingsPath;
-        if (settingsPath is null) return;
-        try
-        {
-            var settings = JsonSerializer.Deserialize<LocaleSettings>(File.ReadAllText(settingsPath));
-            LanguageCode = Normalize(settings?.LanguageCode);
-            Culture = CreateCulture(LanguageCode);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
-        {
-            LanguageCode = "en";
-        }
+        LanguageCode = Normalize(SettingsFile.Read(settingsPath, "LanguageCode"));
+        Culture = CreateCulture(LanguageCode);
     }
 
     public void SetLanguage(string languageCode)
     {
         var normalized = Normalize(languageCode);
         if (normalized == LanguageCode) return;
-        if (settingsPath is not null)
-        {
-            var directory = Path.GetDirectoryName(Path.GetFullPath(settingsPath));
-            Directory.CreateDirectory(directory!);
-            var temporary = Path.Combine(directory!, $".locale-{Guid.NewGuid():N}.tmp");
-            try
-            {
-                File.WriteAllText(temporary, JsonSerializer.Serialize(new LocaleSettings { LanguageCode = normalized }));
-                File.Move(temporary, settingsPath, overwrite: true);
-            }
-            finally { File.Delete(temporary); }
-        }
+        SettingsFile.Write(settingsPath, "LanguageCode", normalized);
         LanguageCode = normalized;
         Culture = CreateCulture(normalized);
         Changed?.Invoke(this, EventArgs.Empty);
@@ -69,10 +48,5 @@ public sealed class LocaleContext : ILocaleContext
         var culture = new CultureInfo(code == "fa" ? "fa-IR" : "en-US");
         culture.DateTimeFormat.Calendar = new GregorianCalendar();
         return CultureInfo.ReadOnly(culture);
-    }
-
-    private sealed class LocaleSettings
-    {
-        public string? LanguageCode { get; set; }
     }
 }

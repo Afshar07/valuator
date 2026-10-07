@@ -118,8 +118,9 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   Stale running history becomes Interrupted, without claiming the backend stopped.
 - Task proposals use a bounded `task-proposals` JSON block. Approval reloads current
   project state, never overwrites metadata from the agent snapshot, and is idempotent.
-- Runtime settings come from environment variables; the desktop language preference
-  is stored locally in `settings.json` in the application data directory. There is no
+- Runtime settings come from environment variables; the desktop language and theme
+  preferences are stored locally in `settings.json` in the application data directory
+  (each preference rewrites only its own key, atomically). There is no
   accounts/settings platform. Backup, encryption and transcript-retention controls
   are not implemented.
 
@@ -146,15 +147,32 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 ## Desktop presentation system
 
 - Figma file `fZ9yGw5Nzv6n5OTl1O9PZx` is the MVP visual source of truth;
-  Dashboard (`4:2`) and Project Detail (`4:157`) establish the visual system.
-- Desktop presentation uses reusable semantic color, spacing, radius and
-  typography resources. Adapt the reference to real stored data; design examples
-  are not application defaults or new domain capabilities.
-- `MainWindow` owns the application shell, navigation and lifetime coordination;
-  focused views/components own screen construction and existing editing flows.
-  This split does not introduce a separate MVVM framework or change service boundaries.
+  Dashboard (`4:2`) and Project Detail (`4:157`) establish the visual system. The
+  Valuator design (Claude Design handoff, 2026-10-07) extends it: the light tokens keep
+  the Figma foundations with the teal accent, dark tokens are derived, and AI-owned
+  surfaces use a separate violet so proposals never read as committed data.
+- `PresentationTheme` owns every raw color, radius and type size. Views bind color
+  tokens as dynamic resources, so Light/Dark/Auto switches live (Auto follows the OS).
+  Inter (OFL, Latin subset), IRANYekanX and Phosphor icons (MIT) are bundled under
+  `Assets/Fonts` with their licenses. English uses Inter; Persian uses IRANYekanX.
+- `MainWindow` owns the shell: sidebar navigation (Needs attention, All projects,
+  Calendar, Documents, Settings), the page host, a modal layer and the assistant
+  panel. Focused views own screen construction and existing editing flows. This split
+  does not introduce a separate MVVM framework or change service boundaries.
+- The assistant is a project-scoped panel docked at the end edge (it overlays the
+  content below 1280 px). It keeps one set of request, preview and consent controls per
+  open project. Every run still needs a request, an explicit preview of the exact
+  context snapshot and consent; changed project state invalidates consent. Proposals
+  are reviewed only in the panel's tray (one approval control per proposal); Delegate &
+  review holds the job history. Without a configured runtime the panel shows setup
+  guidance and no Run action.
+- Calendar and the dashboard agenda use `ProjectSummaries.Schedule` (open dated tasks
+  and milestones of Active/OnHold projects); the projects table uses `NextDeadline`.
+  Documents lists stored file references only: existence is checked, contents are
+  never read or previewed, and open/reveal are explicit user actions. Settings shows
+  runtime configuration and the database path read-only; backup and encryption are
+  shown as not built.
 - RTL/LTR remains localization-owned and inherited by presentation layouts.
   Live language switching updates controls in place, not by rebuilding screens.
   Paths, explicit date entries and technical/context previews stay LTR.
-- Unsupported navigation and global search remain visibly disabled. Delegation
-  shortcuts populate a request; context preview and explicit consent still gate Run.
+- A blank project template is shown disabled until custom requirements can be added.
