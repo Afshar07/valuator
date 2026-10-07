@@ -106,7 +106,7 @@ public sealed class MainWindow : Window
     private async Task DashboardAsync()
     {
         _projectTabs = null; _navigation.Select("dashboard");
-        var view = new DashboardView(_context, ProjectsAsync); await view.LoadAsync(); Show(view);
+        var view = new DashboardView(_context); await view.LoadAsync(); Show(view);
     }
     private async Task ProjectsAsync()
     {

@@ -153,18 +153,6 @@ internal sealed class StatusPill : Border
     };
 }
 
-/// <summary>Progress meter that mirrors with the inherited flow direction.</summary>
-internal sealed class ReadinessBar : Grid
-{
-    public ReadinessBar(double fraction, string tone = "Success")
-    {
-        fraction = Math.Clamp(double.IsNaN(fraction) ? 0 : fraction, 0, 1); Height = 8; VerticalAlignment = VerticalAlignment.Center;
-        ColumnDefinitions.Add(new ColumnDefinition(fraction, GridUnitType.Star)); ColumnDefinitions.Add(new ColumnDefinition(1 - fraction, GridUnitType.Star));
-        Children.Add(new Border { Background = PresentationTheme.Brush("BackgroundTrack"), CornerRadius = PresentationTheme.Radius(4), [Grid.ColumnSpanProperty] = 2 });
-        if (fraction > 0) Children.Add(new Border { Background = PresentationTheme.Brush(tone), CornerRadius = PresentationTheme.Radius(4) });
-    }
-}
-
 internal sealed class ReadinessRing : Panel
 {
     public ReadinessRing(double percent, PresentationContext context)
@@ -388,27 +376,6 @@ internal sealed class TopBar : Border
         Grid.SetColumn(date, 1); grid.Children.Add(date);
         var button = context.Action("project.create", create, "primary"); button.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(button, 2); grid.Children.Add(button);
         Child = grid;
-    }
-}
-
-/// <summary>Project readiness line: avatar, name, mirrored progress bar and percentage.</summary>
-internal sealed class ReadinessRow : Button
-{
-    protected override Type StyleKeyOverride => typeof(Button);
-    public ReadinessRow(PresentationContext context, ProjectSummary summary, Func<Task> action)
-    {
-        Name = "ReadinessRow"; Classes.Add("row");
-        var project = summary.Project;
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,110,*,Auto"), ColumnSpacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        grid.Children.Add(new Avatar(project.Name));
-        var name = context.Label(() => project.Name, "Label"); name.FontWeight = FontWeight.SemiBold; name.TextTrimming = TextTrimming.CharacterEllipsis; name.TextWrapping = TextWrapping.NoWrap; name.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(name, 1); grid.Children.Add(name);
-        var bar = new ReadinessBar(summary.CompletionPercentage / 100, summary.CompletionPercentage >= 70 ? "Success" : "BrandPrimary"); Grid.SetColumn(bar, 2); grid.Children.Add(bar);
-        var percent = context.Label(() => summary.CompletionPercentage.ToString("0", context.Locale.Culture) + "%", "Label"); percent.MinWidth = 36; percent.TextAlignment = TextAlignment.End; percent.VerticalAlignment = VerticalAlignment.Center; percent.FlowDirection = FlowDirection.LeftToRight;
-        Grid.SetColumn(percent, 3); grid.Children.Add(percent); Content = grid;
-        context.Localized.Bind(this, control => AutomationProperties.SetName(control,
-            context.Text.Format("dashboard.readiness", project.Name, summary.CompleteRequirements, summary.TotalRequirements, summary.MissingRequirements.Count)));
-        Click += async (_, _) => await context.ActAsync(this, action);
     }
 }
 
