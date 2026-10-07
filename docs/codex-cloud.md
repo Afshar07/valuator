@@ -2,17 +2,10 @@
 
 ## Scope
 
-The setup installs Flutter **3.47.6 stable**, including **Dart 3.13.5**, from
-the official Linux x64 archive with a pinned SHA-256 checksum. It adds the
-Linux desktop compiler/GTK prerequisites and SQLite CLI/runtime libraries.
-No application dependencies, daemon, OpenCode installation, Android SDK,
-browser, database service, or project adapters are introduced.
-
-The existing `AGENTS.md` and `.ai/` files remain authoritative and unchanged.
-This repository currently has no `pubspec.yaml` or application implementation.
-Verification therefore builds a temporary stock Flutter desktop app outside
-the repository, with Linux and Windows runners, and removes it afterwards.
-That verifies the toolchain rather than the intended harness product.
+The setup installs the **.NET 10 SDK** from the image's Ubuntu/Debian archive
+(`dotnet-sdk-10.0`) when it is missing, then runs the full verification. It
+adds no daemon, OpenCode installation, browser, database service or display
+server. The existing `AGENTS.md` and `.ai/` files remain authoritative.
 
 ## Configure and run in Cloud
 
@@ -22,17 +15,8 @@ and the domain list are configuration inputs, not an automatically applied
 Codex environment manifest or firewall.
 
 In **Settings > Codex Cloud > Environments**, create or edit an environment
-for `Afshar07/unnamed-harness`. Use an Ubuntu/Debian Linux x64 image with root
-or passwordless sudo. In the setup conversation, ask Codex to:
-
-```text
-Run bash scripts/codex/setup.sh from the repository root. Configure limited
-internet access using scripts/codex/allowed-domains.txt, plus only the Ubuntu
-APT mirror hosts required by the selected image. Preserve AGENTS.md and .ai/.
-Review flutter doctor output and verify the Linux build before publishing.
-```
-
-For environments with script fields, set:
+for `Afshar07/unnamed-harness`. Use an Ubuntu/Debian Linux image with root
+or passwordless sudo. For environments with script fields, set:
 
 ```bash
 # Setup script
@@ -44,113 +28,45 @@ bash scripts/codex/setup.sh
 bash scripts/codex/maintenance.sh
 ```
 
-Select **Publish** or **Republish** after the setup is verified, then verify
-again in a new task. Setup scripts do not publish an environment or change
-its internet-access settings. The cloud controls must enforce the allowlist.
+Setup scripts do not publish an environment or change its internet-access
+settings. The cloud controls must enforce the allowlist.
 
-Flutter and Dart are linked into `/usr/local/bin`, so new non-login sessions
-can find them without relying on setup's exported `PATH`. Scripts source
-`scripts/codex/environment.sh` for cache paths, official package endpoints,
-and disabled analytics. For equivalent settings in an interactive shell:
+For an interactive shell with equivalent settings:
 
 ```bash
 source scripts/codex/environment.sh
-flutter doctor -v
 bash scripts/codex/verify.sh
 ```
 
-Once application source exists at the repository root, the same verification
-script selects it automatically. If it lives elsewhere, set the non-secret
-environment variable `FLUTTER_PROJECT_DIR` to its absolute path, or run:
+## What `verify.sh` runs
 
-```bash
-bash scripts/codex/verify.sh path/to/flutter/app
-```
-
-An explicitly selected path without `pubspec.yaml` fails rather than falling
-back to the template. The script runs `flutter pub get`, `flutter analyze
---no-pub`, `flutter test --no-pub` when `test/` exists, and `flutter build linux
---release --no-pub`. It also prints doctor/device diagnostics and checks Git,
-child-process execution, and an in-memory SQLite read/write operation.
-Missing tests are reported as skipped. Diagnostic doctor failures are printed;
-dependency, analysis, test, SQLite, and native build failures fail the script.
+`dotnet restore`, `dotnet build`, `dotnet test` (domain, SQLite, runtime
+fixtures and Avalonia Headless desktop tests, which need no display),
+`dotnet format --verify-no-changes` and `git diff --check`. Any failure fails
+the script. The NuGet cache lives outside the repo (`~/.cache/unnamed-harness/nuget`).
 
 ## Network policy
 
-Use **limited access**, with the eleven exact hosts in
-`scripts/codex/allowed-domains.txt`. Do not select unrestricted access or add
-a broad package-registry preset. Flutter downloads use `storage.googleapis.com`;
-Dart package resolution uses `pub.dev`. Fetch Git repositories over HTTPS
-through the managed proxy; the local origin's SSH URL may not work in Cloud.
-The setup does not rewrite Git remotes or supply Git credentials.
+Use **limited access** with the exact hosts in `scripts/codex/allowed-domains.txt`:
+NuGet (`api.nuget.org`, `www.nuget.org`, `nuget.org`), the .NET download hosts,
+GitHub, and the reserved OpenCode domains. Do not select unrestricted access.
 
-Concrete exception: APT must fetch native compiler and GTK packages from the
-image's configured Ubuntu repositories. For standard Ubuntu x64 sources,
-allow `archive.ubuntu.com` and `security.ubuntu.com` when those exact hosts are
-configured. If the image uses `azure.archive.ubuntu.com`, allow that host
-instead of adding a wildcard. Inspect `/etc/apt/sources.list` and
-`/etc/apt/sources.list.d/` in the setup container for the actual hostnames;
-do not add unused mirrors. A Debian image needs its actual Debian mirror
-hosts instead. Keep those exceptions to provisioning when the environment
-offers separate setup/runtime network policies.
+APT must fetch the SDK from the image's configured Ubuntu repositories. Allow
+`archive.ubuntu.com` and `security.ubuntu.com` when those hosts are configured
+(or the image's actual mirror, e.g. `azure.archive.ubuntu.com`); inspect
+`/etc/apt/sources.list` and `/etc/apt/sources.list.d/` rather than guessing.
+Keep these exceptions to provisioning when separate setup/runtime policies exist.
+If `builds.dotnet.microsoft.com` is blocked, the apt package is the supported path.
 
-The scripts respect inherited proxy settings and CA trust. They do not disable
-TLS checks, bypass the proxy, or install a separate network service. The
-download rejects non-HTTPS redirects and verifies the archive before extraction.
-`flutter doctor` may warn about network probes to hosts outside the allowlist;
-do not widen access just to clear unrelated Android/web diagnostics. Native
-desktop builds provide the relevant executable check.
+The scripts respect inherited proxy settings and CA trust and never disable TLS checks.
+OpenCode's domains are reserved; no runtime is started and no provider access or
+secrets are configured.
 
-OpenCode's domains are reserved for later integration. No runtime is started
-and no model-provider access or secrets are configured. Later dependencies
-(including GitHub release asset hosts), adapters, and provider endpoints need
-specific justification before extending the allowlist.
+## Platform limits
 
-## Platform and lifecycle limits
-
-- **Linux:** analysis, unit/widget tests, and native release builds are the
-  cloud target. Compilation and standard Flutter tests need no display server.
-  Running a desktop window or desktop integration tests needs a display; this
-  setup deliberately adds no Xvfb or graphical services.
-- **Windows:** Dart source and Windows runner files can be edited in Linux,
-  but `flutter build windows` requires a Windows host and Visual Studio's
-  **Desktop development with C++** workload. Enabling the Windows Flutter
-  setting does not install MSVC or provide cross-compilation. On a prepared
-  Windows machine, use the same Flutter version, run `flutter config
-  --enable-windows-desktop`, then doctor, pub get, analyze, test, and
-  `flutter build windows --release`. This Linux installer does not provision
-  a Windows machine.
-- **SDK changes:** change the version, revision, and checksum together in
-  `flutter-version.sh`. Reset the cloud cache and reconcile existing
-  `/usr/local/bin/flutter` and `dart` links when changing versions. Setup refuses
-  to overwrite another toolchain or reuse a mismatched revision.
-- **Local integrations:** Git, subprocesses, filesystem operations, and SQLite
-  stay local to the container. Future adapters inherit its permissions and
-  network limits; tools on the user's Windows computer are not available in
-  the cloud. No adapter-specific toolchains are preinstalled by this setup.
-- **Persistence:** SDK and Pub caches are outside the repo. Cloud container
-  state is not a durable application database. Persist real work through Git
-  and export needed artifacts before the environment is discarded.
-
-## Verification evidence (2026-10-05)
-
-Preparation ran in a local Windows Codex desktop session. Flutter and Dart
-were absent, no installed WSL distribution was available, and no cloud
-executor was attached. Therefore cloud installation, `flutter doctor`, Pub
-resolution, Dart analysis, Flutter tests, and desktop builds are **not yet
-verified**. The setup and verification scripts must run in the cloud setup
-conversation before claiming desktop readiness.
-
-Local checks passed: Bash syntax for every script, `git diff --check`, and
-unchanged tracked `AGENTS.md`/`.ai/` content. Both setup and verification
-correctly exited with an unsupported-host message on Windows, before executing
-Linux installation or Flutter commands. The pinned SDK metadata and archive
-checksum were retrieved from the official release manifest.
-
-Official references:
-
-- [Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environments)
-- [Legacy setup and maintenance scripts](https://learn.chatgpt.com/docs/environments/cloud-environment)
-- [Flutter Linux prerequisites](https://docs.flutter.dev/platform-integration/linux/setup)
-- [Flutter Windows prerequisites](https://docs.flutter.dev/platform-integration/windows/setup)
-- [Official Linux release manifest](https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json)
+- **Linux (cloud):** restore, build, tests and format checks. Running the native
+  desktop window needs a display and is not covered.
+- **Windows:** the shippable `.exe` is built by
+  [`.github/workflows/release.yml`](../.github/workflows/release.yml) on a
+  Windows runner when a GitHub release is published.
+- **Persistence:** container state is not durable. Persist real work through Git.

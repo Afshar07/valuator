@@ -4,7 +4,13 @@ A local, single-window VC investment project assistant built with C#/.NET,
 Avalonia and SQLite. OpenCode is an optional, explicitly configured agent runtime,
 not the application's source of project truth.
 
-## Run
+## Download
+
+Each [GitHub release](https://github.com/Afshar07/unnamed-harness/releases) includes a
+self-contained Windows build, `ProjectOperations-<tag>-win-x64.exe`. It needs no .NET
+install. The build is unsigned, so Windows SmartScreen may warn on first launch.
+
+## Run from source
 
 Install the .NET 10 SDK, then:
 
@@ -64,12 +70,22 @@ src/ProjectOperations.Desktop         Avalonia screens and composition root
 tests/                               Native unit/integration and desktop tests
 ```
 
+## Releases
+
+Publishing a GitHub release runs `.github/workflows/release.yml` on a Windows runner:
+restore, build, test, then a self-contained single-file `win-x64` publish of
+`ProjectOperations.Desktop`, attached to the release as
+`ProjectOperations-<tag>-win-x64.exe`. A semver tag (`v1.2.3`) sets the app version.
+
 ## Checks
 
 ```sh
 dotnet test ProjectOperations.slnx
 dotnet format ProjectOperations.slnx --verify-no-changes
 ```
+
+`bash scripts/codex/verify.sh` runs restore, build, tests, format and whitespace checks
+in one step on Linux (see [cloud environment setup](docs/codex-cloud.md)).
 
 Tests use isolated temporary databases and synthetic project data. Runtime transport
 tests do not prove provider authentication or a live model response. Verification

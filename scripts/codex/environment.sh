@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 # Source this file when using the scripts from a fresh, non-login shell.
 HARNESS_REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$HARNESS_REPO_ROOT/scripts/codex/flutter-version.sh"
-export FLUTTER_ROOT="$HOME/.local/share/unnamed-harness/flutter/$FLUTTER_VERSION/flutter"
-export PUB_CACHE="$HOME/.cache/unnamed-harness/pub"
-export PUB_HOSTED_URL=https://pub.dev
-export FLUTTER_STORAGE_BASE_URL=https://storage.googleapis.com
-export PATH="$FLUTTER_ROOT/bin:$PATH"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_NOLOGO=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export NUGET_PACKAGES="${NUGET_PACKAGES:-$HOME/.cache/unnamed-harness/nuget}"
 export CI=true
-export FLUTTER_SUPPRESS_ANALYTICS=true
-export DART_SUPPRESS_ANALYTICS=true
