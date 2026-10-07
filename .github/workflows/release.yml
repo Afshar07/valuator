@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ProjectOperations.slnx
+
+      - name: Build
+        run: dotnet build ProjectOperations.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test ProjectOperations.slnx --no-build --configuration Release
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
+            echo "Tag '$GITHUB_REF_NAME' is not semver; building with the default version." >&2
+            version=""
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Publish desktop app (win-x64, self-contained, single file)
+        shell: bash
+        run: |
+          args=()
+          if [[ -n "${{ steps.version.outputs.value }}" ]]; then
+            args+=("-p:Version=${{ steps.version.outputs.value }}")
+          fi
+          dotnet publish src/ProjectOperations.Desktop/ProjectOperations.Desktop.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:DebugType=none \
+            "${args[@]}" \
+            --output publish
+
+      - name: Name the asset after the release tag
+        shell: bash
+        run: mv publish/ProjectOperations.Desktop.exe "ProjectOperations-${GITHUB_REF_NAME}-win-x64.exe"
+
+      - name: Attach .exe to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "ProjectOperations-${GITHUB_REF_NAME}-win-x64.exe" --clobber
