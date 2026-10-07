@@ -155,12 +155,7 @@ public sealed class DesignedSectionsTests
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static Button Nav(Window window, string name) => Controls<Button>(window).Single(button => button.Name == name);
     private static Button Segment(Window window, string label) => Controls<Button>(window).First(button => button.Classes.Contains("segment") && MainWindowTests.ButtonText(button) == label);
-    private static void Click(Button button)
-    {
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
+    private static void Click(Button button) => UiWait.Click(button);
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

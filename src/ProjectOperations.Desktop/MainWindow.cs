@@ -115,8 +115,10 @@ public sealed class MainWindow : Window, IShell
         if (clearError) HideError();
         try { await action(); }
         catch (OperationCanceledException) { ShowError("validation.operationCancelled"); }
-        catch (Exception) { ShowError("validation.operationFailed"); }
+        catch (Exception exception) { LastFailure = exception; ShowError("validation.operationFailed"); }
     }
+    /// <summary>The most recent exception reported to the user as a generic failure; retained for diagnostics and tests.</summary>
+    public Exception? LastFailure { get; private set; }
     private void LocaleChanged(object? sender, EventArgs e) => ApplyLocalePresentation();
     private void AppearanceChanged(object? sender, EventArgs e)
     {
@@ -228,11 +230,15 @@ public sealed class MainWindow : Window, IShell
         finally
         {
             _running = null; _runCancellation.Dispose(); _runCancellation = null;
-            SetNavigationEnabled(true); _page.IsEnabled = true;
-            if (_projectTabs is not null)
-                foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = true;
+            // Reload while still locked: unlocking first would let the user act on screens that the pending reload then replaces.
             // A window that is closing only waits for the runtime outcome; it does not reload screens.
-            if (!_closeRequested) await GuardAsync(refresh, clearError: false);
+            try { if (!_closeRequested) await GuardAsync(refresh, clearError: false); }
+            finally
+            {
+                SetNavigationEnabled(true); _page.IsEnabled = true;
+                if (_projectTabs is not null)
+                    foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = true;
+            }
         }
     }
     public void CancelRun() => _runCancellation?.Cancel();

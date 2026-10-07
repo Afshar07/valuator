@@ -197,7 +197,7 @@ public sealed class MainWindowTests
         Assert.All(tabs.Items.OfType<TabItem>().Take(3), tab => Assert.False(tab.IsEnabled));
         Assert.False(Button(window, "All projects").IsEffectivelyEnabled);
         Assert.False(Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
-        Assert.Contains(Controls<TextBox>(window), box => box.Text?.Contains("Synthetic live delta") == true);
+        await UntilAsync(() => Controls<TextBox>(window).Any(box => box.Text?.Contains("Synthetic live delta") == true));
         Click(window, "Stop");
         await UntilAsync(() => fixture.Runtime.CancelRequested.Task.IsCompleted);
         Assert.True(HasText(window, "Stopping — waiting for the agent to finish cancellation…"));
@@ -265,26 +265,13 @@ public sealed class MainWindowTests
         var parent = Assert.IsType<StackPanel>(block.Parent);
         return Assert.IsType<T>(parent.Children[parent.Children.IndexOf(block) + 1]);
     }
-    private static void Click(Window window, string text, bool last = false)
-    {
-        var matches = Buttons(window).Where(b => ButtonText(b) == text);
-        var button = last ? matches.Last() : matches.First();
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-    private static void ClickPrefix(Window window, string prefix)
-    {
-        var button = Buttons(window).First(b => ButtonText(b).StartsWith(prefix));
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
+    private static void Click(Window window, string text, bool last = false) => UiWait.Click(window, b => ButtonText(b) == text, $"\"{text}\"", last);
+    private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, b => ButtonText(b).StartsWith(prefix), $"starting with \"{prefix}\"");
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (!condition() && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10); }
-        Assert.True(condition(), "UI did not reach the expected state within 10 seconds.");
+        Assert.True(condition(), "UI did not reach the expected state within 10 seconds." + Fixture.DescribeLastWindow());
     }
 
     private static async Task StartDelegationAsync(Window window, string projectName)
@@ -311,6 +298,15 @@ public sealed class MainWindowTests
         public MainWindow Window { get; }
         public LocaleContext Locale { get; }
         private readonly SqliteProjectRepository _repository;
+        private static MainWindow? _last;
+        /// <summary>Failure context for timeouts: the hidden exception behind the generic error banner and the visible text.</summary>
+        internal static string DescribeLastWindow()
+        {
+            if (_last is not { } window) return "";
+            var text = window.GetLogicalDescendants().OfType<TextBlock>().Where(b => b.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(b.Text))
+                .Select(b => b.Text!.Replace("\n", " ")).Distinct().Take(60);
+            return $"{Environment.NewLine}LastFailure: {window.LastFailure?.ToString() ?? "none"}{Environment.NewLine}Visible text: {string.Join(" | ", text)}";
+        }
         public Fixture()
         {
             Directory.CreateDirectory(_directory);
@@ -321,6 +317,7 @@ public sealed class MainWindowTests
             Agents = new AgentService(Projects, Runtime, new SqliteAgentJobRepository(database));
             Locale = new LocaleContext(Path.Combine(_directory, "settings.json"));
             Window = new MainWindow(Projects, Agents, () => repository.InitializeAsync(), "Synthetic test runtime — no network or provider requests.", Locale);
+            _last = Window;
         }
         public Task InitializeAsync() => _repository.InitializeAsync();
         public string CreateSourceFile()
