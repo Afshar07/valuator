@@ -28,6 +28,7 @@ public sealed class MainWindowLocalizationTests
         Click(window, "All projects");
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "New project" && button.IsEffectivelyEnabled));
         Click(window, "New project");
+        await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Text == "Project name *"));
         var inputs = new List<TextBox> { LabeledInput(window, "Project name *") };
         inputs[0].Text = "Unsaved synthetic project";
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
