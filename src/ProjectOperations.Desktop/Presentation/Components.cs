@@ -1,10 +1,9 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
-using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
 
@@ -17,6 +16,8 @@ internal sealed class AdaptiveGrid : Panel
     public double Gap { get; set; } = 16;
     /// <summary>Optional relative column widths, used only when every child fits on a single row.</summary>
     public double[]? Weights { get; set; }
+    /// <summary>Stretch each child to its row height (cards in a row line up) or keep their own height.</summary>
+    public bool StretchRows { get; set; }
 
     private List<Control> Items => Children.Where(child => child.IsVisible).ToList();
     private int Columns(double width, int count)
@@ -59,7 +60,8 @@ internal sealed class AdaptiveGrid : Panel
                 row = Math.Max(row, items[start + column].DesiredSize.Height);
             for (var column = 0; column < columns && start + column < items.Count; column++)
             {
-                items[start + column].Arrange(new Rect(x, y, widths[column], row)); x += widths[column] + Gap;
+                var item = items[start + column];
+                item.Arrange(new Rect(x, y, widths[column], StretchRows ? row : item.DesiredSize.Height)); x += widths[column] + Gap;
             }
             y += row + Gap;
         }
@@ -67,315 +69,371 @@ internal sealed class AdaptiveGrid : Panel
     }
 }
 
-internal sealed class Avatar : Border
+/// <summary>Small layout and decoration factories shared by every screen.</summary>
+internal static class Ui
 {
-    public Avatar(string name, string tone = "BrandPrimary", string soft = "BrandSoft", double size = 34)
+    public static Border Card(Control? child = null, Thickness? padding = null) => new Border
     {
-        Width = size; Height = size; CornerRadius = PresentationTheme.Radius(size / 2); Background = PresentationTheme.Brush(soft); VerticalAlignment = VerticalAlignment.Center;
-        var initial = string.IsNullOrWhiteSpace(name) ? "△" : name.Trim().EnumerateRunes().First().ToString();
-        Child = PresentationTheme.Typeset(new TextBlock { Text = initial, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }, "HeadingSmall", tone);
+        BorderThickness = new Thickness(1),
+        CornerRadius = new CornerRadius(PresentationTheme.RadiusCard),
+        Padding = padding ?? new Thickness(16, 14),
+        ClipToBounds = true,
+        Child = child
+    }.Paint(Border.BackgroundProperty, "BackgroundCard").Paint(Border.BorderBrushProperty, "BorderDefault").CardShadowed();
+
+    /// <summary>A row that sits inside a card list: full-bleed, separated from the previous row by a subtle top rule.</summary>
+    public static Border Separated(Control child, bool first = false) => new Border
+    {
+        BorderThickness = new Thickness(0, first ? 0 : 1, 0, 0),
+        Child = child
+    }.Paint(Border.BorderBrushProperty, "BorderSubtle");
+
+    public static Border Rule() => new Border { Height = 1 }.Paint(Border.BackgroundProperty, "BorderSubtle");
+
+    public static Border Dot(double size, string color, bool square = false) => new Border
+    {
+        Width = size,
+        Height = size,
+        CornerRadius = new CornerRadius(square ? 1.5 : size / 2),
+        VerticalAlignment = VerticalAlignment.Center
+    }.Paint(Border.BackgroundProperty, color);
+
+    public static Border Pill(PresentationContext context, Func<string> caption, Tone tone, string? icon = null)
+    {
+        var text = context.Label(caption, "Micro", tone.Foreground); text.TextWrapping = TextWrapping.NoWrap; text.TextTrimming = TextTrimming.CharacterEllipsis;
+        Control content = text;
+        if (icon is not null)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
+            row.Children.Add(Icons.Glyph(icon, 11, tone.Foreground, IconWeight.Bold)); row.Children.Add(text); content = row;
+        }
+        return new Border
+        {
+            CornerRadius = new CornerRadius(PresentationTheme.RadiusPill),
+            Padding = new Thickness(8, 2),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = content
+        }.Paint(Border.BackgroundProperty, tone.Background);
+    }
+
+    /// <summary>Thin rounded progress bar; the fill grows from the start edge in either flow direction.</summary>
+    public static Control Progress(double percent, double height = 5)
+    {
+        var value = Math.Clamp(percent, 0, 100);
+        var grid = new Grid { Height = height, VerticalAlignment = VerticalAlignment.Center, ColumnDefinitions = new ColumnDefinitions($"{Math.Max(value, 0.0001):0.####}*,{Math.Max(100 - value, 0.0001):0.####}*") };
+        var track = new Border { CornerRadius = new CornerRadius(height / 2) }.Paint(Border.BackgroundProperty, "BackgroundTrack");
+        Grid.SetColumnSpan(track, 2); grid.Children.Add(track);
+        if (value > 0) grid.Children.Add(new Border { CornerRadius = new CornerRadius(height / 2) }.Paint(Border.BackgroundProperty, "Accent"));
+        return grid;
+    }
+
+    /// <summary>Banner strip (warning, AI pending, info) with a leading icon.</summary>
+    public static Control Banner(Control content, string icon, string iconColor, string background, string? border = null, bool dashed = false)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10 };
+        var glyph = Icons.Glyph(icon, 17, iconColor); glyph.VerticalAlignment = VerticalAlignment.Top; glyph.Margin = new Thickness(0, 1, 0, 0);
+        grid.Children.Add(glyph); Grid.SetColumn(content, 1); content.VerticalAlignment = VerticalAlignment.Center; grid.Children.Add(content);
+        if (dashed) return new DashedFrame(grid, border ?? "BorderDefault", background, PresentationTheme.RadiusMedium, new Thickness(14, 10));
+        var banner = new Border { CornerRadius = new CornerRadius(PresentationTheme.RadiusMedium), Padding = new Thickness(14, 10), Child = grid }
+            .Paint(Border.BackgroundProperty, background);
+        if (border is not null) { banner.BorderThickness = new Thickness(1); banner.Paint(Border.BorderBrushProperty, border); }
+        return banner;
+    }
+
+    /// <summary>Icon square used for project initials and file types.</summary>
+    public static Border Tile(Control content, double size = 30, double radius = 8, string background = "BackgroundTrack") => new Border
+    {
+        Width = size,
+        Height = size,
+        CornerRadius = new CornerRadius(radius),
+        VerticalAlignment = VerticalAlignment.Center,
+        Child = content
+    }.Paint(Border.BackgroundProperty, background);
+
+    public static Border Initial(string name, double size = 30)
+    {
+        var initial = string.IsNullOrWhiteSpace(name) ? "·" : name.Trim().EnumerateRunes().First().ToString();
+        var text = PresentationTheme.Typeset(new TextBlock { Text = initial, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }, "BodyStrong", "TextSecondary");
+        return Tile(text, size);
+    }
+
+    /// <summary>Card header: title, optional muted count and optional trailing action.</summary>
+    public static Grid Header(PresentationContext context, Func<string> title, Control? action = null, Func<string>? count = null)
+    {
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, MinHeight = 26 };
+        var heading = context.Label(title, "Heading"); heading.VerticalAlignment = VerticalAlignment.Center;
+        if (count is not null)
+        {
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+            line.Children.Add(heading); var muted = context.Label(count, "MetaMedium", "TextTertiary"); muted.FontSize = 14; muted.VerticalAlignment = VerticalAlignment.Center; line.Children.Add(muted);
+            header.Children.Add(line);
+        }
+        else header.Children.Add(heading);
+        if (action is not null) { action.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(action, 1); header.Children.Add(action); }
+        return header;
     }
 }
 
+/// <summary>Rounded frame with a dashed outline: marks AI proposals and not-yet-built concepts.</summary>
+internal sealed class DashedFrame : Panel
+{
+    public DashedFrame(Control child, string stroke, string? background, double radius, Thickness padding, double thickness = 1)
+    {
+        var outline = new Avalonia.Controls.Shapes.Rectangle { RadiusX = radius, RadiusY = radius, StrokeThickness = thickness, StrokeDashArray = [4, 3], IsHitTestVisible = false };
+        outline.Paint(Avalonia.Controls.Shapes.Shape.StrokeProperty, stroke);
+        var body = new Border { CornerRadius = new CornerRadius(radius), Padding = padding, Child = child };
+        if (background is not null) body.Paint(Border.BackgroundProperty, background);
+        Children.Add(body); Children.Add(outline);
+    }
+}
+
+/// <summary>Padded card with a header and a body stack.</summary>
 internal sealed class SectionCard : Border
 {
-    public StackPanel Body { get; } = new() { Spacing = 12 };
-    public SectionCard(PresentationContext context, string title, Control? action = null) : this(context, () => context.Text.Get(title), action) { }
-    public SectionCard(PresentationContext context, Func<string> title, Control? action = null)
+    public StackPanel Body { get; } = new() { Spacing = 10 };
+    public SectionCard(PresentationContext context, string title, Control? action = null, Func<string>? count = null) : this(context, () => context.Text.Get(title), action, count) { }
+    public SectionCard(PresentationContext context, Func<string> title, Control? action = null, Func<string>? count = null)
     {
-        Classes.Add("sectionCard"); Background = PresentationTheme.Brush("BackgroundCard"); BorderBrush = PresentationTheme.Brush("BorderDefault");
-        BorderThickness = new Thickness(1); CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusLarge); Padding = new Thickness(20);
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, MinHeight = 32 };
-        var heading = context.Heading(title, "HeadingSmall"); heading.VerticalAlignment = VerticalAlignment.Center; header.Children.Add(heading);
-        if (action is not null) { action.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(action, 1); header.Children.Add(action); }
-        Body.Children.Add(header); Child = Body;
+        Classes.Add("sectionCard"); BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(PresentationTheme.RadiusCard); Padding = new Thickness(16, 14);
+        this.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault").CardShadowed();
+        Body.Children.Add(Ui.Header(context, title, action, count)); Child = Body;
     }
-    public static Button Link(PresentationContext context, string key, Func<Task> action)
+}
+
+/// <summary>Card whose rows run edge to edge, separated by rules (lists and tables).</summary>
+internal sealed class ListCard : Border
+{
+    private readonly StackPanel _rows = new();
+    public ListCard(PresentationContext context, Func<string>? title = null, Control? action = null, Func<string>? count = null, Control? columnHeader = null)
     {
-        var button = context.Action(key, action); button.Classes.Add("link"); return button;
+        BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(PresentationTheme.RadiusCard); ClipToBounds = true;
+        this.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault").CardShadowed();
+        var stack = new StackPanel();
+        if (title is not null) stack.Children.Add(new Border { Padding = new Thickness(16, 12, 16, 10), Child = Ui.Header(context, title, action, count) });
+        if (columnHeader is not null) stack.Children.Add(columnHeader);
+        stack.Children.Add(_rows); Child = stack;
+        _hasHeading = title is not null && columnHeader is null;
+    }
+    private readonly bool _hasHeading;
+    public int Count => _rows.Children.Count;
+    public void Add(Control row) => _rows.Children.Add(Ui.Separated(row, first: _rows.Children.Count == 0 && !_hasHeading));
+    /// <summary>Muted band that groups the rows below it (e.g. Active / Done).</summary>
+    public void AddGroup(PresentationContext context, Func<string> label)
+    {
+        var text = context.Label(label, "MetaMedium", "TextSecondary");
+        _rows.Children.Add(new Border { Padding = new Thickness(16, 6), BorderThickness = new Thickness(0, 1, 0, 0), Child = text }
+            .Paint(BackgroundProperty, "BackgroundMuted").Paint(BorderBrushProperty, "BorderSubtle"));
+    }
+    public void Clear() => _rows.Children.Clear();
+}
+
+/// <summary>Column header band for table-like list cards.</summary>
+internal sealed class TableHeader : Border
+{
+    public TableHeader(PresentationContext context, string columns, params string[] keys)
+    {
+        Padding = new Thickness(16, 9); BorderThickness = new Thickness(0, 0, 0, 1);
+        this.Paint(BackgroundProperty, "BackgroundMuted").Paint(BorderBrushProperty, "BorderDefault");
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
+        for (var index = 0; index < keys.Length; index++)
+        {
+            if (keys[index].Length == 0) continue;
+            var key = keys[index]; var label = context.Label(() => context.Text.Get(key), "MetaMedium", "TextSecondary"); label.TextWrapping = TextWrapping.NoWrap;
+            label.TextTrimming = TextTrimming.CharacterEllipsis; Grid.SetColumn(label, index); grid.Children.Add(label);
+        }
+        Child = grid;
     }
 }
 
 internal sealed class StatCard : Border
 {
-    public StatCard(PresentationContext context, string name, Func<string> title, int value, string tone, Func<string> hint)
+    public StatCard(PresentationContext context, string name, string labelKey, int value, string icon, string iconColor, string numberColor = "TextPrimary")
     {
-        Name = name; MinHeight = 116;
-        Background = PresentationTheme.Brush("BackgroundCard"); BorderBrush = PresentationTheme.Brush("BorderDefault"); BorderThickness = new Thickness(1);
-        CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusLarge); Padding = new Thickness(16);
-        var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnDefinitions = new ColumnDefinitions("Auto,*"), RowSpacing = 12, ColumnSpacing = 12 };
-        var icon = new Border
-        {
-            Width = 30,
-            Height = 30,
-            CornerRadius = PresentationTheme.Radius(9),
-            Background = PresentationTheme.Brush(PresentationTheme.SoftToken(tone)),
-            Child = new Ellipse { Width = 10, Height = 10, Fill = PresentationTheme.Brush(tone), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
-        };
-        grid.Children.Add(icon);
-        var labels = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        labels.Children.Add(context.Label(title, "Label")); labels.Children.Add(context.Label(hint, "Caption", tone));
-        Grid.SetColumn(labels, 1); grid.Children.Add(labels);
-        var number = context.Heading(() => value.ToString("N0", context.Locale.Culture), "HeadingMedium"); number.Name = "StatValue";
-        Grid.SetRow(number, 1); Grid.SetColumnSpan(number, 2); grid.Children.Add(number);
-        Child = grid;
+        Name = name; BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(PresentationTheme.RadiusCard); Padding = new Thickness(16, 14);
+        this.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault").CardShadowed();
+        var stack = new StackPanel { Spacing = 6 };
+        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        line.Children.Add(Icons.Glyph(icon, 15, iconColor)); var label = context.Label(labelKey, "Caption", "TextSecondary"); label.VerticalAlignment = VerticalAlignment.Center; line.Children.Add(label);
+        stack.Children.Add(line);
+        var number = context.Label(() => value.ToString("N0", context.Locale.Culture), "Stat", numberColor); number.Name = "StatValue"; stack.Children.Add(number);
+        Child = stack;
     }
 }
 
-internal sealed class StatusPill : Border
-{
-    public StatusPill(PresentationContext context, Func<string> caption, string tone)
-    {
-        Background = PresentationTheme.Brush(PresentationTheme.SoftToken(tone)); CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusPill);
-        Padding = new Thickness(12, 5); HorizontalAlignment = HorizontalAlignment.Left; VerticalAlignment = VerticalAlignment.Center;
-        var text = context.Label(caption, "Label", tone); text.TextWrapping = TextWrapping.NoWrap; text.TextTrimming = TextTrimming.CharacterEllipsis; Child = text;
-    }
-    public static string Tone(RequirementStatus status) => status switch
-    {
-        RequirementStatus.Missing => "Error",
-        RequirementStatus.Provided => "BrandPrimary",
-        RequirementStatus.NeedsReview => "Warning",
-        _ => "Success"
-    };
-    public static string Tone(ProjectStatus status) => status switch
-    {
-        ProjectStatus.Active => "Success",
-        ProjectStatus.OnHold => "Warning",
-        ProjectStatus.Completed => "BrandPrimary",
-        _ => "Neutral"
-    };
-    public static string Tone(ProjectTaskStatus status, bool overdue) => overdue ? "Error" : status switch
-    {
-        ProjectTaskStatus.Done => "Success",
-        ProjectTaskStatus.InProgress => "BrandPrimary",
-        ProjectTaskStatus.Cancelled => "Neutral",
-        _ => "Neutral"
-    };
-}
-
-internal sealed class ReadinessRing : Panel
-{
-    public ReadinessRing(double percent, PresentationContext context)
-    {
-        Width = 68; Height = 68; var sweep = Math.Clamp(percent, 0, 100) * 3.6;
-        Children.Add(new Ellipse { Stroke = PresentationTheme.Brush("BackgroundTrack"), StrokeThickness = 8, Width = 60, Height = 60 });
-        if (sweep > 0) Children.Add(new Arc
-        {
-            Stroke = PresentationTheme.Brush("Success"),
-            StrokeThickness = 8,
-            StrokeLineCap = PenLineCap.Round,
-            Width = 60,
-            Height = 60,
-            StartAngle = -90,
-            SweepAngle = Math.Min(sweep, 359.9)
-        });
-        var label = PresentationTheme.Typeset(new TextBlock { Text = percent.ToString("0", context.Locale.Culture) + "%", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FlowDirection = FlowDirection.LeftToRight }, "HeadingSmall");
-        Children.Add(label);
-    }
-}
-
-/// <summary>Base whole-row button: leading visual, title/subtitle, optional status pill and trailing value.</summary>
+/// <summary>Whole-row button inside a list card; the accessible name describes the row for assistive technology and tests.</summary>
 internal class ListRow : Button
 {
     protected override Type StyleKeyOverride => typeof(Button);
-    public ListRow(PresentationContext context, Control leading, Func<string> title, Func<string>? subtitle, Func<string>? pill, string tone,
-        Func<string>? trailing, string trailingTone, Func<string> accessibleName, Func<Task> action)
+    public ListRow(PresentationContext context, Control content, Func<string> accessibleName, Func<Task> action)
     {
-        Classes.Add("row");
+        Classes.Add("row"); Content = content;
+        context.Localized.Bind(this, control => AutomationProperties.SetName(control, accessibleName()));
+        Click += async (_, _) => await context.ActAsync(this, action);
+    }
+
+    /// <summary>Leading visual, title/subtitle stack, optional pill and trailing text.</summary>
+    public static Grid Layout(PresentationContext context, Control? leading, Func<string> title, Func<string>? subtitle, Control? pill, Func<string>? trailing, string trailingColor = "TextSecondary")
+    {
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), ColumnSpacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        grid.Children.Add(leading);
-        var labels = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        var heading = context.Label(title, "Label"); heading.FontWeight = FontWeight.SemiBold; heading.FontSize = 13; labels.Children.Add(heading);
-        if (subtitle is not null) labels.Children.Add(context.Label(subtitle, "Caption", "TextTertiary"));
+        if (leading is not null) grid.Children.Add(leading);
+        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        labels.Children.Add(context.Label(title, "BodyMedium"));
+        if (subtitle is not null) labels.Children.Add(context.Label(subtitle, "Caption", "TextSecondary"));
         Grid.SetColumn(labels, 1); grid.Children.Add(labels);
-        if (pill is not null) { var item = new StatusPill(context, pill, tone); Grid.SetColumn(item, 2); grid.Children.Add(item); }
+        if (pill is not null) { Grid.SetColumn(pill, 2); grid.Children.Add(pill); }
         if (trailing is not null)
         {
-            var value = context.Label(trailing, "Label", trailingTone); value.TextWrapping = TextWrapping.NoWrap; value.VerticalAlignment = VerticalAlignment.Center; value.MinWidth = 44;
-            value.TextAlignment = TextAlignment.End; Grid.SetColumn(value, 3); grid.Children.Add(value);
+            var value = context.Label(trailing, "Caption", trailingColor); value.TextWrapping = TextWrapping.NoWrap; value.VerticalAlignment = VerticalAlignment.Center; value.TextAlignment = TextAlignment.End;
+            Grid.SetColumn(value, 3); grid.Children.Add(value);
         }
-        Content = grid; context.Localized.Bind(this, control => AutomationProperties.SetName(control, accessibleName()));
-        Click += async (_, _) => await context.ActAsync(this, action);
+        return grid;
     }
 }
 
-internal sealed class ProjectRow : ListRow
+internal static class StatusVisuals
 {
-    public ProjectRow(PresentationContext context, Project project, Func<Task> action, Func<string>? trailing = null, bool statusPill = false)
-        : base(context, new Avatar(project.Name), () => project.Name,
-            () => statusPill ? Join(project.CompanyName, context.EnumText(project.Stage)) : project.CompanyName,
-            () => statusPill ? context.EnumText(project.Status) : context.EnumText(project.Stage),
-            statusPill ? StatusPill.Tone(project.Status) : "BrandPrimary", trailing, "TextPrimary",
-            () => $"{project.Name} · {project.CompanyName} · {context.EnumText(project.Stage)} · {context.EnumText(project.Status)} · {project.Owner}", action)
-    { Name = "ProjectRow"; }
-    private static string Join(string first, string second) => string.IsNullOrWhiteSpace(first) ? second : first + " · " + second;
+    public static (string Icon, IconWeight Weight, Tone Tone) Requirement(RequirementStatus status) => status switch
+    {
+        RequirementStatus.Complete => (Icons.CheckCircle, IconWeight.Fill, Tone.Success),
+        RequirementStatus.Provided => (Icons.CircleHalf, IconWeight.Regular, Tone.Accent),
+        RequirementStatus.NeedsReview => (Icons.WarningCircle, IconWeight.Regular, Tone.Warning),
+        _ => (Icons.CircleDashed, IconWeight.Regular, Tone.Error)
+    };
 
-    /// <summary>Row for attention items that belong to a project but are not the project itself.</summary>
-    public ProjectRow(PresentationContext context, string projectName, Func<string> title, Func<string>? detail, Func<string> pill, string tone,
-        Func<string> dueText, Func<string> accessibleName, Func<Task> action)
-        : base(context, new Avatar(projectName), title, detail, pill, tone, dueText, tone, accessibleName, action) { Name = "PriorityRow"; }
+    public static Tone Project(ProjectStatus status) => status switch
+    {
+        ProjectStatus.Active => Tone.Success,
+        ProjectStatus.OnHold => Tone.Neutral,
+        ProjectStatus.Completed => Tone.Accent,
+        _ => Tone.Neutral
+    };
+
+    public static (string Icon, IconWeight Weight, string Color) Task(ProjectTaskStatus status) => status switch
+    {
+        ProjectTaskStatus.Done => (Icons.CheckCircle, IconWeight.Fill, "Success"),
+        ProjectTaskStatus.Cancelled => (Icons.Prohibit, IconWeight.Regular, "TextTertiary"),
+        ProjectTaskStatus.InProgress => (Icons.CircleHalf, IconWeight.Regular, "Accent"),
+        _ => (Icons.Circle, IconWeight.Regular, "TextTertiary")
+    };
 }
 
-internal sealed class RequirementGroupCard : Border
+/// <summary>Two-to-four option segmented control (theme, language).</summary>
+internal sealed class Segmented : Border
 {
-    public StackPanel Body { get; } = new() { Spacing = 2 };
-    public RequirementGroupCard(PresentationContext context, string id, string title, IReadOnlyList<ProjectRequirement> requirements)
+    private readonly List<(string Id, Button Button)> _options = [];
+    public Segmented(PresentationContext context, IEnumerable<(string Id, Func<string> Label)> options, Func<string> selected, Action<string> select, double optionWidth = double.NaN, string? name = null)
     {
-        Name = "RequirementGroup"; Padding = new Thickness(16, 12); CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusMedium);
-        Background = PresentationTheme.Brush("BackgroundMuted"); BorderBrush = PresentationTheme.Brush("BorderDefault"); BorderThickness = new Thickness(1);
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Margin = new Thickness(0, 0, 0, 6) };
-        header.Children.Add(context.Heading(() => new DomainDisplay(context.Text).Group(id, title), "Label"));
-        var count = context.Label(() => context.Text.Format("presentation.groupComplete", requirements.Count(item => item.Status == RequirementStatus.Complete), requirements.Count), "Caption", "TextSecondary");
-        Grid.SetColumn(count, 1); header.Children.Add(count); Body.Children.Add(header); Child = Body;
-    }
-}
-
-/// <summary>Editable requirement row (opens the existing editor).</summary>
-internal sealed class RequirementRow : Button
-{
-    protected override Type StyleKeyOverride => typeof(Button);
-    public RequirementRow(PresentationContext context, ProjectRequirement requirement, Func<Task> action)
-    {
-        Name = "RequirementRow"; Classes.Add("row");
-        string Title() => new DomainDisplay(context.Text).Requirement(requirement);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        var labels = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        labels.Children.Add(context.Label(Title, "Label"));
-        labels.Children.Add(context.Label(() => context.Text.Format("presentation.requirementFiles", context.EnumText(requirement.Type), requirement.Files.Count), "Caption", "TextTertiary"));
-        grid.Children.Add(labels);
-        var pill = new StatusPill(context, () => context.EnumText(requirement.Status), StatusPill.Tone(requirement.Status)); Grid.SetColumn(pill, 1); grid.Children.Add(pill); Content = grid;
-        context.Localized.Bind(this, control => AutomationProperties.SetName(control, context.Text.Format("requirement.summary", Title(), context.EnumText(requirement.Type), context.EnumText(requirement.Status), requirement.Files.Count)));
-        Click += async (_, _) => await context.ActAsync(this, action);
-    }
-}
-
-/// <summary>Read-only requirement line used by the overview summary.</summary>
-internal sealed class RequirementSummaryRow : Grid
-{
-    public RequirementSummaryRow(PresentationContext context, ProjectRequirement requirement)
-    {
-        Name = "RequirementSummaryRow"; ColumnDefinitions = new ColumnDefinitions("*,Auto"); ColumnSpacing = 12; Margin = new Thickness(0, 4);
-        Children.Add(context.Label(() => new DomainDisplay(context.Text).Requirement(requirement), "BodySmall"));
-        var pill = new StatusPill(context, () => context.EnumText(requirement.Status), StatusPill.Tone(requirement.Status)); Grid.SetColumn(pill, 1); Children.Add(pill);
-    }
-}
-
-internal sealed class TaskRow : Grid
-{
-    public TaskRow(PresentationContext context, ProjectTask task, Func<Task> edit, Func<Task> complete)
-    {
-        Name = "TaskRow"; ColumnDefinitions = new ColumnDefinitions("*,Auto"); ColumnSpacing = 8;
-        var active = task.Status is ProjectTaskStatus.Todo or ProjectTaskStatus.InProgress;
-        var overdue = active && task.DueAt < DateTimeOffset.Now;
-        var tone = StatusPill.Tone(task.Status, overdue);
-        Children.Add(new ListRow(context, StatusMark(task.Status, overdue), () => task.Title, () => context.Due(task.DueAt), () => context.EnumText(task.Status), tone, null, tone,
-            () => $"{task.Title} · {context.EnumText(task.Status)} · {context.Due(task.DueAt)}", edit));
-        if (active)
+        if (name is not null) Name = name;
+        CornerRadius = new CornerRadius(9); Padding = new Thickness(3); this.Paint(BackgroundProperty, "BackgroundTrack");
+        var grid = new UniformGrid { Rows = 1 };
+        foreach (var (id, label) in options)
         {
-            var done = context.Action("task.complete", complete); done.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(done, 1); Children.Add(done);
+            var button = new Button { MinWidth = double.IsNaN(optionWidth) ? 0 : optionWidth, Margin = new Thickness(1, 0) }; button.Classes.Add("segment");
+            context.Localized.Bind(button, control => { control.Content = label(); AutomationProperties.SetName(control, label()); });
+            button.Click += (_, _) => select(id);
+            _options.Add((id, button)); grid.Children.Add(button);
+        }
+        Child = grid;
+        context.Localized.Bind(this, _ => Refresh(selected()));
+    }
+    public void Refresh(string selected)
+    {
+        foreach (var (id, button) in _options)
+        {
+            button.Classes.Set("selected", id == selected);
+            if (id == selected) button.CardShadowedButton(); else button.ClearValue(Button.EffectProperty);
         }
     }
-    public static Control StatusMark(ProjectTaskStatus status, bool overdue)
-    {
-        var tone = overdue ? "Error" : status == ProjectTaskStatus.Done ? "Success" : "TextTertiary";
-        var glyph = status == ProjectTaskStatus.Done ? "✓" : overdue ? "●" : "○";
-        return PresentationTheme.Typeset(new TextBlock { Text = glyph, Width = 20, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center }, "Label", tone);
-    }
 }
 
-internal sealed class AiActionButton : Button
+internal static class ButtonDecorations
 {
-    protected override Type StyleKeyOverride => typeof(Button);
-    public AiActionButton(PresentationContext context, string id, Func<Task> action)
-    {
-        Name = "AiAction_" + id; Classes.Add("aiAction");
-        context.Localized.Bind(this, control => control.Content = "✦  " + context.Text.Get("agent.action." + id));
-        context.Localized.Bind(this, control => AutomationProperties.SetName(control, context.Text.Get("agent.action." + id)));
-        Click += async (_, _) => await context.ActAsync(this, action);
-    }
+    /// <summary>Selected segment lift; Avalonia buttons have no box shadow of their own, so a subtle drop shadow effect stands in.</summary>
+    public static void CardShadowedButton(this Button button) => button.Effect = new DropShadowEffect { BlurRadius = 2, OffsetX = 0, OffsetY = 1, Opacity = 0.08 };
 }
 
+/// <summary>Application sidebar: brand, navigation, storage note, theme and language controls.</summary>
 internal sealed class AppSidebar : Border
 {
-    private readonly Button _dashboard;
-    private readonly Button _projects;
-    public AppSidebar(PresentationContext context, Func<Task> dashboard, Func<Task> projects)
+    private readonly Dictionary<string, Button> _entries = [];
+    private readonly TextBlock _badge;
+    private readonly Border _badgeHost;
+    public Segmented ThemeSelector { get; }
+    public Button Language { get; }
+
+    public AppSidebar(PresentationContext context, IReadOnlyList<(string Page, string Key, string Name, string Icon)> pages, Action<string> navigate)
     {
-        Name = "AppSidebar"; Background = PresentationTheme.Brush("BackgroundSidebar"); Padding = new Thickness(16, 24); Width = 208;
+        Name = "AppSidebar"; Width = 232; Padding = new Thickness(12, 18, 12, 14); BorderThickness = new Thickness(0, 0, 1, 0);
+        this.Paint(BackgroundProperty, "BackgroundSidebar").Paint(BorderBrushProperty, "BorderDefault");
         var dock = new DockPanel();
-        var footer = new StackPanel { Spacing = 12 };
-        footer.Children.Add(WorkspaceCard(context));
-        var language = new ComboBox { Name = "LanguageSelector", ItemsSource = new[] { "English", "فارسی" }, SelectedIndex = context.Locale.LanguageCode == "fa" ? 1 : 0, HorizontalAlignment = HorizontalAlignment.Stretch };
-        language.SelectionChanged += (_, _) =>
+
+        var brand = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, Margin = new Thickness(8, 2, 8, 18) };
+        brand.Children.Add(Ui.Tile(Icons.Glyph(Icons.Scales, 18, "OnAccent", IconWeight.Bold), 34, 9, "Accent"));
+        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        var title = context.Label("app.title", "BodyStrong"); title.FontSize = 14; title.TextWrapping = TextWrapping.NoWrap; names.Children.Add(title);
+        var subtitle = context.Label("presentation.workspace", "Meta", "TextSecondary"); subtitle.TextWrapping = TextWrapping.NoWrap; names.Children.Add(subtitle);
+        Grid.SetColumn(names, 1); brand.Children.Add(names);
+        DockPanel.SetDock(brand, Dock.Top); dock.Children.Add(brand);
+
+        var footer = new StackPanel { Spacing = 8 };
+        var stored = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(10, 0, 10, 4) };
+        stored.Children.Add(Icons.Glyph(Icons.HardDrives, 14)); var storedText = context.Label("presentation.localMvp", "Meta", "TextSecondary"); storedText.VerticalAlignment = VerticalAlignment.Center; stored.Children.Add(storedText);
+        footer.Children.Add(stored);
+        ThemeSelector = new Segmented(context, AppearanceContext.Themes.Select(id => (id, (Func<string>)(() => context.Text.Get("theme." + id)))), () => context.Appearance.Theme,
+            id => context.SetTheme(id), name: "ThemeSelector");
+        footer.Children.Add(ThemeSelector);
+        Language = new Button { Name = "LanguageSelector", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36, Padding = new Thickness(10, 0), CornerRadius = new CornerRadius(9) };
+        var language = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
+        language.Children.Add(Icons.Glyph(Icons.Translate, 15, "TextPrimary"));
+        var current = context.Label(() => context.Locale.LanguageCode == "fa" ? "فارسی" : "English", "BodyMedium"); current.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(current, 1); language.Children.Add(current);
+        var other = context.Label(() => context.Locale.LanguageCode == "fa" ? "English" : "فارسی", "Micro", "TextTertiary"); other.FontWeight = FontWeight.Normal; other.VerticalAlignment = VerticalAlignment.Center;
+        other.FontFamily = context.Locale.LanguageCode == "fa" ? PresentationTheme.LatinFontFamily : PresentationTheme.PersianFontFamily;
+        context.Localized.Bind(other, control => control.FontFamily = context.Locale.LanguageCode == "fa" ? PresentationTheme.LatinFontFamily : PresentationTheme.PersianFontFamily);
+        Grid.SetColumn(other, 2); language.Children.Add(other);
+        Language.Content = language;
+        context.Localized.Bind(Language, control => AutomationProperties.SetName(control, context.Text.Get("settings.language")));
+        Language.Click += (_, _) => context.SetLanguage(context.Locale.LanguageCode == "fa" ? "en" : "fa");
+        footer.Children.Add(Language);
+        DockPanel.SetDock(footer, Dock.Bottom); dock.Children.Add(footer);
+
+        var entries = new StackPanel { Spacing = 4 };
+        _badge = PresentationTheme.Typeset(new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }, "Micro", "Error");
+        _badge.FontWeight = FontWeight.SemiBold;
+        _badgeHost = new Border { MinWidth = 18, Height = 18, Padding = new Thickness(5, 0), CornerRadius = new CornerRadius(9), IsVisible = false, Child = _badge, VerticalAlignment = VerticalAlignment.Center }
+            .Paint(BackgroundProperty, "ErrorSoft");
+        foreach (var (page, key, name, icon) in pages)
         {
-            try { context.Locale.SetLanguage(language.SelectedIndex == 1 ? "fa" : "en"); }
-            catch (Exception) { language.SelectedIndex = context.Locale.LanguageCode == "fa" ? 1 : 0; context.ShowError("validation.languageSaveFailed"); }
-        };
-        context.Localized.Bind(language, control => control.SelectedIndex = context.Locale.LanguageCode == "fa" ? 1 : 0);
-        footer.Children.Add(language); DockPanel.SetDock(footer, Dock.Bottom); dock.Children.Add(footer);
-        var entries = new StackPanel { Spacing = 8 };
-        var brand = context.Heading(() => "△  " + context.Text.Get("app.title"), "HeadingSmall"); brand.FontSize = 13; brand.Margin = new Thickness(8, 4, 8, 28); brand.TextWrapping = TextWrapping.NoWrap; entries.Children.Add(brand);
-        _dashboard = Entry(context, "navigation.attention", "NavigationDashboard", dashboard);
-        _projects = Entry(context, "navigation.projects", "NavigationProjects", projects);
-        entries.Children.Add(_dashboard); entries.Children.Add(_projects);
-        foreach (var id in new[] { "Calendar", "Documents", "Delegation" }) entries.Children.Add(Entry(context, "presentation.navigation" + id, "Navigation" + id, null));
-        entries.Children.Add(new Border { Height = 1, Background = PresentationTheme.Brush("BorderSubtle"), Margin = new Thickness(4, 12) });
-        entries.Children.Add(Entry(context, "presentation.navigationSettings", "NavigationSettings", null));
+            var button = new Button { Name = name }; button.Classes.Add("nav");
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+            row.Children.Add(Icons.Glyph(icon, 16, "TextSecondary"));
+            var caption = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }; Grid.SetColumn(caption, 1); row.Children.Add(caption);
+            if (page == "dashboard") { Grid.SetColumn(_badgeHost, 2); row.Children.Add(_badgeHost); }
+            button.Content = row;
+            context.Localized.Bind(button, control => { caption.Text = context.Text.Get(key); AutomationProperties.SetName(control, context.Text.Get(key)); });
+            var target = page;
+            button.Click += (_, _) => navigate(target);
+            _entries[page] = button; entries.Children.Add(button);
+        }
         dock.Children.Add(entries); Child = dock;
+        context.Localized.Bind(this, _ => _badge.Text = _count.ToString("N0", context.Locale.Culture));
+        _context = context;
     }
-    private static Control WorkspaceCard(PresentationContext context)
-    {
-        var card = new Border { Background = PresentationTheme.Brush("BackgroundCard"), BorderBrush = PresentationTheme.Brush("BorderDefault"), BorderThickness = new Thickness(1), CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusMedium), Padding = new Thickness(12) };
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10 };
-        grid.Children.Add(new Avatar("△", "OnAccent", "Accent", 30));
-        var labels = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        labels.Children.Add(context.Label("presentation.workspace", "Label")); labels.Children.Add(context.Label("presentation.localMvp", "Caption", "TextTertiary"));
-        Grid.SetColumn(labels, 1); grid.Children.Add(labels); card.Child = grid; return card;
-    }
-    private static Button Entry(PresentationContext context, string key, string name, Func<Task>? action)
-    {
-        var button = new Button { Name = name, IsEnabled = action is not null };
-        button.Classes.Add("nav");
-        context.Localized.Bind(button, control =>
-        {
-            var caption = context.Text.Get(key);
-            AutomationProperties.SetName(control, caption);
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-            row.Children.Add(PresentationTheme.Typeset(new TextBlock { Text = action is null ? "○" : "●", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, "Caption", action is null ? "TextTertiary" : "BrandPrimary"));
-            row.Children.Add(new TextBlock { Text = caption, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
-            control.Content = row;
-        });
-        if (action is not null) button.Click += async (_, _) => await context.ActAsync(button, action);
-        return button;
-    }
+    private readonly PresentationContext _context;
+    private int _count;
+
     public void Select(string page)
     {
-        _dashboard.Classes.Set("selected", page == "dashboard"); _projects.Classes.Set("selected", page == "projects");
-    }
-}
-
-internal sealed class TopBar : Border
-{
-    public TopBar(PresentationContext context, Func<Task> create)
-    {
-        Name = "TopBar"; Background = PresentationTheme.Brush("BackgroundApp"); Padding = new Thickness(40, 20, 40, 8);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 16 };
-        var search = new TextBox
+        foreach (var (id, button) in _entries)
         {
-            Name = "GlobalSearch",
-            IsEnabled = false,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            MinHeight = 40,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Background = PresentationTheme.Brush("BackgroundCard"),
-            CornerRadius = PresentationTheme.Radius(PresentationTheme.RadiusMedium)
-        };
-        context.Localized.Bind(search, control => { control.Watermark = context.Text.Get("presentation.search"); AutomationProperties.SetName(control, context.Text.Get("presentation.search")); });
-        grid.Children.Add(new ReadableColumn { MaxContentWidth = 440, Child = search });
-        var date = context.Label(() => DateTimeOffset.Now.ToString("D", context.Locale.Culture), "Caption", "TextSecondary"); date.VerticalAlignment = VerticalAlignment.Center; date.TextWrapping = TextWrapping.NoWrap; date.TextTrimming = TextTrimming.CharacterEllipsis;
-        Grid.SetColumn(date, 1); grid.Children.Add(date);
-        var button = context.Action("project.create", create, "primary"); button.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(button, 2); grid.Children.Add(button);
-        Child = grid;
+            button.Classes.Set("selected", id == page);
+            if (button.Content is Grid grid && grid.Children[0] is TextBlock icon) icon.Paint(TextBlock.ForegroundProperty, id == page ? "TextPrimary" : "TextSecondary");
+        }
+    }
+
+    public void SetAttentionCount(int count)
+    {
+        _count = count; _badge.Text = count.ToString("N0", _context.Locale.Culture); _badgeHost.IsVisible = count > 0;
     }
 }
 

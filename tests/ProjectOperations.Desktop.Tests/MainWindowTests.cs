@@ -23,12 +23,17 @@ public sealed class MainWindowTests
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        Assert.True(HasText(window, "Recent projects"));
+        Assert.True(HasText(window, "No projects yet. Create your first project to start organizing the work."));
+        Click(window, "All projects");
+        await UntilAsync(() => Buttons(window).Any(b => ButtonText(b) == "New project" && b.IsEffectivelyEnabled));
+        Click(window, "New project");
         Click(window, "Create project");
+        Assert.True(Controls<TextBlock>(window).Single(block => block.Name == "CreateProjectError").IsVisible);
+        Assert.Empty(await fixture.Projects.ListAsync());
         Input(window, "Project name *").Text = "Synthetic investment";
         Input(window, "Company").Text = "Example company";
         Input(window, "Owner").Text = "Test owner";
-        Click(window, "Create project", last: true);
+        Click(window, "Create project");
         await UntilAsync(() => HasText(window, "Synthetic investment") && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Single(await fixture.Projects.ListAsync());
         Assert.True(HasText(window, "Pitch deck") && HasText(window, "Missing"));
@@ -40,7 +45,7 @@ public sealed class MainWindowTests
         var status = LabeledControl<ComboBox>(window, "Status (explicitly reviewed by you)");
         status.SelectedItem = RequirementStatus.Provided;
         Click(window, "Save requirement");
-        await UntilAsync(() => HasText(window, "Readiness · 0/16 complete (0%)") && !Buttons(window).Any(b => ButtonText(b) == "Save requirement") && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => ReadinessRatio(window) == "0/16" && !Buttons(window).Any(b => ButtonText(b) == "Save requirement") && Button(window, "All projects").IsEffectivelyEnabled);
         var project = (await fixture.Projects.ListAsync()).Single();
         Assert.Equal("Awaiting revised deck", project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Value);
         Assert.Equal(RequirementStatus.Provided, project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Status);
@@ -48,7 +53,7 @@ public sealed class MainWindowTests
         ClickPrefix(window, "Pitch deck · Document");
         LabeledControl<ComboBox>(window, "Status (explicitly reviewed by you)").SelectedItem = RequirementStatus.Complete;
         Click(window, "Save requirement");
-        await UntilAsync(() => HasText(window, "Readiness · 1/16 complete (6%)") && Button(window, "All projects").IsEffectivelyEnabled);
+        await UntilAsync(() => ReadinessRatio(window) == "1/16" && Button(window, "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 2;
         Click(window, "New task");
         Input(window, "Task title *").Text = "Request financial plan";
@@ -137,7 +142,7 @@ public sealed class MainWindowTests
         var remaining = Controls<CheckBox>(window).Single(c => c.Content is TextBlock text && text.Text!.Contains(" · Pending"));
         Assert.False(remaining.IsChecked);
         remaining.IsChecked = true;
-        Click(window, "Reject selected proposals");
+        Click(window, "Reject selected");
         await UntilAsync(() => Controls<CheckBox>(window).Any(c => c.Content is TextBlock text && text.Text!.Contains(" · Rejected")) && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Single((await fixture.Projects.GetAsync(project.Id))!.Tasks);
         Assert.Contains(Controls<TextBox>(window), box => box.IsReadOnly && box.Text == "Synthetic analysis with two proposals");
@@ -156,7 +161,7 @@ public sealed class MainWindowTests
         await StartDelegationAsync(window, project.Name);
         await UntilAsync(() => HasText(window, "Failed") && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.False(HasText(window, "Completed"));
-        Assert.Contains(Controls<TextBlock>(window), text => text.IsVisible && text.Text!.StartsWith("The agent job failed."));
+        Assert.Contains(Controls<TextBlock>(window), text => text.IsEffectivelyVisible && text.Text?.StartsWith("The agent job failed.") == true);
         var job = Assert.Single(await fixture.Agents.HistoryAsync(project.Id));
         Assert.Equal(AgentJobStatus.Failed, job.Status);
         Assert.Equal("Synthetic transport unavailable", job.Error);
@@ -191,7 +196,7 @@ public sealed class MainWindowTests
         await UntilAsync(() => fixture.Runtime.Calls == 1);
         Assert.All(tabs.Items.OfType<TabItem>().Take(3), tab => Assert.False(tab.IsEnabled));
         Assert.False(Button(window, "All projects").IsEffectivelyEnabled);
-        Assert.False(Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
+        Assert.False(Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
         Assert.Contains(Controls<TextBox>(window), box => box.Text?.Contains("Synthetic live delta") == true);
         Click(window, "Stop");
         await UntilAsync(() => fixture.Runtime.CancelRequested.Task.IsCompleted);
@@ -248,6 +253,7 @@ public sealed class MainWindowTests
 
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
+    private static string? ReadinessRatio(Window window) => Controls<TextBlock>(window).SingleOrDefault(block => block.Name == "ReadinessRatio")?.Text;
     internal static string ButtonText(Button button) => AutomationProperties.GetName(button) is { Length: > 0 } name ? name : button.Content as string ?? "";
     private static Button Button(Window window, string text) => Buttons(window).First(b => ButtonText(b) == text);
     private static bool HasText(Window window, string text) => Controls<TextBlock>(window).Any(block => block.Text == text)

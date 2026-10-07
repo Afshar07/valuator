@@ -15,6 +15,12 @@ public sealed record DashboardSummary(IReadOnlyList<ProjectSummary> Projects,
     IReadOnlyList<Project> RecentProjects, IReadOnlyList<TaskAttention> OverdueTasks,
     IReadOnlyList<TaskAttention> UpcomingTasks, IReadOnlyList<MilestoneAttention> UpcomingMilestones);
 
+public enum ScheduleItemKind { Task, Milestone }
+
+/// <summary>A dated, still-open task or milestone. Overdue applies to active tasks due before the supplied instant.</summary>
+public sealed record ScheduleItem(Guid ProjectId, string ProjectName, ScheduleItemKind Kind, Guid ItemId, string Title,
+    DateTimeOffset DueAt, bool IsOverdue);
+
 public static class ProjectSummaries
 {
     public static ProjectSummary Summarize(Project project, DateTimeOffset now)
@@ -45,4 +51,26 @@ public static class ProjectSummaries
                 .Select(milestone => new MilestoneAttention(summary.Project.Id, summary.Project.Name, milestone)))
                 .OrderBy(item => item.Milestone.DueAt).ThenBy(item => item.Milestone.Id).ToList());
     }
+
+    /// <summary>
+    /// Open dated work (active tasks and incomplete milestones) of Active/OnHold projects due within [from, to),
+    /// ordered by date. Done/Cancelled tasks, completed milestones and Completed/Archived projects are excluded.
+    /// </summary>
+    public static IReadOnlyList<ScheduleItem> Schedule(IEnumerable<Project> projects, DateTimeOffset from, DateTimeOffset to, DateTimeOffset now) =>
+        projects.Where(project => project.Status is ProjectStatus.Active or ProjectStatus.OnHold)
+            .SelectMany(OpenItems)
+            .Where(item => item.DueAt >= from && item.DueAt < to)
+            .Select(item => item with { IsOverdue = item.Kind == ScheduleItemKind.Task && item.DueAt < now })
+            .OrderBy(item => item.DueAt).ThenBy(item => item.ItemId).ToList();
+
+    /// <summary>Earliest open dated task or milestone of a project, or null when nothing open is dated.</summary>
+    public static ScheduleItem? NextDeadline(Project project, DateTimeOffset now) =>
+        OpenItems(project).OrderBy(item => item.DueAt).ThenBy(item => item.ItemId)
+            .Select(item => item with { IsOverdue = item.Kind == ScheduleItemKind.Task && item.DueAt < now }).FirstOrDefault();
+
+    private static IEnumerable<ScheduleItem> OpenItems(Project project) =>
+        project.Tasks.Where(task => task.Status is ProjectTaskStatus.Todo or ProjectTaskStatus.InProgress && task.DueAt.HasValue)
+            .Select(task => new ScheduleItem(project.Id, project.Name, ScheduleItemKind.Task, task.Id, task.Title, task.DueAt!.Value, false))
+            .Concat(project.Milestones.Where(milestone => !milestone.IsComplete && milestone.DueAt.HasValue)
+                .Select(milestone => new ScheduleItem(project.Id, project.Name, ScheduleItemKind.Milestone, milestone.Id, milestone.Title, milestone.DueAt!.Value, false)));
 }

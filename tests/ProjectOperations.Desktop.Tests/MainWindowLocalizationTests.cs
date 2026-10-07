@@ -24,14 +24,15 @@ public sealed class MainWindowLocalizationTests
         var window = fixture.Window;
         window.Show();
         var englishFont = window.FontFamily;
-        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "Create project" && button.IsEffectivelyEnabled));
-        Click(window, "Create project");
-        var inputs = Controls<TextBox>(window).Where(input => input.IsEffectivelyEnabled && !input.IsReadOnly).ToList();
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
+        Click(window, "All projects");
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "New project" && button.IsEffectivelyEnabled));
+        Click(window, "New project");
+        var inputs = new List<TextBox> { LabeledInput(window, "Project name *") };
         inputs[0].Text = "Unsaved synthetic project";
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
         stage.SelectedItem = ProjectStage.DueDiligence;
-        var language = Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector");
-        language.SelectedIndex = 1;
+        Click(window, "Language");
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
         Assert.Equal(FlowDirection.RightToLeft, inputs[0].FlowDirection);
@@ -48,7 +49,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Contains(Controls<TextBlock>(window), block => block.Text == "نام پروژه *" && block.TextAlignment == TextAlignment.Start);
         Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == "ایجاد پروژه");
         Assert.Empty(await fixture.Projects.ListAsync());
-        language.SelectedIndex = 0;
+        Click(window, "زبان");
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
         Assert.Equal(FlowDirection.LeftToRight, inputs[0].FlowDirection);
         Assert.Equal(englishFont, window.FontFamily);
@@ -133,9 +134,9 @@ public sealed class MainWindowLocalizationTests
         Click(window, "اجرا با زمینهٔ تأییدشده");
         await UntilAsync(() => fixture.Runtime.Calls == 1);
         Assert.Equal(AgentPrompts.BuildOutputInstructions(AgentResponseLanguage.Persian), fixture.Runtime.LastRequest!.SystemInstructions);
-        Assert.False(Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
+        Assert.False(Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
         fixture.Runtime.Release.TrySetResult();
-        await UntilAsync(() => Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
+        await UntilAsync(() => Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
         fixture.Runtime.Release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Click(window, "پیش‌نمایش زمینه پیش از درخواست");
         consent.IsChecked = true;
@@ -145,7 +146,7 @@ public sealed class MainWindowLocalizationTests
         Click(window, "توقف");
         Assert.Contains(Controls<TextBlock>(window), control => control.Text == "در حال توقف — منتظر پایان لغو توسط عامل…");
         fixture.Runtime.Release.TrySetResult();
-        await UntilAsync(() => Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
+        await UntilAsync(() => Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
         window.Close();
     }
 
@@ -162,10 +163,9 @@ public sealed class MainWindowLocalizationTests
         {
             window.Show();
             await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
-            var language = Controls<ComboBox>(window).Single(control => control.Name == "LanguageSelector");
-            language.SelectedIndex = 1;
+            Click(window, "Language");
             Assert.Equal("en", locale.LanguageCode);
-            Assert.Equal(0, language.SelectedIndex);
+            Assert.Contains(Controls<TextBlock>(window), control => control.Text == "English");
             Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
             Assert.Contains(Controls<TextBlock>(window), control => control.IsVisible && control.Text == "The language preference could not be saved.");
         }
@@ -197,6 +197,12 @@ public sealed class MainWindowLocalizationTests
 
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
+    private static TextBox LabeledInput(Window window, string label)
+    {
+        var block = Controls<TextBlock>(window).Last(block => block.Text == label);
+        var parent = Assert.IsType<StackPanel>(block.Parent);
+        return Assert.IsType<TextBox>(parent.Children[parent.Children.IndexOf(block) + 1]);
+    }
     private static void Click(Window window, string text) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button) == text));
     private static void ClickPrefix(Window window, string prefix) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button).StartsWith(prefix)));
     private static void ClickButton(Button button)

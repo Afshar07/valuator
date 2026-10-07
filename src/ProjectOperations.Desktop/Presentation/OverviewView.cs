@@ -2,144 +2,130 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-/// <summary>Overview tab: readiness, requirement completeness, deadlines, delegation shortcuts and project editing.</summary>
+/// <summary>Overview tab: explicit current state, missing/unreviewed items, open questions, follow-ups and project editing.</summary>
 internal sealed class OverviewView : PresentationView
 {
     private readonly Project _project;
     private readonly ProjectSummary _summary;
-    private readonly Action<string> _useQuickAction;
-    private readonly Action<int> _selectTab;
 
-    public OverviewView(PresentationContext context, Project project, Action<string> useQuickAction, Action<int> selectTab) : base(context)
+    public OverviewView(PresentationContext context, Project project) : base(context)
     {
-        _project = project; _useQuickAction = useQuickAction; _selectTab = selectTab; Spacing = 24;
+        _project = project; Spacing = 16;
         _summary = ProjectSummaries.Summarize(project, DateTimeOffset.Now);
-        var columns = new AdaptiveGrid { MinItemWidth = 380, Weights = [1.8, 1] };
-        var main = new StackPanel { Spacing = 16 };
-        main.Children.Add(ReadinessCard()); main.Children.Add(StateCard()); main.Children.Add(RequirementsCard());
-        var side = new StackPanel { Spacing = 16 };
-        side.Children.Add(TasksCard()); side.Children.Add(AiCard());
-        columns.Children.Add(main); columns.Children.Add(side);
-        Children.Add(columns); Children.Add(DetailsCard());
-    }
-
-    private Control ReadinessCard()
-    {
-        var card = new SectionCard(Context, "dashboard.projectReadiness") { Name = "ReadinessCard" };
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 16 };
-        grid.Children.Add(new ReadinessRing(_summary.CompletionPercentage, Context) { VerticalAlignment = VerticalAlignment.Center });
-        var copy = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-        copy.Children.Add(Label(() => F("overview.readiness", _summary.CompleteRequirements, _summary.TotalRequirements, _summary.CompletionPercentage), "Label"));
-        copy.Children.Add(Label("overview.readinessDisclosure", "Caption", "TextSecondary"));
-        Grid.SetColumn(copy, 1); grid.Children.Add(copy);
-        var counts = new StackPanel { Spacing = 6, MinWidth = 140, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var status in new[] { RequirementStatus.Complete, RequirementStatus.Provided, RequirementStatus.NeedsReview, RequirementStatus.Missing })
-            counts.Children.Add(CountLine(status));
-        Grid.SetColumn(counts, 2); grid.Children.Add(counts);
-        card.Body.Children.Add(grid); return card;
-    }
-
-    private Control CountLine(RequirementStatus status)
-    {
-        var tone = StatusPill.Tone(status); var count = _project.Requirements.Count(item => item.Status == status);
-        var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
-        line.Children.Add(PresentationTheme.Typeset(new TextBlock { Text = "●", FontSize = 10 }, "Caption", tone));
-        var name = Label(() => EnumText(status), "Caption", "TextSecondary"); Grid.SetColumn(name, 1); line.Children.Add(name);
-        var value = Label(() => count.ToString("N0", _locale.Culture), "Label"); Grid.SetColumn(value, 2); line.Children.Add(value);
-        return line;
+        var cards = new AdaptiveGrid { MinItemWidth = 300 };
+        cards.Children.Add(StateCard());
+        cards.Children.Add(MissingCard());
+        cards.Children.Add(ListCard("presentation.openQuestions", Icons.Question, project.State.OpenQuestions, "OpenQuestionsCard"));
+        cards.Children.Add(ListCard("presentation.followUps", Icons.ArrowBendUpRight, project.State.FollowUps, "FollowUpsCard"));
+        Children.Add(cards);
+        Children.Add(DetailsCard());
     }
 
     private Control StateCard()
     {
         var card = new SectionCard(Context, "overview.currentState") { Name = "CurrentStateCard" };
-        var state = _project.State;
-        card.Body.Children.Add(Label(() => string.IsNullOrWhiteSpace(state.Summary) ? T("date.notSet") : state.Summary, "Body", string.IsNullOrWhiteSpace(state.Summary) ? "TextTertiary" : "TextPrimary"));
-        var lists = new AdaptiveGrid { MinItemWidth = 220 };
-        lists.Children.Add(BulletList("presentation.openQuestions", state.OpenQuestions));
-        lists.Children.Add(BulletList("presentation.followUps", state.FollowUps));
-        card.Body.Children.Add(lists); return card;
+        card.Body.Spacing = 0; card.Body.Children[0].Margin = new Thickness(0, 0, 0, 8);
+        void Fact(Func<string> key, Func<string> value, string color = "TextPrimary")
+        {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+            row.Children.Add(Label(key, "Body", "TextSecondary"));
+            var text = Label(value, "BodyStrong", color); text.TextWrapping = TextWrapping.NoWrap; text.TextAlignment = TextAlignment.End; Grid.SetColumn(text, 1); row.Children.Add(text);
+            card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 8), Child = row }));
+        }
+        Fact(() => T("project.stage"), () => EnumText(_project.Stage));
+        Fact(() => T("presentation.nextMilestone"), () => _summary.NextMilestone is null ? T("overview.noMilestone") : $"{_summary.NextMilestone.Title} · {Context.ShortDate(_summary.NextMilestone.DueAt)}");
+        Fact(() => T("project.column.readiness"), () => $"{N(_summary.CompleteRequirements)}/{N(_summary.TotalRequirements)}");
+        Fact(() => T("presentation.stat.overdue"), () => N(_summary.OverdueTasks.Count), _summary.OverdueTasks.Count > 0 ? "Error" : "TextPrimary");
+        Fact(() => T("presentation.openQuestions"), () => N(_project.State.OpenQuestions.Count));
+        Fact(() => T("presentation.followUps"), () => N(_project.State.FollowUps.Count));
+        foreach (var (key, value) in new[] { ("overview.summary", (Func<string>)(() => _project.State.Summary)), ("field.notes", () => _project.Notes) })
+        {
+            var section = new StackPanel { Spacing = 6 };
+            section.Children.Add(Label(key, "Body", "TextSecondary"));
+            section.Children.Add(Label(() => string.IsNullOrWhiteSpace(value()) ? T("date.notSet") : value(), "Body", string.IsNullOrWhiteSpace(value()) ? "TextTertiary" : "TextPrimary"));
+            card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 12, 0, 4), Child = section }));
+        }
+        return card;
     }
 
-    private Control BulletList(string titleKey, IReadOnlyList<string> items)
+    private Control MissingCard()
     {
-        var panel = new StackPanel { Spacing = 4 };
-        panel.Children.Add(Label(() => $"{T(titleKey)} · {items.Count.ToString("N0", _locale.Culture)}", "Label", "TextSecondary"));
-        if (items.Count == 0) panel.Children.Add(Label("date.notSet", "BodySmall", "TextTertiary"));
-        foreach (var item in items.Take(5))
+        var card = new SectionCard(Context, "overview.missing", count: () => N(_summary.MissingRequirements.Count)) { Name = "MissingCard" };
+        card.Body.Spacing = 0; card.Body.Children[0].Margin = new Thickness(0, 0, 0, 8);
+        if (_summary.MissingRequirements.Count == 0) card.Body.Children.Add(Label("overview.noMissing", "Body", "TextTertiary"));
+        foreach (var requirement in _summary.MissingRequirements)
         {
-            var text = item; var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6 };
-            line.Children.Add(PresentationTheme.Typeset(new TextBlock { Text = "•" }, "BodySmall", "TextTertiary"));
-            var content = Label(() => text, "BodySmall"); Grid.SetColumn(content, 1); line.Children.Add(content); panel.Children.Add(line);
+            var (icon, weight, tone) = StatusVisuals.Requirement(requirement.Status);
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+            row.Children.Add(Icons.Glyph(icon, 16, tone.Foreground, weight));
+            var title = Label(() => RequirementTitle(requirement), "Body"); title.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(title, 1); row.Children.Add(title);
+            var status = Label(() => EnumText(requirement.Status), "Meta", tone.Foreground); status.VerticalAlignment = VerticalAlignment.Center; status.TextWrapping = TextWrapping.NoWrap;
+            Grid.SetColumn(status, 2); row.Children.Add(status);
+            card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 7), Child = row }));
         }
+        return card;
+    }
+
+    /// <summary>Open questions / follow-ups list with an inline add line that saves to the project's explicit state.</summary>
+    private Control ListCard(string titleKey, string icon, List<string> items, string name)
+    {
+        var host = new ContentControl();
+        var add = Context.IconAction("overview.add", Icons.Plus, () => { host.Content = AddLine(titleKey, items, () => host.Content = null); return Task.CompletedTask; });
+        add.MinHeight = 26; add.Padding = new Thickness(9, 0); add.FontSize = 12;
+        var card = new SectionCard(Context, titleKey, add, () => N(items.Count)) { Name = name };
+        card.Body.Spacing = 0; card.Body.Children[0].Margin = new Thickness(0, 0, 0, 8);
+        if (items.Count == 0) card.Body.Children.Add(Label("date.notSet", "Body", "TextTertiary"));
+        foreach (var item in items)
+        {
+            var text = item;
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10 };
+            var glyph = Icons.Glyph(icon, 15, "TextTertiary"); glyph.VerticalAlignment = VerticalAlignment.Top; glyph.Margin = new Thickness(0, 2, 0, 0); row.Children.Add(glyph);
+            var label = Label(() => text, "Body"); Grid.SetColumn(label, 1); row.Children.Add(label);
+            card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 7), Child = row }));
+        }
+        card.Body.Children.Add(host);
+        return card;
+    }
+
+    private Control AddLine(string titleKey, List<string> items, Action close)
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 10, 0, 0) };
+        var input = Input(); Bind(input, control => control.Watermark = T(titleKey));
+        panel.Children.Add(input);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        actions.Children.Add(Action("overview.addSave", async () =>
+        {
+            if (string.IsNullOrWhiteSpace(input.Text)) return;
+            items.Add(input.Text.Trim()); await SaveAsync(_project); await OpenProjectAsync(_project.Id, 0);
+        }, "primary"));
+        actions.Children.Add(Action("action.cancel", () => { close(); return Task.CompletedTask; }));
+        panel.Children.Add(actions);
+        input.AttachedToVisualTree += (_, _) => input.Focus();
         return panel;
-    }
-
-    private Control RequirementsCard()
-    {
-        var card = new SectionCard(Context, "tabs.requirements", SectionCard.Link(Context, "presentation.viewAll", () => { _selectTab(1); return Task.CompletedTask; })) { Name = "RequirementsCard" };
-        foreach (var group in VcTemplate.Create().Groups)
-        {
-            var requirements = _project.Requirements.Where(item => item.GroupId == group.Id).ToList();
-            var groupCard = new RequirementGroupCard(Context, group.Id, group.Title, requirements);
-            foreach (var requirement in requirements) groupCard.Body.Children.Add(new RequirementSummaryRow(Context, requirement));
-            card.Body.Children.Add(groupCard);
-        }
-        return card;
-    }
-
-    private Control TasksCard()
-    {
-        var card = new SectionCard(Context, "tasks.title", SectionCard.Link(Context, "presentation.viewAll", () => { _selectTab(2); return Task.CompletedTask; })) { Name = "DeadlinesCard" };
-        card.Body.Children.Add(Label(() => F("overview.deadlines", _summary.OverdueTasks.Count, _summary.UpcomingTasks.Count), "Caption", "TextSecondary"));
-        var active = _summary.OverdueTasks.Concat(_summary.UpcomingTasks).Take(5).ToList();
-        if (active.Count == 0) card.Body.Children.Add(Label("presentation.noActiveTasks", "BodySmall", "TextTertiary"));
-        foreach (var task in active)
-        {
-            var overdue = task.DueAt < DateTimeOffset.Now;
-            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
-            line.Children.Add(TaskRow.StatusMark(task.Status, overdue));
-            var title = Label(() => task.Title, "BodySmall"); title.TextTrimming = TextTrimming.CharacterEllipsis; Grid.SetColumn(title, 1); line.Children.Add(title);
-            var due = Label(() => Context.ShortDate(task.DueAt), "Caption", overdue ? "Error" : "TextSecondary"); Grid.SetColumn(due, 2); line.Children.Add(due);
-            card.Body.Children.Add(line);
-        }
-        card.Body.Children.Add(Label(() => _summary.NextMilestone is null ? T("overview.noMilestone") : F("overview.milestone", _summary.NextMilestone.Title, Due(_summary.NextMilestone.DueAt)), "Caption", "TextSecondary"));
-        return card;
-    }
-
-    private Control AiCard()
-    {
-        var card = new SectionCard(Context, () => "✦  " + T("agent.title")) { Name = "AiDelegationCard" };
-        card.Body.Children.Add(Label("presentation.aiHint", "Caption", "TextSecondary"));
-        foreach (var preset in AgentPrompts.Actions)
-        {
-            var prompt = preset.Prompt;
-            card.Body.Children.Add(new AiActionButton(Context, preset.Id, () => { _useQuickAction(prompt); return Task.CompletedTask; }));
-        }
-        return card;
     }
 
     private Control DetailsCard()
     {
         var card = new SectionCard(Context, "presentation.detailsTitle") { Name = "ProjectDetailsCard" };
-        var panel = card.Body;
+        var panel = card.Body; panel.Spacing = 12;
         var name = Input(_project.Name); var company = Input(_project.CompanyName); var owner = Input(_project.Owner);
         var notes = Input(_project.Notes, true); var stage = Choice(_project.Stage); var status = Choice(_project.Status);
-        var fields = new AdaptiveGrid { MinItemWidth = 260 };
+        var fields = new AdaptiveGrid { MinItemWidth = 220, Gap = 12 };
         foreach (var (label, input) in new (string, Control)[] { ("project.name", name), ("project.company", company), ("project.owner", owner), ("project.stage", stage), ("field.status", status) })
-        {
-            var group = new StackPanel { Spacing = 6 }; Field(group, label, input); fields.Children.Add(group);
-        }
-        panel.Children.Add(fields); Field(panel, "field.notes", notes);
+            fields.Children.Add(FieldGroup(label, input));
+        panel.Children.Add(fields);
         var state = Input(_project.State.Summary, true);
         var questions = Input(string.Join('\n', _project.State.OpenQuestions), true);
         var followups = Input(string.Join('\n', _project.State.FollowUps), true);
-        Field(panel, "overview.currentState", state); Field(panel, "overview.questions", questions); Field(panel, "overview.followUps", followups);
+        var texts = new AdaptiveGrid { MinItemWidth = 260, Gap = 12 };
+        texts.Children.Add(FieldGroup("field.notes", notes)); texts.Children.Add(FieldGroup("overview.currentState", state));
+        texts.Children.Add(FieldGroup("overview.questions", questions)); texts.Children.Add(FieldGroup("overview.followUps", followups));
+        panel.Children.Add(texts);
         panel.Children.Add(Action("overview.save", async () =>
         {
             if (string.IsNullOrWhiteSpace(name.Text)) { ShowError("validation.projectNameRequired"); return; }

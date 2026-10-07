@@ -84,7 +84,7 @@ public sealed class PresentationTests
     }
 
     [AvaloniaFact]
-    public async Task Dashboard_is_minimal_uses_stored_data_and_future_navigation_is_disabled()
+    public async Task Dashboard_counts_stored_data_and_every_section_is_navigable()
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
@@ -103,12 +103,19 @@ public sealed class PresentationTests
 
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "PriorityItems"));
-        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "1 overdue tasks · 0 tasks due in 7 days · 1 upcoming milestones");
+        // Startup keeps navigation locked until the first screen and its attention badge have loaded.
+        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "PriorityItems")
+            && Controls<Control>(window).Single(control => control.Name == "NavigationCalendar").IsEffectivelyEnabled);
+        string Stat(string name) => Controls<Control>(window).Single(card => card.Name == name).GetLogicalDescendants().OfType<TextBlock>().Single(block => block.Name == "StatValue").Text!;
+        Assert.Equal("1", Stat("DashboardOverdueStat"));
+        Assert.Equal("0", Stat("DashboardUpcomingStat"));
+        Assert.Equal("1", Stat("DashboardMilestonesStat"));
+        Assert.Equal("1", Stat("DashboardActiveStat"));
         Assert.Contains(Controls<Control>(window), control => control.Name == "PriorityRow");
-        Assert.DoesNotContain(Controls<Control>(window), control => control.Name is "DashboardOverdueStat" or "DashboardMissingStat" or "DashboardMilestonesStat" or "DashboardActiveStat" or "ReadinessRow");
-        foreach (var name in new[] { "NavigationCalendar", "NavigationDocuments", "NavigationDelegation", "NavigationSettings", "GlobalSearch" })
-            Assert.False(Controls<Control>(window).Single(control => control.Name == name).IsEffectivelyEnabled);
+        Assert.True(Controls<Control>(window).Single(control => control.Name == "AgendaCard").IsVisible);
+        Assert.DoesNotContain(Controls<Control>(window), control => control.Name == "GlobalSearch");
+        foreach (var name in new[] { "NavigationCalendar", "NavigationDocuments", "NavigationSettings" })
+            Assert.True(Controls<Control>(window).Single(control => control.Name == name).IsEffectivelyEnabled);
         Assert.Equal(0, fixture.Runtime.Calls);
         window.Close();
     }

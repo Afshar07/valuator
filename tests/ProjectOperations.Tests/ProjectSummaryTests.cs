@@ -94,4 +94,39 @@ public sealed class ProjectSummaryTests
         };
         Assert.Equal([first.Id, last.Id], ProjectSummaries.Dashboard([project], Now).UpcomingMilestones.Select(item => item.Milestone.Id));
     }
+
+    [Fact]
+    public void ScheduleIncludesOnlyOpenDatedWorkOfLiveProjectsWithinRange()
+    {
+        var live = new Project { Name = "Live", Status = ProjectStatus.OnHold };
+        live.Tasks.Add(new ProjectTask { Title = "Late", DueAt = Now.AddDays(-1) });
+        live.Tasks.Add(new ProjectTask { Title = "Soon", DueAt = Now.AddDays(2), Status = ProjectTaskStatus.InProgress });
+        live.Tasks.Add(new ProjectTask { Title = "Done", DueAt = Now.AddDays(1), Status = ProjectTaskStatus.Done });
+        live.Tasks.Add(new ProjectTask { Title = "Undated" });
+        live.Tasks.Add(new ProjectTask { Title = "Outside", DueAt = Now.AddDays(10) });
+        live.Milestones.Add(new Milestone { Title = "Past milestone", DueAt = Now.AddDays(-2) });
+        live.Milestones.Add(new Milestone { Title = "Complete", DueAt = Now.AddDays(1), IsComplete = true });
+        var closed = new Project { Name = "Closed", Status = ProjectStatus.Completed };
+        closed.Tasks.Add(new ProjectTask { Title = "Excluded", DueAt = Now });
+
+        var items = ProjectSummaries.Schedule([live, closed], Now.AddDays(-3), Now.AddDays(7), Now);
+
+        Assert.Equal(["Past milestone", "Late", "Soon"], items.Select(item => item.Title));
+        Assert.Equal([false, true, false], items.Select(item => item.IsOverdue));
+        Assert.Equal(ScheduleItemKind.Milestone, items[0].Kind);
+        Assert.All(items, item => Assert.Equal("Live", item.ProjectName));
+    }
+
+    [Fact]
+    public void NextDeadlineIsEarliestOpenDatedItem()
+    {
+        var project = new Project();
+        Assert.Null(ProjectSummaries.NextDeadline(project, Now));
+        project.Tasks.Add(new ProjectTask { Title = "Done early", DueAt = Now.AddDays(-5), Status = ProjectTaskStatus.Cancelled });
+        project.Milestones.Add(new Milestone { Title = "Review", DueAt = Now.AddDays(3) });
+        project.Tasks.Add(new ProjectTask { Title = "Late", DueAt = Now.AddHours(-1) });
+        var next = ProjectSummaries.NextDeadline(project, Now)!;
+        Assert.Equal("Late", next.Title);
+        Assert.True(next.IsOverdue);
+    }
 }

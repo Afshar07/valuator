@@ -20,7 +20,8 @@ different directory (for example, an isolated verification directory).
 
 Choose **English** or **فارسی** in the language selector. Labels and layout direction
 switch live (English LTR, Persian RTL), without changing project data. The selection
-is saved in `settings.json` in the same data directory. Agent responses use the
+is saved in `settings.json` in the same data directory, as is the Light / Dark / Auto
+theme chosen in the sidebar or Settings. Agent responses use the
 selected language; structured proposal fields remain unchanged. Date entry uses
 Gregorian `yyyy-MM-dd HH:mm` in both languages; Jalali display is deferred.
 See [localization boundaries and extension guidance](docs/localization.md).
