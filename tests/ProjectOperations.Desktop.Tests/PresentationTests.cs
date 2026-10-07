@@ -42,6 +42,8 @@ public sealed class PresentationTests
         window.Show();
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
         Capture("dashboard");
+        ClickPrefix(window, text.Get("navigation.projects"));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " · Synthetic Capital") && button.IsEffectivelyEnabled));
         ClickPrefix(window, project.Name + " · Synthetic Capital");
         await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == text.Get("navigation.projects")).IsEffectivelyEnabled);
         var tabs = Controls<TabControl>(window).Single();
@@ -82,7 +84,7 @@ public sealed class PresentationTests
     }
 
     [AvaloniaFact]
-    public async Task Dashboard_stats_use_stored_data_and_future_navigation_is_disabled()
+    public async Task Dashboard_is_minimal_uses_stored_data_and_future_navigation_is_disabled()
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
@@ -101,13 +103,10 @@ public sealed class PresentationTests
 
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "DashboardOverdueStat"));
-        string Value(string name) => Controls<Control>(window).Single(control => control.Name == name)
-            .GetLogicalDescendants().OfType<TextBlock>().Single(block => block.Name == "StatValue").Text!;
-        Assert.Equal("1", Value("DashboardOverdueStat"));
-        Assert.Equal("13", Value("DashboardMissingStat"));
-        Assert.Equal("1", Value("DashboardMilestonesStat"));
-        Assert.Equal("1", Value("DashboardActiveStat"));
+        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "PriorityItems"));
+        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "1 overdue tasks · 0 tasks due in 7 days · 1 upcoming milestones");
+        Assert.Contains(Controls<Control>(window), control => control.Name == "PriorityRow");
+        Assert.DoesNotContain(Controls<Control>(window), control => control.Name is "DashboardOverdueStat" or "DashboardMissingStat" or "DashboardMilestonesStat" or "DashboardActiveStat" or "ReadinessRow");
         foreach (var name in new[] { "NavigationCalendar", "NavigationDocuments", "NavigationDelegation", "NavigationSettings", "GlobalSearch" })
             Assert.False(Controls<Control>(window).Single(control => control.Name == name).IsEffectivelyEnabled);
         Assert.Equal(0, fixture.Runtime.Calls);
