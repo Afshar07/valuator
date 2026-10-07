@@ -197,7 +197,7 @@ public sealed class MainWindowTests
         Assert.All(tabs.Items.OfType<TabItem>().Take(3), tab => Assert.False(tab.IsEnabled));
         Assert.False(Button(window, "All projects").IsEffectivelyEnabled);
         Assert.False(Controls<Control>(window).Single(control => control.Name == "LanguageSelector").IsEffectivelyEnabled);
-        Assert.Contains(Controls<TextBox>(window), box => box.Text?.Contains("Synthetic live delta") == true);
+        await UntilAsync(() => Controls<TextBox>(window).Any(box => box.Text?.Contains("Synthetic live delta") == true));
         Click(window, "Stop");
         await UntilAsync(() => fixture.Runtime.CancelRequested.Task.IsCompleted);
         Assert.True(HasText(window, "Stopping — waiting for the agent to finish cancellation…"));
@@ -265,21 +265,8 @@ public sealed class MainWindowTests
         var parent = Assert.IsType<StackPanel>(block.Parent);
         return Assert.IsType<T>(parent.Children[parent.Children.IndexOf(block) + 1]);
     }
-    private static void Click(Window window, string text, bool last = false)
-    {
-        var matches = Buttons(window).Where(b => ButtonText(b) == text);
-        var button = last ? matches.Last() : matches.First();
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-    private static void ClickPrefix(Window window, string prefix)
-    {
-        var button = Buttons(window).First(b => ButtonText(b).StartsWith(prefix));
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
+    private static void Click(Window window, string text, bool last = false) => UiWait.Click(window, b => ButtonText(b) == text, $"\"{text}\"", last);
+    private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, b => ButtonText(b).StartsWith(prefix), $"starting with \"{prefix}\"");
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

@@ -204,14 +204,8 @@ public sealed class MainWindowLocalizationTests
         var parent = Assert.IsType<StackPanel>(block.Parent);
         return Assert.IsType<TextBox>(parent.Children[parent.Children.IndexOf(block) + 1]);
     }
-    private static void Click(Window window, string text) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button) == text));
-    private static void ClickPrefix(Window window, string prefix) => ClickButton(Buttons(window).First(button => MainWindowTests.ButtonText(button).StartsWith(prefix)));
-    private static void ClickButton(Button button)
-    {
-        Assert.True(button.IsEffectivelyEnabled);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
+    private static void Click(Window window, string text) => UiWait.Click(window, button => MainWindowTests.ButtonText(button) == text, $"\"{text}\"");
+    private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, button => MainWindowTests.ButtonText(button).StartsWith(prefix), $"starting with \"{prefix}\"");
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
