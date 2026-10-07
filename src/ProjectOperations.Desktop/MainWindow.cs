@@ -230,11 +230,15 @@ public sealed class MainWindow : Window, IShell
         finally
         {
             _running = null; _runCancellation.Dispose(); _runCancellation = null;
-            SetNavigationEnabled(true); _page.IsEnabled = true;
-            if (_projectTabs is not null)
-                foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = true;
+            // Reload while still locked: unlocking first would let the user act on screens that the pending reload then replaces.
             // A window that is closing only waits for the runtime outcome; it does not reload screens.
-            if (!_closeRequested) await GuardAsync(refresh, clearError: false);
+            try { if (!_closeRequested) await GuardAsync(refresh, clearError: false); }
+            finally
+            {
+                SetNavigationEnabled(true); _page.IsEnabled = true;
+                if (_projectTabs is not null)
+                    foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = true;
+            }
         }
     }
     public void CancelRun() => _runCancellation?.Cancel();
