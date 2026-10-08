@@ -123,6 +123,19 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
         project.Revision = revision;
     }
 
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.Run(() => DeleteCoreAsync(id, cancellationToken), cancellationToken);
+
+    private async Task DeleteCoreAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+        // Foreign keys cascade to requirements, files, tasks, milestones, state and agent jobs.
+        using var command = SqliteDatabase.Command(connection, transaction, "DELETE FROM projects WHERE id=$id;", ("$id", id));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     internal static async Task<long> SaveAggregateAsync(SqliteConnection connection, SqliteTransaction transaction,
         Project project, CancellationToken cancellationToken)
     {

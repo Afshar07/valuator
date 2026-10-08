@@ -104,6 +104,11 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   proposal review outcomes commit atomically. Native SQLite work runs off the UI thread.
 - Files stay in their original locations. Persist references, size and timestamps;
   removal only deletes the association. No extraction, OCR or managed storage layer.
+- Projects can be deleted permanently (`ProjectService.DeleteAsync` → `IProjectRepository.DeleteAsync`).
+  One transaction deletes the `projects` row; foreign-key `ON DELETE CASCADE` removes requirements,
+  file references, tasks, milestones, state and agent job history. Linked files on disk are never
+  touched, other projects are unaffected, and deleting a missing project is a no-op. There is no
+  soft delete or undo. The stage that the project used is kept.
 - Agent context is a snapshot of the selected project only, including values/notes,
   dates, file paths and up to three recent completed result excerpts (12,000 characters
   each). Prior output is labeled unverified history, not current fact. Every request
@@ -203,3 +208,11 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   project cannot be deleted (`StageInUseException`; Settings disables the button and shows the usage count), nor can the
   last stage of a template. Projects may move to any stage. Databases older than version 3 are discarded, not migrated.
   Stages are managed in Settings (`StageEditor`) and shown with `Ui.StagePill` in the header, list, dashboard and overview.
+- **Project deletion UI.** The only entry point is the trash icon in the last column of the All projects
+  table (`ProjectsView`; also kept in the compact layout). It opens `DeleteProjectDialog`
+  (`ProjectDialogs.cs`), which names the project and states that deletion is permanent and linked files
+  are untouched; only its confirm button calls `ProjectService.DeleteAsync` and then navigates to the
+  refreshed list. Cancel, close and scrim click keep the project. The icon handles its own `Click`
+  (marked handled) so the enclosing row does not also open the project. It is deliberately not in the
+  Edit project dialog, where Save/Cancel sit beside it. Strings: `v3.delProject`, `v3.delProjectT`,
+  `v3.delProjectBody` (English and Persian).

@@ -45,6 +45,26 @@ internal sealed class EditProjectDialog : DialogFrame
     }
 }
 
+/// <summary>Asks for explicit confirmation before a project and everything inside it is permanently deleted.</summary>
+internal sealed class DeleteProjectDialog : DialogFrame
+{
+    public DeleteProjectDialog(PresentationContext context, Project project)
+        : base(context, "DeleteProjectDialog", () => context.Text.Get("v3.delProjectT"))
+    {
+        Body.Children.Add(context.Label(() => context.Text.Format("v3.delProjectBody", project.Name), "Body"));
+        var cancel = context.Action("action.cancel", () => { context.Shell.CloseModal(); return Task.CompletedTask; });
+        cancel.Name = "CancelDeleteProjectButton";
+        var confirm = context.IconAction("v3.delProject", Icons.Trash, async () =>
+        {
+            await context.Projects.DeleteAsync(project.Id);
+            context.Shell.CloseModal();
+            await context.Shell.NavigateAsync("projects");
+        }, "danger");
+        confirm.Name = "ConfirmDeleteProjectButton";
+        Footer(null, cancel, confirm);
+    }
+}
+
 /// <summary>Shared date row of the task and milestone dialogs: quick chips, a date picker and the relative hint.</summary>
 internal sealed class DateRow : StackPanel
 {

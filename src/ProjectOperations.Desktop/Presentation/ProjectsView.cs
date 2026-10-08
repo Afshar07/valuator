@@ -11,8 +11,8 @@ namespace ProjectOperations.Desktop;
 /// <summary>All projects as a table: stage, readiness (Complete only), next open deadline, owner and status.</summary>
 internal sealed class ProjectsView : PresentationView
 {
-    private const string Columns = "2*,1.3*,1.4*,1*,0.9*,90";
-    private const string CompactColumns = "2*,1.4*,1*,90";
+    private const string Columns = "2*,1.3*,1.4*,1*,0.9*,90,30";
+    private const string CompactColumns = "2*,1.4*,1*,90,30";
     private readonly List<(Project Project, Control Row)> _rows = [];
     private readonly TextBox _filter = new() { Name = "ProjectFilter", MinWidth = 0, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(0), MinHeight = 0 };
 
@@ -34,7 +34,7 @@ internal sealed class ProjectsView : PresentationView
         Children.Add(PageHeader("navigation.projects", null, search, create));
 
         var compact = false;
-        var header = new TableHeader(Context, Columns, "project.column.project", "project.column.stage", "project.column.readiness", "project.column.next", "project.column.owner", "project.column.status");
+        var header = new TableHeader(Context, Columns, "project.column.project", "project.column.stage", "project.column.readiness", "project.column.next", "project.column.owner", "project.column.status", "");
         var card = new ListCard(Context, columnHeader: header) { Name = "ProjectsCard" };
         var now = DateTimeOffset.Now;
         foreach (var project in await _projects.ListAsync())
@@ -78,7 +78,7 @@ internal sealed class ProjectsView : PresentationView
                 if (!child.IsSet(OriginalColumn)) child.SetValue(OriginalColumn, Grid.GetColumn(child));
                 var column = (int)child.GetValue(OriginalColumn);
                 child.IsVisible = !compact || column is not (1 or 4);
-                Grid.SetColumn(child, compact ? column switch { 0 => 0, 2 => 1, 3 => 2, 5 => 3, _ => 0 } : column);
+                Grid.SetColumn(child, compact ? column switch { 0 => 0, 2 => 1, 3 => 2, 5 => 3, 6 => 4, _ => 0 } : column);
             }
         }
         private static readonly AttachedProperty<int> OriginalColumn = AvaloniaProperty.RegisterAttached<ProjectRow, Control, int>("OriginalColumn");
@@ -105,6 +105,13 @@ internal sealed class ProjectsView : PresentationView
             Place(grid, Cell(deadline), 3);
             Place(grid, Cell(context.Label(() => string.IsNullOrWhiteSpace(project.Owner) ? "—" : project.Owner, "Body", "TextSecondary")), 4);
             Place(grid, Ui.Pill(context, () => context.EnumText(project.Status), StatusVisuals.Project(project.Status)), 5);
+            // The delete button sits inside the row button; it handles its own click, so the row does not open the project.
+            var delete = context.IconAction("v3.delProject", Icons.Trash, () => { context.Shell.ShowModal(new DeleteProjectDialog(context, project)); return Task.CompletedTask; }, "dangerGhost", iconOnly: true);
+            delete.Click += (_, e) => e.Handled = true; // Click bubbles: keep the row from also opening the project.
+            delete.Name = "DeleteProjectButton"; delete.Width = 30; delete.Height = 30; delete.MinHeight = 30; delete.Padding = new Thickness(0);
+            delete.HorizontalAlignment = HorizontalAlignment.Center; delete.VerticalAlignment = VerticalAlignment.Center;
+            delete.HorizontalContentAlignment = HorizontalAlignment.Center; delete.VerticalContentAlignment = VerticalAlignment.Center;
+            Place(grid, delete, 6);
             return grid;
         }
         private static TextBlock Cell(TextBlock text) { text.VerticalAlignment = VerticalAlignment.Center; text.TextTrimming = TextTrimming.CharacterEllipsis; return text; }

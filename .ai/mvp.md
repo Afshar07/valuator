@@ -28,6 +28,7 @@ The chosen MVP stack is **C#/.NET, Avalonia UI, SQLite, and OpenCode behind `IAg
 
 - Keep delegated analysis/preparation separate from user decisions and approval of structured-state changes.
 - Protect source documents and unrelated user files; do not treat agent access as authorization for destructive edits.
+- Deleting a project is a user-only destructive action: it requires an explicit confirmation naming the project, removes only application-owned records (never linked files), and is never offered to or performed by the agent.
 - Distinguish missing information, unsupported extraction, inferred conclusions, and verified facts. Report actual job outcomes and provenance rather than assuming success.
 - Stop must initiate real cancellation. Resolve process termination, partial results, failure recovery, and state-write behavior before claiming reliable cancellation; cancellation does not automatically undo prior effects.
 - Sensitive finance documents require explicit decisions about runtime access, provider transmission, credentials, and retention before implementation at those boundaries.

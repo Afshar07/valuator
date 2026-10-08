@@ -193,6 +193,39 @@ public sealed class PresentationTests
         window.Close();
     }
 
+    [AvaloniaFact]
+    public async Task Projects_are_deleted_only_after_confirmation()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        var project = await fixture.Projects.CreateAsync("Doomed project", "Company", ProjectStatus.Active, "", "");
+        var window = fixture.Window;
+        window.Show();
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
+        Click(window, "All projects");
+        await UntilAsync(() => Buttons(window).Any(button => button.Name == "DeleteProjectButton"));
+        static void Press(Window window, string name) =>
+            Buttons(window).Single(button => button.Name == name).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+
+        // Cancelling the confirmation keeps the project, and the list stays on screen (the row did not open the project).
+        Press(window, "DeleteProjectButton");
+        await UntilAsync(() => Buttons(window).Any(button => button.Name == "ConfirmDeleteProjectButton"));
+        Assert.NotNull(await fixture.Projects.GetAsync(project.Id));
+        Press(window, "CancelDeleteProjectButton");
+        await UntilAsync(() => !Buttons(window).Any(button => button.Name == "ConfirmDeleteProjectButton"));
+        Assert.NotNull(await fixture.Projects.GetAsync(project.Id));
+        Assert.Contains(Buttons(window), button => button.Name == "DeleteProjectButton");
+        Assert.DoesNotContain(Controls<TabControl>(window), _ => true);
+
+        // Confirming deletes it and the list no longer shows it.
+        Press(window, "DeleteProjectButton");
+        await UntilAsync(() => Buttons(window).Any(button => button.Name == "ConfirmDeleteProjectButton"));
+        Press(window, "ConfirmDeleteProjectButton");
+        await UntilAsync(() => !Buttons(window).Any(button => button.Name is "ConfirmDeleteProjectButton" or "DeleteProjectButton"));
+        Assert.Null(await fixture.Projects.GetAsync(project.Id));
+        window.Close();
+    }
+
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);
     private static TextBox LabeledInput(Window window, string label)

@@ -93,6 +93,26 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task DeleteRemovesTheProjectAndItsChildrenAndJobsButKeepsOtherProjects()
+    {
+        var project = CreateProject();
+        var other = CreateProject();
+        await Repository.SaveAsync(project);
+        await Repository.SaveAsync(other);
+        var jobs = new SqliteAgentJobRepository(DatabasePath);
+        await jobs.SaveAsync(new AgentJob { ProjectId = project.Id, ResultText = "Gone with the project" });
+        await jobs.SaveAsync(new AgentJob { ProjectId = other.Id, ResultText = "Kept" });
+
+        await Repository.DeleteAsync(project.Id);
+
+        Assert.Null(await Repository.GetAsync(project.Id));
+        Assert.Equal(other.Id, Assert.Single(await Repository.ListAsync()).Id);
+        Assert.Empty(await jobs.ListAsync(project.Id));
+        Assert.Single(await jobs.ListAsync(other.Id));
+        await Repository.DeleteAsync(project.Id); // deleting a missing project is a no-op
+    }
+
+    [Fact]
     public async Task SavesReplaceRemovedChildrenWithoutDeletingOtherProjectsOrJobs()
     {
         var project = CreateProject();

@@ -7,6 +7,8 @@ public interface IProjectRepository
     Task<IReadOnlyList<Project>> ListAsync(CancellationToken cancellationToken = default);
     Task<Project?> GetAsync(Guid id, CancellationToken cancellationToken = default);
     Task SaveAsync(Project project, CancellationToken cancellationToken = default);
+    /// <summary>Permanently removes a project with its requirements, file references, tasks, milestones, state and agent history.</summary>
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     /// <summary>The template's ordered stages; the defaults are seeded the first time a template is asked for.</summary>
     Task<IReadOnlyList<ProjectStage>> ListStagesAsync(string templateId, CancellationToken cancellationToken = default);
     /// <summary>Replaces the template's ordered stages. Fails when a removed stage is still used by a project.</summary>
@@ -124,6 +126,10 @@ public sealed class ProjectService(IProjectRepository repository)
         try { await repository.SaveAsync(project, cancellationToken); }
         catch { project.UpdatedAt = previous; throw; }
     }
+
+    /// <summary>Permanently deletes the project. Linked files stay where they are; only their references are removed.</summary>
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        repository.DeleteAsync(id, cancellationToken);
 
     public Task<IReadOnlyList<Project>> ListAsync(CancellationToken cancellationToken = default) =>
         repository.ListAsync(cancellationToken);
