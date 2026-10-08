@@ -5,23 +5,23 @@
   "installed": {
     "lead": {
       "source": "toolkit",
-      "version": "2026.10.5",
-      "hash": "48f268fb69ecb1a0cb1c3a4c30e298964dbb5c139dace54cd2119d4166cfdbe0"
+      "version": "2026.10.8",
+      "hash": "e7479f17a4feedcf7da58b8964933763d45b8fdb55ee9cbbc75e8421b848682d"
     },
     "researcher": {
       "source": "toolkit",
-      "version": "2026.10.5",
-      "hash": "d5e10bb281f9c022d4bd3eb6bde0acee7d02bde136a9cf9d5b8b78c6fadf91be"
+      "version": "2026.10.8",
+      "hash": "689d94091ae5fe60d4c1957569e99c7e16b3aff5710f897299230ba76453d67f"
     },
     "external-researcher": {
       "source": "toolkit",
-      "version": "2026.10.5",
-      "hash": "6eadc9588dd686e46548f10cdd8a372456a3dd5d79fafb711fac62a2fd78c185"
+      "version": "2026.10.8",
+      "hash": "15683eb15d58dfc49b2dc79a4854d30436fc64d1f64e88d034256de87d14cf93"
     },
     "coder": {
       "source": "toolkit",
-      "version": "2026.10.5",
-      "hash": "91f5fcd237360511e468dcdba044cb92cf1d2237eceeff701c718e7c13817642"
+      "version": "2026.10.8",
+      "hash": "607bcb72254363324f31c62263cb07e4130e5650764cd7956001cd86fcb49c58"
     }
   }
 }

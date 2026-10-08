@@ -208,19 +208,21 @@ internal sealed class RequirementsView : PresentationView
 
         if (requirement.Type == RequirementType.Document)
         {
-            var files = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
+            var files = new StackPanel { Spacing = 8 };
             foreach (var file in requirement.Files.ToList())
             {
-                var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+                var fileRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Left };
+                var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
                 chip.Children.Add(Icons.Glyph(Icons.ForFile(file.Path), 14, "TextSecondary"));
-                var name = Label(() => file.FileName, "Small"); name.FlowDirection = FlowDirection.LeftToRight; chip.Children.Add(name);
-                files.Children.Add(new Border { Height = 30, Padding = new Thickness(10, 0), CornerRadius = new CornerRadius(PresentationTheme.RadiusControl), BorderThickness = new Thickness(1), Child = chip, VerticalAlignment = VerticalAlignment.Center }
+                var name = Label(() => file.FileName, "Small"); name.FlowDirection = FlowDirection.LeftToRight; name.VerticalAlignment = VerticalAlignment.Center; chip.Children.Add(name);
+                fileRow.Children.Add(new Border { Height = 30, Padding = new Thickness(10, 0), CornerRadius = new CornerRadius(PresentationTheme.RadiusControl), BorderThickness = new Thickness(1), Child = chip, VerticalAlignment = VerticalAlignment.Center }
                     .Paint(Border.BackgroundProperty, "BackgroundCard").Paint(Border.BorderBrushProperty, "BorderDefault"));
                 var unlink = Action("documents.unlink", async () => { requirement.Files.Remove(file); await SaveAsync(_project); await Context.Shell.RefreshProjectAsync(); }, "ghost");
-                unlink.Name = "UnlinkFile"; unlink.MinHeight = 30; unlink.Padding = new Thickness(8, 0); files.Children.Add(unlink);
+                unlink.Name = "UnlinkFile"; unlink.MinHeight = 30; unlink.Padding = new Thickness(8, 0); unlink.VerticalAlignment = VerticalAlignment.Center; fileRow.Children.Add(unlink);
+                files.Children.Add(fileRow);
             }
             var pick = Context.IconAction("v3.chooseFile", Icons.FolderOpen, () => PickFilesAsync(requirement));
-            pick.Name = "ChooseFile"; pick.MinHeight = 30; files.Children.Add(pick);
+            pick.Name = "ChooseFile"; pick.MinHeight = 30; pick.HorizontalAlignment = HorizontalAlignment.Left; files.Children.Add(pick);
             panel.Children.Add(files);
         }
         else
@@ -236,7 +238,7 @@ internal sealed class RequirementsView : PresentationView
                 await SaveAsync(_project); await Context.Shell.RefreshProjectAsync();
             }, "primary");
             save.Name = "SaveValue"; save.MinHeight = 34;
-            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left };
+            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Stretch };
             line.Children.Add(input); Grid.SetColumn(save, 1); line.Children.Add(save);
             panel.Children.Add(line);
         }
