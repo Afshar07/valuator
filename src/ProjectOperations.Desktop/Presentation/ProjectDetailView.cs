@@ -54,9 +54,9 @@ internal sealed class ProjectDetailView : PresentationView
         var titleLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
         var title = Label(() => _project.Name, "Title"); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis; title.Name = "ProjectTitle";
         titleLine.Children.Add(title);
-        var stage = Ui.Pill(Context, () => EnumText(_project.Stage), Tone.Accent); titleLine.Children.Add(stage);
+        var stage = Ui.StagePill(Context, _project.Stage); stage.Name = "StagePill"; titleLine.Children.Add(stage);
         if (_project.Status != ProjectStatus.Active) titleLine.Children.Add(Ui.Pill(Context, () => EnumText(_project.Status), Tone.Neutral));
-        var edit = Context.IconAction("v3.editProject", Icons.PencilSimple, () => { Context.Shell.ShowModal(new EditProjectDialog(Context, _project)); return Task.CompletedTask; }, "square", iconOnly: true);
+        var edit = Context.IconAction("v3.editProject", Icons.PencilSimple, async () => Context.Shell.ShowModal(new EditProjectDialog(Context, _project, await Context.Projects.ListStagesAsync(_project.TemplateId))), "square", iconOnly: true);
         edit.Name = "EditProjectButton"; edit.Width = 30; edit.Height = 30; edit.VerticalAlignment = VerticalAlignment.Center;
         edit.Paint(Button.ForegroundProperty, "TextSecondary");
         titleLine.Children.Add(edit);

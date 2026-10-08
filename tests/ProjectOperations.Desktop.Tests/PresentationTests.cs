@@ -23,7 +23,7 @@ public sealed class PresentationTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas اطلس", "Synthetic Capital", ProjectStage.DueDiligence, ProjectStatus.Active, "Local owner", "Synthetic project notes");
+        var project = await fixture.Projects.CreateAsync("Atlas اطلس", "Synthetic Capital", ProjectStatus.Active, "Local owner", "Synthetic project notes");
         project.Requirements[0].Status = RequirementStatus.Complete;
         project.Requirements[1].Status = RequirementStatus.Provided;
         project.Requirements[2].Status = RequirementStatus.NeedsReview;
@@ -88,7 +88,7 @@ public sealed class PresentationTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var active = await fixture.Projects.CreateAsync("Synthetic active", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var active = await fixture.Projects.CreateAsync("Synthetic active", "Company", ProjectStatus.Active, "", "");
         active.Requirements[0].Status = RequirementStatus.Complete;
         active.Requirements[1].Status = RequirementStatus.Provided;
         active.Requirements[2].Status = RequirementStatus.NeedsReview;
@@ -96,7 +96,7 @@ public sealed class PresentationTests
         active.Tasks.Add(new ProjectTask { ProjectId = active.Id, Title = "Already done", DueAt = DateTimeOffset.Now.AddDays(-2), Status = ProjectTaskStatus.Done });
         active.Milestones.Add(new Milestone { ProjectId = active.Id, Title = "Upcoming", DueAt = DateTimeOffset.Now.AddDays(2) });
         await fixture.Projects.SaveAsync(active);
-        var completed = await fixture.Projects.CreateAsync("Synthetic completed", "Company", ProjectStage.Screening, ProjectStatus.Completed, "", "");
+        var completed = await fixture.Projects.CreateAsync("Synthetic completed", "Company", ProjectStatus.Completed, "", "");
         foreach (var requirement in completed.Requirements) requirement.Status = RequirementStatus.Complete;
         completed.Tasks.Add(new ProjectTask { ProjectId = completed.Id, Title = "Excluded deadline", DueAt = DateTimeOffset.Now.AddDays(-2) });
         await fixture.Projects.SaveAsync(completed);
@@ -125,7 +125,7 @@ public sealed class PresentationTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Mixed Atlas اطلس", "Company", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Mixed Atlas اطلس", "Company", ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
@@ -164,7 +164,7 @@ public sealed class PresentationTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Milestone project", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Milestone project", "Company", ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));

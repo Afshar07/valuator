@@ -15,7 +15,7 @@ public sealed class AgentServiceTests
     public async Task ResponseLanguageOnlyChangesInstructionsNotTheConsentedContextOrPrompt(AgentResponseLanguage language)
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "Owner", "یادداشت");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "Owner", "یادداشت");
         AgentRequest? sent = null;
         var service = new AgentService(fixture.Projects, new TestRuntime((request, _, _) =>
         {
@@ -62,8 +62,8 @@ public sealed class AgentServiceTests
     public async Task ContextContainsOnlySelectedProjectAndNoAutomaticTasksAreCommitted()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var other = await fixture.Projects.CreateAsync("Private other project", "Other company", default, default, "", "OTHER_SECRET");
-        var selected = await fixture.Projects.CreateAsync("Atlas", "Atlas company", default, default, "Owner", "ATLAS_NOTE");
+        var other = await fixture.Projects.CreateAsync("Private other project", "Other company", default, "", "OTHER_SECRET");
+        var selected = await fixture.Projects.CreateAsync("Atlas", "Atlas company", default, "Owner", "ATLAS_NOTE");
         AgentRequest? sent = null;
         var runtime = new TestRuntime((request, _, _) =>
         {
@@ -88,7 +88,7 @@ public sealed class AgentServiceTests
     public async Task ApprovalReloadsFreshProjectAndRetriesDoNotDuplicateTasks()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "Before", "");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "Before", "");
         var proposal = new TaskProposal { Title = "Request forecast" };
         var jobs = new MemoryJobs(fixture.Projects);
         var service = new AgentService(fixture.Projects,
@@ -111,7 +111,7 @@ public sealed class AgentServiceTests
     public async Task RejectionDoesNotCreateTasks()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "", "");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "", "");
         var proposal = new TaskProposal { Title = "Not approved" };
         var service = new AgentService(fixture.Projects,
             new TestRuntime((_, _, _) => Task.FromResult(new AgentResult { Proposals = [proposal] })), new MemoryJobs(fixture.Projects));
@@ -126,7 +126,7 @@ public sealed class AgentServiceTests
     public async Task ConfirmedCancellationPersistsPartialResultAndNoProposals()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "", "");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "", "");
         using var stop = new CancellationTokenSource();
         var runtime = new TestRuntime((_, progress, token) =>
         {
@@ -146,7 +146,7 @@ public sealed class AgentServiceTests
     public async Task FailedStopIsNotRecordedAsCancelled()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "", "");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "", "");
         using var stop = new CancellationTokenSource();
         var runtime = new TestRuntime((_, _, _) =>
         {
@@ -163,7 +163,7 @@ public sealed class AgentServiceTests
     public async Task StaleRunningHistoryIsInterruptedNotSuccessfulOrConfirmedStopped()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, default, "", "");
+        var project = await fixture.Projects.CreateAsync("Atlas", "Atlas", default, "", "");
         var jobs = new MemoryJobs();
         await jobs.SaveAsync(new AgentJob { ProjectId = project.Id, Status = AgentJobStatus.Running });
         var service = new AgentService(fixture.Projects,

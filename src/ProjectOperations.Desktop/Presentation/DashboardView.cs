@@ -66,7 +66,7 @@ internal sealed class DashboardView : PresentationView
         var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 3 };
         var title = new WrapPanel { ItemSpacing = 8 };
         title.Children.Add(Label(() => project.Name, "BodyStrong"));
-        title.Children.Add(Label(() => EnumText(project.Stage), "Caption", "TextTertiary"));
+        title.Children.Add(Ui.StagePill(Context, project.Stage));
         labels.Children.Add(title);
         var line = Label(() => "", "Small", "TextSecondary"); line.TextWrapping = TextWrapping.NoWrap; line.TextTrimming = TextTrimming.CharacterEllipsis;
         Bind(line, control =>

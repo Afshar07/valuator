@@ -83,7 +83,7 @@ public sealed class LocalizationTests
         locale.SetLanguage(language);
         var localization = new LocalizationService(locale);
         var display = new DomainDisplay(localization);
-        var types = new[] { typeof(ProjectStatus), typeof(ProjectStage), typeof(RequirementType),
+        var types = new[] { typeof(ProjectStatus), typeof(RequirementType),
             typeof(RequirementStatus), typeof(ProjectTaskStatus), typeof(AgentJobStatus), typeof(ProposalReviewStatus) };
         foreach (var type in types)
             foreach (Enum value in System.Enum.GetValues(type))
@@ -93,7 +93,6 @@ public sealed class LocalizationTests
                 Assert.False(string.IsNullOrWhiteSpace(display.Get(value)));
                 Assert.Equal(original, JsonSerializer.Serialize(value, type));
             }
-        Assert.Equal(localization.Get("project.stage.dueDiligence"), display.Enum(ProjectStage.DueDiligence));
         Assert.Equal(localization.Get("requirement.status.needsReview"), display.Get(RequirementStatus.NeedsReview));
         Assert.Equal(localization.Get("task.status.todo"), display.Get(ProjectTaskStatus.Todo));
     }

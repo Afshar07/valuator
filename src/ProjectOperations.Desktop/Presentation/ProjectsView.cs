@@ -67,7 +67,7 @@ internal sealed class ProjectsView : PresentationView
     private sealed class ProjectRow : ListRow
     {
         public ProjectRow(PresentationContext context, Project project, DateTimeOffset now, Func<Task> action)
-            : base(context, Layout(context, project, now), () => $"{project.Name} · {project.CompanyName} · {context.EnumText(project.Stage)} · {context.EnumText(project.Status)} · {project.Owner}", action)
+            : base(context, Layout(context, project, now), () => $"{project.Name} · {project.CompanyName} · {project.Stage.Title} · {context.EnumText(project.Status)} · {project.Owner}", action)
         { Name = "ProjectRow"; Padding = new Thickness(16, 12); }
 
         public static void SetCompact(Grid grid, bool compact)
@@ -95,7 +95,7 @@ internal sealed class ProjectsView : PresentationView
             if (!string.IsNullOrWhiteSpace(project.CompanyName)) names.Children.Add(context.Label(() => project.CompanyName, "Caption", "TextSecondary"));
             Grid.SetColumn(names, 1); identity.Children.Add(names);
             Place(grid, identity, 0);
-            Place(grid, Cell(context.Label(() => context.EnumText(project.Stage), "Body", "TextSecondary")), 1);
+            Place(grid, Ui.StagePill(context, project.Stage), 1);
             var readiness = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
             readiness.Children.Add(Ui.Progress(summary.CompletionPercentage));
             var ratio = context.Label(() => $"{context.Number(summary.CompleteRequirements)}/{context.Number(summary.TotalRequirements)}", "Caption", "TextSecondary");

@@ -118,5 +118,19 @@
   "v3.restartL": "Welcome screen",
   "v3.restart": "Show again",
   "v3.addRequirement": "Add requirement",
-  "v3.requirementPh": "e.g. Customer contracts"
+  "v3.requirementPh": "e.g. Customer contracts",
+  "stages.title": "Project stages",
+  "stages.note": "Each template has its own ordered stages. A project can move to any stage in any order.",
+  "stages.add": "Add stage",
+  "stages.up": "Move up",
+  "stages.down": "Move down",
+  "stages.delete": "Delete stage",
+  "stages.color": "Change color",
+  "stages.name": "Stage name",
+  "stages.newName": "New stage",
+  "stages.inUseOne": "Used by 1 project",
+  "stages.inUse": "Used by {0} projects",
+  "stages.inUseWhy": "A stage that projects use can't be deleted. Move those projects to another stage first.",
+  "stages.lastOne": "A template needs at least one stage.",
+  "stages.saveFailed": "The stages could not be saved."
 }

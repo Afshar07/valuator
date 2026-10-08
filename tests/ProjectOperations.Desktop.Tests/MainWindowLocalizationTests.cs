@@ -62,7 +62,8 @@ public sealed class MainWindowLocalizationTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Existing project", "Company", ProjectStage.Portfolio, ProjectStatus.Active, "", "");
+        var portfolio = (await fixture.Projects.ListStagesAsync(VcTemplate.Create().Id))[4];
+        var project = await fixture.Projects.CreateAsync("Existing project", "Company", ProjectStatus.Active, "", "", portfolio.Id);
         var date = new DateTimeOffset(2030, 1, 15, 9, 30, 0, TimeSpan.Zero);
         project.Tasks.Add(new ProjectTask { ProjectId = project.Id, Title = "Existing task", DueAt = date, Status = ProjectTaskStatus.InProgress });
         project.Requirements[0].Value = "Original requirement value";
@@ -93,8 +94,8 @@ public sealed class MainWindowLocalizationTests
         window.UpdateLayout();
         UiWait.Click(Controls<Button>(window).Single(button => button.Name == "EditProjectButton"));
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
-        Assert.Equal(ProjectStage.Portfolio, stage.SelectedItem);
-        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "پرتفوی");
+        Assert.Equal(portfolio.Id, ((ProjectStage)stage.SelectedItem!).Id);
+        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
         fixture.Locale.SetLanguage("en");
         Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
         Click(window, "Cancel");

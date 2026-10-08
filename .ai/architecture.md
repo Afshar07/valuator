@@ -196,3 +196,10 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   placeholder files, a runtime that always refuses, and the assistant reported as not
   configured. Leaving it (or exiting the app) deletes the temporary data; the user's database
   is never opened by the sample.
+- **Configurable stages (SQLite schema version 3).** `ProjectStage` is a class (stable id, one untranslated title,
+  `#RRGGBB` color), not an enum. Each template id (`vc-investment-v1`, `blank`) owns an ordered list in the `stages`
+  table, seeded with Screening, Due Diligence, Investment Committee, Investment, Portfolio and Exit on first use. A
+  project stores `StageId` (FK, `ON DELETE RESTRICT`); the repository fills `Project.Stage` on load. A stage used by a
+  project cannot be deleted (`StageInUseException`; Settings disables the button and shows the usage count), nor can the
+  last stage of a template. Projects may move to any stage. Databases older than version 3 are discarded, not migrated.
+  Stages are managed in Settings (`StageEditor`) and shown with `Ui.StagePill` in the header, list, dashboard and overview.

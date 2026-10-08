@@ -78,7 +78,7 @@ public sealed class MainWindowTests
     {
         using var fixture = new Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("File project", "Example", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("File project", "Example", ProjectStatus.Active, "", "");
         var path = fixture.CreateSourceFile();
         project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Files.Add(new ProjectFile
         {
@@ -110,7 +110,7 @@ public sealed class MainWindowTests
     {
         using var fixture = new Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Review project", "Example", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Review project", "Example", ProjectStatus.Active, "", "");
         fixture.Runtime.Result = new AgentResult
         {
             Text = "Synthetic analysis with two proposals",
@@ -145,7 +145,7 @@ public sealed class MainWindowTests
     {
         using var fixture = new Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Failure project", "Example", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Failure project", "Example", ProjectStatus.Active, "", "");
         fixture.Runtime.Failure = new InvalidOperationException("Synthetic transport unavailable");
         fixture.Runtime.Release.TrySetResult();
         var window = fixture.Window;
@@ -165,7 +165,7 @@ public sealed class MainWindowTests
     {
         using var fixture = new Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Synthetic project", "Example", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Synthetic project", "Example", ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
@@ -207,7 +207,7 @@ public sealed class MainWindowTests
     {
         using var fixture = new Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Close test", "Example", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Close test", "Example", ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);

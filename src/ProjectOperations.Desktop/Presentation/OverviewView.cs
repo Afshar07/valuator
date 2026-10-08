@@ -36,7 +36,10 @@ internal sealed class OverviewView : PresentationView
             var text = Label(value, "BodyStrong", color); text.TextWrapping = TextWrapping.NoWrap; text.TextAlignment = TextAlignment.End; Grid.SetColumn(text, 1); row.Children.Add(text);
             card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 8), Child = row }));
         }
-        Fact(() => T("project.stage"), () => EnumText(_project.Stage));
+        var stageRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Name = "OverviewStage" };
+        stageRow.Children.Add(Label(() => T("project.stage"), "Body", "TextSecondary"));
+        var stagePill = Ui.StagePill(Context, _project.Stage); stagePill.HorizontalAlignment = HorizontalAlignment.Right; Grid.SetColumn(stagePill, 1); stageRow.Children.Add(stagePill);
+        card.Body.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 8), Child = stageRow }));
         Fact(() => T("presentation.nextMilestone"), () => _summary.NextMilestone is null ? T("overview.noMilestone") : $"{_summary.NextMilestone.Title} · {Context.ShortDate(_summary.NextMilestone.DueAt)}");
         Fact(() => T("project.column.readiness"), () => $"{N(_summary.CompleteRequirements)}/{N(_summary.TotalRequirements)}");
         Fact(() => T("presentation.stat.overdue"), () => N(_summary.OverdueTasks.Count), _summary.OverdueTasks.Count > 0 ? "Error" : "TextPrimary");

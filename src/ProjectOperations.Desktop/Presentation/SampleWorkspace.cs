@@ -58,10 +58,11 @@ internal sealed class SampleWorkspace : IDisposable
             return path;
         }
 
-        var nova = await Projects.CreateAsync(T("Nova Logistics", "نوا لجستیک"), T("Nova Freight Co.", "شرکت حمل نوا"), ProjectStage.DueDiligence, ProjectStatus.Active, T("Sara M.", "سارا م."), "");
-        var atlas = await Projects.CreateAsync(T("Atlas Health", "اطلس سلامت"), T("Atlas Medical Ltd.", "اطلس پزشکی"), ProjectStage.InvestmentCommittee, ProjectStatus.Active, T("Reza K.", "رضا ک."), "");
-        var orbit = await Projects.CreateAsync(T("Orbit Pay", "اوربیت پی"), T("Orbit Fintech", "اوربیت فین‌تک"), ProjectStage.Screening, ProjectStatus.Active, T("Sara M.", "سارا م."), "");
-        var kavir = await Projects.CreateAsync(T("Kavir Foods", "کویر فودز"), T("Kavir Agro Group", "گروه کشت کویر"), ProjectStage.Portfolio, ProjectStatus.OnHold, T("Neda A.", "ندا ا."), "");
+        var stages = await Projects.ListStagesAsync(VcTemplate.Create().Id);
+        var nova = await Projects.CreateAsync(T("Nova Logistics", "نوا لجستیک"), T("Nova Freight Co.", "شرکت حمل نوا"), ProjectStatus.Active, T("Sara M.", "سارا م."), "", stages[1].Id);
+        var atlas = await Projects.CreateAsync(T("Atlas Health", "اطلس سلامت"), T("Atlas Medical Ltd.", "اطلس پزشکی"), ProjectStatus.Active, T("Reza K.", "رضا ک."), "", stages[2].Id);
+        var orbit = await Projects.CreateAsync(T("Orbit Pay", "اوربیت پی"), T("Orbit Fintech", "اوربیت فین‌تک"), ProjectStatus.Active, T("Sara M.", "سارا م."), "", stages[0].Id);
+        var kavir = await Projects.CreateAsync(T("Kavir Foods", "کویر فودز"), T("Kavir Agro Group", "گروه کشت کویر"), ProjectStatus.OnHold, T("Neda A.", "ندا ا."), "", stages[4].Id);
 
         // Readiness of the other three deals: that many requirements complete, in checklist order.
         foreach (var (project, done) in new[] { (atlas, 13), (orbit, 3), (kavir, 16) })

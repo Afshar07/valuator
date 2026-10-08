@@ -117,6 +117,23 @@ internal static class Ui
         }.Paint(Border.BackgroundProperty, tone.Background);
     }
 
+    /// <summary>Pill in the stage's own color: title in the color on a soft tint of it (the title is user text, never translated).</summary>
+    public static Border StagePill(PresentationContext context, ProjectStage stage)
+    {
+        var color = Color.Parse(stage.Color);
+        var text = context.Label(() => stage.Title, "Micro"); text.TextWrapping = TextWrapping.NoWrap; text.TextTrimming = TextTrimming.CharacterEllipsis;
+        text.Foreground = new SolidColorBrush(color);
+        return new Border
+        {
+            CornerRadius = new CornerRadius(PresentationTheme.RadiusPill),
+            Padding = new Thickness(8, 2),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = new SolidColorBrush(color, 0.16),
+            Child = text
+        };
+    }
+
     /// <summary>Thin rounded progress bar; the fill grows from the start edge in either flow direction.</summary>
     public static Control Progress(double percent, double height = 5)
     {

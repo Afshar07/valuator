@@ -22,7 +22,7 @@ public sealed class LocalizationPersistenceTests
             var repository = new SqliteProjectRepository(database);
             await repository.InitializeAsync();
             var projects = new ProjectService(repository);
-            var project = await projects.CreateAsync("شرکت Example", "Example Ltd", ProjectStage.DueDiligence,
+            var project = await projects.CreateAsync("شرکت Example", "Example Ltd",
                 ProjectStatus.OnHold, "Owner", "Original notes / یادداشت");
             var instant = new DateTimeOffset(2030, 1, 15, 9, 30, 0, TimeSpan.FromHours(3.5));
             project.Requirements[0].Status = RequirementStatus.NeedsReview;
@@ -41,7 +41,6 @@ public sealed class LocalizationPersistenceTests
             foreach (var code in new[] { "fa", "en", "fa" })
             {
                 locale.SetLanguage(code);
-                _ = display.Get(project.Stage);
                 _ = display.Get(project.Status);
                 foreach (var requirement in project.Requirements)
                 {
@@ -61,11 +60,11 @@ public sealed class LocalizationPersistenceTests
             await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database }.ToString());
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT stage,status FROM projects WHERE id=$id";
+            command.CommandText = "SELECT stage_id,status FROM projects WHERE id=$id";
             command.Parameters.AddWithValue("$id", project.Id.ToString("D"));
             await using var reader = await command.ExecuteReaderAsync();
             Assert.True(await reader.ReadAsync());
-            Assert.Equal((int)ProjectStage.DueDiligence, reader.GetInt32(0));
+            Assert.Equal(project.StageId.ToString("D"), reader.GetString(0));
             Assert.Equal((int)ProjectStatus.OnHold, reader.GetInt32(1));
         }
         finally

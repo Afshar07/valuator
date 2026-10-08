@@ -15,7 +15,13 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
     private SqliteProjectRepository Repository => new(DatabasePath);
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 14, 20, 30, TimeSpan.FromHours(3.5));
 
-    public Task InitializeAsync() => Repository.InitializeAsync();
+    private static readonly ProjectStage DueDiligence = new() { Id = Guid.Parse("11111111-2222-3333-4444-555555555555"), Title = "Due Diligence", Color = "#2563EB" };
+
+    public async Task InitializeAsync()
+    {
+        await Repository.InitializeAsync();
+        await Repository.SaveStagesAsync(VcTemplate.Create().Id, [DueDiligence]);
+    }
 
     public Task DisposeAsync()
     {
@@ -32,7 +38,8 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
             Name = "بررسی 'Atlas'",
             CompanyName = "شرکت Atlas",
             Owner = "VC analyst",
-            Stage = ProjectStage.DueDiligence,
+            StageId = DueDiligence.Id,
+            Stage = DueDiligence,
             Status = ProjectStatus.OnHold,
             Notes = "Notes\nline 2",
             CreatedAt = Now.AddDays(-2),
@@ -168,7 +175,7 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
     public async Task ServiceCreatesVcRequirementsAndUpdatesTimestamps()
     {
         var service = new ProjectService(Repository);
-        var project = await service.CreateAsync("  Atlas  ", "  Atlas company  ", ProjectStage.Screening,
+        var project = await service.CreateAsync("  Atlas  ", "  Atlas company  ",
             ProjectStatus.Active, "Analyst", "Notes");
         Assert.Equal("Atlas", project.Name);
         Assert.Equal("Atlas company", project.CompanyName);
@@ -313,7 +320,7 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
         {
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA user_version = 3;";
+            command.CommandText = "PRAGMA user_version = 4;";
             await command.ExecuteNonQueryAsync();
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => Repository.InitializeAsync());
@@ -321,7 +328,7 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
         await verify.OpenAsync();
         using var version = verify.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Assert.Equal(3L, await version.ExecuteScalarAsync());
+        Assert.Equal(4L, await version.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -336,7 +343,7 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task VersionOneDatabaseIsMigratedWithoutLosingTasks()
+    public async Task OlderDatabaseIsDiscardedAndReseededWithDefaultStages()
     {
         var project = CreateProject();
         await Repository.SaveAsync(project);
@@ -345,15 +352,29 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
         {
             await connection.OpenAsync();
             using var downgrade = connection.CreateCommand();
-            downgrade.CommandText = "ALTER TABLE tasks DROP COLUMN requirement_id; PRAGMA user_version = 1;";
+            downgrade.CommandText = "PRAGMA user_version = 2;";
             await downgrade.ExecuteNonQueryAsync();
         }
         await Repository.InitializeAsync();
+        Assert.Empty(await Repository.ListAsync());
+        var stages = await Repository.ListStagesAsync(VcTemplate.Create().Id);
+        Assert.Equal(["Screening", "Due Diligence", "Investment Committee", "Investment", "Portfolio", "Exit"], stages.Select(stage => stage.Title));
+    }
+
+    [Fact]
+    public async Task StagesKeepOrderAndCannotBeRemovedWhileAProjectUsesThem()
+    {
+        var project = CreateProject();
+        await Repository.SaveAsync(project);
+        var extra = new ProjectStage { Title = "Closing", Color = "#16A34A" };
+        await Repository.SaveStagesAsync(project.TemplateId, [extra, DueDiligence]);
+        Assert.Equal(["Closing", "Due Diligence"], (await Repository.ListStagesAsync(project.TemplateId)).Select(stage => stage.Title));
+        Assert.Equal(1, (await Repository.CountProjectsByStageAsync())[DueDiligence.Id]);
         var loaded = (await Repository.GetAsync(project.Id))!;
-        Assert.Equal(2, loaded.Tasks.Count);
-        Assert.All(loaded.Tasks, task => Assert.Null(task.RequirementId));
-        loaded.Tasks[0].RequirementId = loaded.Requirements[0].Id;
-        await Repository.SaveAsync(loaded);
-        Assert.Equal(loaded.Requirements[0].Id, (await Repository.GetAsync(project.Id))!.Tasks[0].RequirementId);
+        Assert.Equal("#2563EB", loaded.Stage.Color);
+        var service = new ProjectService(Repository);
+        await Assert.ThrowsAsync<StageInUseException>(() => service.DeleteStageAsync(project.TemplateId, DueDiligence.Id));
+        await service.DeleteStageAsync(project.TemplateId, extra.Id);
+        Assert.Single(await Repository.ListStagesAsync(project.TemplateId));
     }
 }

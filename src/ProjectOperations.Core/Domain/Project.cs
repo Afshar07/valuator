@@ -1,6 +1,5 @@
 namespace ProjectOperations.Core.Domain;
 
-public enum ProjectStage { Screening, DueDiligence, InvestmentCommittee, Investment, Portfolio, Exit }
 public enum ProjectStatus { Active, OnHold, Completed, Archived }
 public enum RequirementType { Document, Text, Number, Money, Structured }
 public enum RequirementStatus { Missing, Provided, NeedsReview, Complete }
@@ -11,7 +10,9 @@ public sealed class Project
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
     public string CompanyName { get; set; } = "";
-    public ProjectStage Stage { get; set; }
+    public Guid StageId { get; set; }
+    /// <summary>The stage <see cref="StageId"/> points to, filled in when the project is loaded.</summary>
+    public ProjectStage Stage { get; set; } = new();
     public ProjectStatus Status { get; set; }
     public string Owner { get; set; } = "";
     public string Notes { get; set; } = "";
@@ -23,6 +24,24 @@ public sealed class Project
     public List<ProjectTask> Tasks { get; set; } = [];
     public List<Milestone> Milestones { get; set; } = [];
     public ProjectState State { get; set; } = new();
+}
+
+/// <summary>A user-configurable step of a template's pipeline. <see cref="Color"/> is "#RRGGBB".</summary>
+public sealed class ProjectStage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = "";
+    public string Color { get; set; } = "#64748B";
+
+    public static List<ProjectStage> Defaults() =>
+    [
+        new() { Title = "Screening", Color = "#64748B" },
+        new() { Title = "Due Diligence", Color = "#2563EB" },
+        new() { Title = "Investment Committee", Color = "#7C3AED" },
+        new() { Title = "Investment", Color = "#0D9488" },
+        new() { Title = "Portfolio", Color = "#16A34A" },
+        new() { Title = "Exit", Color = "#D97706" }
+    ];
 }
 
 public sealed class ProjectState

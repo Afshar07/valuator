@@ -17,7 +17,7 @@ public sealed class LocalizationLayoutTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Layout project", "", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Layout project", "", ProjectStatus.Active, "", "");
         project.Tasks.Add(new ProjectTask { ProjectId = project.Id, Title = "Dated task", DueAt = DateTimeOffset.Now.AddDays(2) });
         await fixture.Projects.SaveAsync(project);
         var window = fixture.Window;

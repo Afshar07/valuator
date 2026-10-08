@@ -32,13 +32,28 @@ internal sealed class SqliteDatabase(string path)
         using var transaction = connection.BeginTransaction();
         using var version = Command(connection, transaction, "PRAGMA user_version;");
         var current = Convert.ToInt32(await version.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
-        if (current > 2) throw new InvalidOperationException("This database was created by a newer application version.");
+        if (current > 3) throw new InvalidOperationException("This database was created by a newer application version.");
+        if (current is 1 or 2)
+        {
+            // Configurable stages replaced the stage enum without a migration: older data is discarded.
+            using var discard = Command(connection, transaction, """
+                DROP TABLE IF EXISTS agent_jobs; DROP TABLE IF EXISTS state_items; DROP TABLE IF EXISTS project_state;
+                DROP TABLE IF EXISTS milestones; DROP TABLE IF EXISTS tasks; DROP TABLE IF EXISTS files;
+                DROP TABLE IF EXISTS requirements; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS stages;
+                """);
+            await discard.ExecuteNonQueryAsync(cancellationToken);
+            current = 0;
+        }
         if (current == 0)
         {
             using var schema = Command(connection, transaction, """
+                CREATE TABLE stages (
+                    id TEXT PRIMARY KEY, template_id TEXT NOT NULL, position INTEGER NOT NULL,
+                    title TEXT NOT NULL, color TEXT NOT NULL);
+                CREATE INDEX stages_template ON stages(template_id);
                 CREATE TABLE projects (
                     id TEXT PRIMARY KEY, name TEXT NOT NULL, company_name TEXT NOT NULL,
-                    stage INTEGER NOT NULL, status INTEGER NOT NULL, owner TEXT NOT NULL, notes TEXT NOT NULL,
+                    stage_id TEXT NOT NULL REFERENCES stages(id) ON DELETE RESTRICT, status INTEGER NOT NULL, owner TEXT NOT NULL, notes TEXT NOT NULL,
                     created_at TEXT NOT NULL, updated_at TEXT NOT NULL, template_id TEXT NOT NULL, revision INTEGER NOT NULL);
                 CREATE TABLE requirements (
                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -69,14 +84,9 @@ internal sealed class SqliteDatabase(string path)
                 CREATE INDEX tasks_project ON tasks(project_id);
                 CREATE INDEX milestones_project ON milestones(project_id);
                 CREATE INDEX agent_jobs_project ON agent_jobs(project_id);
-                PRAGMA user_version = 2;
+                PRAGMA user_version = 3;
                 """);
             await schema.ExecuteNonQueryAsync(cancellationToken);
-        }
-        else if (current == 1)
-        {
-            using var migrate = Command(connection, transaction, "ALTER TABLE tasks ADD COLUMN requirement_id TEXT; PRAGMA user_version = 2;");
-            await migrate.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
     }

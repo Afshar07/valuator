@@ -9,10 +9,10 @@ namespace ProjectOperations.Desktop;
 /// <summary>Edit-project dialog opened from the pencil beside the project title: name, company, owner, stage, status, notes and current state.</summary>
 internal sealed class EditProjectDialog : DialogFrame
 {
-    public EditProjectDialog(PresentationContext context, Project project) : base(context, "EditProjectDialog", () => context.Text.Get("v3.editProject"))
+    public EditProjectDialog(PresentationContext context, Project project, IReadOnlyList<ProjectStage> stages) : base(context, "EditProjectDialog", () => context.Text.Get("v3.editProject"))
     {
         var name = Forms.Input(project.Name); var company = Forms.Input(project.CompanyName); var owner = Forms.Input(project.Owner);
-        var stage = Forms.Choice(context, project.Stage, context.EnumText);
+        var stage = new ComboBox { ItemsSource = stages, SelectedItem = stages.FirstOrDefault(item => item.Id == project.StageId), MinHeight = 36, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "ProjectStageChoice", ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectStage>((item, _) => Ui.StagePill(context, item)) };
         var status = project.Status;
         var notes = Forms.Input(project.Notes); notes.AcceptsReturn = true; notes.TextWrapping = TextWrapping.Wrap; notes.MinHeight = 76; notes.VerticalContentAlignment = VerticalAlignment.Top;
         var summary = Forms.Input(project.State.Summary); summary.AcceptsReturn = true; summary.TextWrapping = TextWrapping.Wrap; summary.MinHeight = 76; summary.VerticalContentAlignment = VerticalAlignment.Top;
@@ -35,7 +35,7 @@ internal sealed class EditProjectDialog : DialogFrame
         {
             if (string.IsNullOrWhiteSpace(name.Text)) { error.IsVisible = true; return; }
             project.Name = name.Text.Trim(); project.CompanyName = company.Text?.Trim() ?? ""; project.Owner = owner.Text?.Trim() ?? "";
-            project.Stage = (ProjectStage)stage.SelectedItem!; project.Status = status;
+            project.Stage = (ProjectStage)stage.SelectedItem!; project.StageId = project.Stage.Id; project.Status = status;
             project.Notes = notes.Text ?? ""; project.State.Summary = summary.Text ?? "";
             await context.Projects.SaveAsync(project);
             context.Shell.CloseModal();

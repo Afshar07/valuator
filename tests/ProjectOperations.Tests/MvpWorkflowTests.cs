@@ -19,7 +19,7 @@ public sealed class MvpWorkflowTests
             var repository = new SqliteProjectRepository(database);
             await repository.InitializeAsync();
             var service = new ProjectService(repository);
-            var project = await service.CreateAsync("Atlas", "Atlas Company", ProjectStage.DueDiligence,
+            var project = await service.CreateAsync("Atlas", "Atlas Company",
                 ProjectStatus.Active, "Analyst", "Synthetic verification project");
             Assert.Equal(16, project.Requirements.Count);
             var path = Path.Combine(directory, "synthetic-pitch.txt");
@@ -74,11 +74,11 @@ public sealed class MvpWorkflowTests
             var repository = new SqliteProjectRepository(database);
             await repository.InitializeAsync();
             var service = new ProjectService(repository);
-            var empty = await service.CreateBlankAsync("Empty deal", "", ProjectStage.Screening, ProjectStatus.Active, "", "");
+            var empty = await service.CreateBlankAsync("Empty deal", "", ProjectStatus.Active, "", "");
             Assert.Equal(ProjectService.BlankTemplateId, empty.TemplateId);
             Assert.Empty(empty.Requirements);
 
-            var project = await service.CreateBlankAsync("  Custom deal ", " Company ", ProjectStage.Screening, ProjectStatus.Active, "", "", " Customer contracts ");
+            var project = await service.CreateBlankAsync("  Custom deal ", " Company ", ProjectStatus.Active, "", "", " Customer contracts ");
             var requirement = Assert.Single(project.Requirements);
             Assert.Equal("Customer contracts", requirement.Title);
             Assert.Equal("custom", requirement.GroupId);
@@ -92,7 +92,7 @@ public sealed class MvpWorkflowTests
             var reopened = (await new SqliteProjectRepository(database).GetAsync(project.Id))!;
             Assert.Equal("Custom deal", reopened.Name);
             Assert.Equal(["Customer contracts", "Cap table"], reopened.Requirements.Select(item => item.Title));
-            await Assert.ThrowsAsync<ArgumentException>(() => service.CreateBlankAsync(" ", "", ProjectStage.Screening, ProjectStatus.Active, "", ""));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.CreateBlankAsync(" ", "", ProjectStatus.Active, "", ""));
         }
         finally
         {

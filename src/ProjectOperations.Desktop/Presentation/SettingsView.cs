@@ -27,6 +27,9 @@ internal sealed class SettingsView : PresentationView
         appearance.Children.Add(Row(language, languages));
         sections.Children.Add(Card(appearance));
 
+        var stages = Section("stages.title"); stages.Children.Add(new StageEditor(Context));
+        sections.Children.Add(Card(stages));
+
         var agent = Section("settings.agent", AssistantPanel.StatusLine(Context, () => Context.Environment.AgentConfigured ? "agent.state.configured" : "agent.state.off",
             () => Context.Environment.AgentConfigured ? "Accent" : "TextTertiary"));
         agent.Children.Add(new Border { Padding = new Thickness(0, 0, 0, 10), Child = Label("settings.agentNote", "Small", "TextSecondary") });

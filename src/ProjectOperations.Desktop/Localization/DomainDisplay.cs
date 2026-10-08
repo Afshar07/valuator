@@ -26,7 +26,6 @@ public sealed class DomainDisplay(ILocalizationService localization) : IDomainDi
         var prefix = value switch
         {
             ProjectStatus => "project.status",
-            ProjectStage => "project.stage",
             RequirementType => "requirement.type",
             RequirementStatus => "requirement.status",
             ProjectTaskStatus => "task.status",

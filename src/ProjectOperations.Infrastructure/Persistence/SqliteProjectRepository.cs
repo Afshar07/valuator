@@ -27,6 +27,77 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
         return projects.OrderByDescending(project => project.UpdatedAt).ThenBy(project => project.Id).ToList();
     }
 
+    public Task<IReadOnlyList<ProjectStage>> ListStagesAsync(string templateId, CancellationToken cancellationToken = default) =>
+        Task.Run(() => ListStagesCoreAsync(templateId, cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<ProjectStage>> ListStagesCoreAsync(string templateId, CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+        var stages = await ReadStagesAsync(connection, transaction, templateId, cancellationToken);
+        if (stages.Count == 0)
+        {
+            stages = ProjectStage.Defaults();
+            await WriteStagesAsync(connection, transaction, templateId, stages, cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
+        return stages;
+    }
+
+    public Task SaveStagesAsync(string templateId, IReadOnlyList<ProjectStage> stages, CancellationToken cancellationToken = default) =>
+        Task.Run(() => SaveStagesCoreAsync(templateId, stages, cancellationToken), cancellationToken);
+
+    private async Task SaveStagesCoreAsync(string templateId, IReadOnlyList<ProjectStage> stages, CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+        await WriteStagesAsync(connection, transaction, templateId, stages, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task<List<ProjectStage>> ReadStagesAsync(SqliteConnection connection, SqliteTransaction transaction,
+        string templateId, CancellationToken cancellationToken)
+    {
+        using var command = SqliteDatabase.Command(connection, transaction,
+            "SELECT id,title,color FROM stages WHERE template_id=$template ORDER BY position;", ("$template", templateId));
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var stages = new List<ProjectStage>();
+        while (await reader.ReadAsync(cancellationToken))
+            stages.Add(new ProjectStage { Id = Guid.Parse(reader.GetString(0)), Title = reader.GetString(1), Color = reader.GetString(2) });
+        return stages;
+    }
+
+    private static async Task WriteStagesAsync(SqliteConnection connection, SqliteTransaction transaction,
+        string templateId, IReadOnlyList<ProjectStage> stages, CancellationToken cancellationToken)
+    {
+        for (var position = 0; position < stages.Count; position++)
+        {
+            using var upsert = SqliteDatabase.Command(connection, transaction, """
+                INSERT INTO stages(id,template_id,position,title,color) VALUES($id,$template,$position,$title,$color)
+                ON CONFLICT(id) DO UPDATE SET position=$position,title=$title,color=$color WHERE stages.template_id=$template;
+                """, ("$id", stages[position].Id), ("$template", templateId), ("$position", position),
+                ("$title", stages[position].Title.Trim()), ("$color", stages[position].Color));
+            await upsert.ExecuteNonQueryAsync(cancellationToken);
+        }
+        var keep = string.Join(",", stages.Select((_, index) => "$k" + index));
+        using var delete = SqliteDatabase.Command(connection, transaction,
+            $"DELETE FROM stages WHERE template_id=$template AND id NOT IN ({keep});",
+            [("$template", templateId), .. stages.Select((stage, index) => ($"$k{index}", (object?)stage.Id))]);
+        await delete.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public Task<IReadOnlyDictionary<Guid, int>> CountProjectsByStageAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(async () =>
+        {
+            await using var connection = await database.OpenAsync(cancellationToken);
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT stage_id,COUNT(*) FROM projects GROUP BY stage_id;";
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var counts = new Dictionary<Guid, int>();
+            while (await reader.ReadAsync(cancellationToken)) counts[Guid.Parse(reader.GetString(0))] = reader.GetInt32(1);
+            return (IReadOnlyDictionary<Guid, int>)counts;
+        }, cancellationToken);
+
     public Task<Project?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.Run(() => GetCoreAsync(id, cancellationToken), cancellationToken);
 
@@ -61,13 +132,13 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
             throw new ArgumentException("Tasks and milestones must belong to the containing project.", nameof(project));
         var revision = checked(project.Revision + 1);
         using (var command = SqliteDatabase.Command(connection, transaction, """
-            INSERT INTO projects(id,name,company_name,stage,status,owner,notes,created_at,updated_at,template_id,revision)
+            INSERT INTO projects(id,name,company_name,stage_id,status,owner,notes,created_at,updated_at,template_id,revision)
             VALUES($id,$name,$company,$stage,$status,$owner,$notes,$created,$updated,$template,$next)
-            ON CONFLICT(id) DO UPDATE SET name=$name,company_name=$company,stage=$stage,status=$status,
+            ON CONFLICT(id) DO UPDATE SET name=$name,company_name=$company,stage_id=$stage,status=$status,
                 owner=$owner,notes=$notes,updated_at=$updated,template_id=$template,revision=$next
             WHERE projects.revision=$revision;
             """, ("$id", project.Id), ("$name", project.Name), ("$company", project.CompanyName),
-            ("$stage", project.Stage), ("$status", project.Status), ("$owner", project.Owner), ("$notes", project.Notes),
+            ("$stage", project.StageId), ("$status", project.Status), ("$owner", project.Owner), ("$notes", project.Notes),
             ("$created", project.CreatedAt), ("$updated", project.UpdatedAt), ("$template", project.TemplateId),
             ("$next", revision), ("$revision", project.Revision)))
         {
@@ -147,19 +218,21 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
         Guid? id, CancellationToken cancellationToken)
     {
         using var command = SqliteDatabase.Command(connection, transaction,
-            "SELECT id,name,company_name,stage,status,owner,notes,created_at,updated_at,template_id,revision FROM projects"
-            + (id.HasValue ? " WHERE id=$id;" : ";"), ("$id", id));
+            "SELECT p.id,p.name,p.company_name,p.stage_id,p.status,p.owner,p.notes,p.created_at,p.updated_at,p.template_id,p.revision,s.title,s.color"
+            + " FROM projects p JOIN stages s ON s.id=p.stage_id" + (id.HasValue ? " WHERE p.id=$id;" : ";"), ("$id", id));
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var result = new List<Project>();
         while (await reader.ReadAsync(cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var stageId = Guid.Parse(reader.GetString(3));
             result.Add(new Project
             {
                 Id = Guid.Parse(reader.GetString(0)),
                 Name = reader.GetString(1),
                 CompanyName = reader.GetString(2),
-                Stage = (ProjectStage)reader.GetInt32(3),
+                StageId = stageId,
+                Stage = new ProjectStage { Id = stageId, Title = reader.GetString(11), Color = reader.GetString(12) },
                 Status = (ProjectStatus)reader.GetInt32(4),
                 Owner = reader.GetString(5),
                 Notes = reader.GetString(6),

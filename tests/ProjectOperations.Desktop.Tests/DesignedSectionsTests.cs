@@ -26,7 +26,7 @@ public sealed class DesignedSectionsTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Nova Logistics", "Nova Freight", ProjectStage.DueDiligence, ProjectStatus.Active, "Owner", "");
+        var project = await fixture.Projects.CreateAsync("Nova Logistics", "Nova Freight", ProjectStatus.Active, "Owner", "");
         var source = fixture.CreateSourceFile();
         project.Requirements[0].Files.Add(new ProjectFile { FileName = "synthetic.txt", Path = source, SizeBytes = new FileInfo(source).Length });
         var missing = Path.Combine(Path.GetDirectoryName(source)!, "moved-away.pdf");
@@ -130,7 +130,7 @@ public sealed class DesignedSectionsTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
-        var project = await fixture.Projects.CreateAsync("Offline project", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        var project = await fixture.Projects.CreateAsync("Offline project", "Company", ProjectStatus.Active, "", "");
         var window = new MainWindow(fixture.Projects, fixture.Agents, () => Task.CompletedTask, "Agent not configured.", fixture.Locale,
             environment: new DesktopEnvironment(AgentConfigured: false, DatabasePath: "/synthetic/projects.db"));
         try

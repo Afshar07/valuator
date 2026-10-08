@@ -296,7 +296,7 @@ internal sealed class WizardScreen : OnboardingScreen
         Project project;
         if (_template == 0)
         {
-            project = await Context.Projects.CreateAsync(name, _company, ProjectStage.Screening, ProjectStatus.Active, "", "");
+            project = await Context.Projects.CreateAsync(name, _company, ProjectStatus.Active, "", "");
             if (_deck is not null && project.Requirements.FirstOrDefault(item => item.DefinitionId == "pitch-deck") is { } deck)
             {
                 deck.Files.Add(new ProjectFile { FileName = Path.GetFileName(_deck), Path = _deck, SizeBytes = File.Exists(_deck) ? new FileInfo(_deck).Length : 0 });
@@ -305,7 +305,7 @@ internal sealed class WizardScreen : OnboardingScreen
             }
         }
         else
-            project = await Context.Projects.CreateBlankAsync(name, _company, ProjectStage.Screening, ProjectStatus.Active, "", "",
+            project = await Context.Projects.CreateBlankAsync(name, _company, ProjectStatus.Active, "", "",
                 _requirement.Trim().Length > 0 ? _requirement : T("v3.defaultRequirement"));
         Context.Shell.CloseOverlay();
         await Context.Shell.OpenCreatedProjectAsync(project.Id);
