@@ -62,4 +62,42 @@ public sealed class MvpWorkflowTests
             Directory.Delete(directory, true);
         }
     }
+
+    [Fact]
+    public async Task BlankProjectHasOnlyTheRequirementsTheUserAddsAndKeepsThemAfterReopen()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "projectops-blank-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var database = Path.Combine(directory, "projects.db");
+            var repository = new SqliteProjectRepository(database);
+            await repository.InitializeAsync();
+            var service = new ProjectService(repository);
+            var empty = await service.CreateBlankAsync("Empty deal", "", ProjectStage.Screening, ProjectStatus.Active, "", "");
+            Assert.Equal(ProjectService.BlankTemplateId, empty.TemplateId);
+            Assert.Empty(empty.Requirements);
+
+            var project = await service.CreateBlankAsync("  Custom deal ", " Company ", ProjectStage.Screening, ProjectStatus.Active, "", "", " Customer contracts ");
+            var requirement = Assert.Single(project.Requirements);
+            Assert.Equal("Customer contracts", requirement.Title);
+            Assert.Equal("custom", requirement.GroupId);
+            Assert.Equal(RequirementType.Document, requirement.Type);
+            Assert.Equal(RequirementStatus.Missing, requirement.Status);
+            project.Requirements.Add(ProjectService.NewCustomRequirement("Cap table"));
+            Assert.NotEqual(project.Requirements[0].DefinitionId, project.Requirements[1].DefinitionId);
+            await service.SaveAsync(project);
+
+            SqliteConnection.ClearAllPools();
+            var reopened = (await new SqliteProjectRepository(database).GetAsync(project.Id))!;
+            Assert.Equal("Custom deal", reopened.Name);
+            Assert.Equal(["Customer contracts", "Cap table"], reopened.Requirements.Select(item => item.Title));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.CreateBlankAsync(" ", "", ProjectStage.Screening, ProjectStatus.Active, "", ""));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(directory, recursive: true);
+        }
+    }
 }

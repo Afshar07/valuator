@@ -29,6 +29,7 @@ step 7, then follow the route exactly in order.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
 - Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
 - Native tests / verification: `testing.md` → `mvp.md` → `architecture.md` → source.
+- First-run / onboarding / sample workspace / sidebar disclosure: `product.md` → `mvp.md` → `architecture.md` → source (`Presentation/OnboardingScreens.cs`, `SampleWorkspace.cs`, `MainWindow.cs`).
 - When an ongoing task crosses one of these boundaries, read that boundary's route before source unless the task document already includes it.
 - Add focused task routes here when another real project boundary appears.
 - Route format: `local-context.md` → optional shared/domain context → source.

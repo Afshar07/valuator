@@ -32,7 +32,7 @@ internal sealed class SqliteDatabase(string path)
         using var transaction = connection.BeginTransaction();
         using var version = Command(connection, transaction, "PRAGMA user_version;");
         var current = Convert.ToInt32(await version.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
-        if (current > 1) throw new InvalidOperationException("This database was created by a newer application version.");
+        if (current > 2) throw new InvalidOperationException("This database was created by a newer application version.");
         if (current == 0)
         {
             using var schema = Command(connection, transaction, """
@@ -51,7 +51,7 @@ internal sealed class SqliteDatabase(string path)
                 CREATE TABLE tasks (
                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
                     position INTEGER NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, status INTEGER NOT NULL, due_at TEXT,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, requirement_id TEXT);
                 CREATE TABLE milestones (
                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
                     position INTEGER NOT NULL, title TEXT NOT NULL, notes TEXT NOT NULL, due_at TEXT, is_complete INTEGER NOT NULL);
@@ -69,9 +69,14 @@ internal sealed class SqliteDatabase(string path)
                 CREATE INDEX tasks_project ON tasks(project_id);
                 CREATE INDEX milestones_project ON milestones(project_id);
                 CREATE INDEX agent_jobs_project ON agent_jobs(project_id);
-                PRAGMA user_version = 1;
+                PRAGMA user_version = 2;
                 """);
             await schema.ExecuteNonQueryAsync(cancellationToken);
+        }
+        else if (current == 1)
+        {
+            using var migrate = Command(connection, transaction, "ALTER TABLE tasks ADD COLUMN requirement_id TEXT; PRAGMA user_version = 2;");
+            await migrate.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
     }

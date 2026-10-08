@@ -28,11 +28,9 @@ public sealed class MainWindowLocalizationTests
         Click(window, "All projects");
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "New project" && button.IsEffectivelyEnabled));
         Click(window, "New project");
-        await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Text == "Project name *"));
-        var inputs = new List<TextBox> { LabeledInput(window, "Project name *") };
+        await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Text == "Project name"));
+        var inputs = new List<TextBox> { LabeledInput(window, "Project name") };
         inputs[0].Text = "Unsaved synthetic project";
-        var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
-        stage.SelectedItem = ProjectStage.DueDiligence;
         Click(window, "Language");
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
@@ -41,21 +39,20 @@ public sealed class MainWindowLocalizationTests
         Assert.Equal("IRANYekanX", new Typeface(window.FontFamily).GlyphTypeface.FamilyName);
         Assert.Contains("IRANYekanX", new Typeface(window.FontFamily, weight: FontWeight.Bold).GlyphTypeface.FamilyName);
         Assert.Equal(window.FontFamily, inputs[0].FontFamily);
-        Assert.Equal(window.FontFamily, Controls<TextBlock>(window).Single(block => block.Text == "نام پروژه *").FontFamily);
+        Assert.Equal(window.FontFamily, Controls<TextBlock>(window).Single(block => block.Text == "نام پروژه").FontFamily);
         foreach (var weight in new[] { "Regular", "Bold" })
             Assert.True(Avalonia.Platform.AssetLoader.Exists(new Uri($"avares://ProjectOperations.Desktop/Assets/Fonts/IRANYekanX/IRANYekanX-{weight}.ttf")));
         Assert.Equal(TextAlignment.Start, inputs[0].TextAlignment);
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
-        Assert.Equal(ProjectStage.DueDiligence, stage.SelectedItem);
-        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "نام پروژه *" && block.TextAlignment == TextAlignment.Start);
-        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == "ایجاد پروژه");
+        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "نام پروژه" && block.TextAlignment == TextAlignment.Start);
+        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == "ادامه");
         Assert.Empty(await fixture.Projects.ListAsync());
         Click(window, "زبان");
         Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
         Assert.Equal(FlowDirection.LeftToRight, inputs[0].FlowDirection);
         Assert.Equal(englishFont, window.FontFamily);
         Assert.Equal(englishFont, inputs[0].FontFamily);
-        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "Project name *");
+        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "Project name");
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
         window.Close();
     }
@@ -73,44 +70,38 @@ public sealed class MainWindowLocalizationTests
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Existing project ·") && button.IsEffectivelyEnabled));
-        ClickPrefix(window, "Existing project ·");
+        OpenProject(window, "Existing project");
         await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 2;
         Dispatcher.UIThread.RunJobs();
         ClickPrefix(window, "Existing task ·");
-        var due = Controls<TextBox>(window).Single(control => control.Text == new LocaleDateFormatter(fixture.Locale).Edit(date));
-        var status = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectTaskStatus);
-        due.Text = "2031-02-03 10:15";
+        var picker = Controls<CalendarDatePicker>(window).Single();
+        Assert.Equal(date.ToLocalTime().Date, picker.SelectedDate);
+        picker.SelectedDate = new DateTime(2031, 2, 3);
         fixture.Locale.SetLanguage("fa");
         Assert.Equal(2, tabs.SelectedIndex);
-        Assert.Equal("2031-02-03 10:15", due.Text);
-        Assert.Equal(FlowDirection.LeftToRight, due.FlowDirection);
-        Assert.Equal(TextAlignment.Start, due.TextAlignment);
-        Assert.True(due.MinHeight > 0);
-        Assert.Equal(ProjectTaskStatus.InProgress, status.SelectedItem);
+        Assert.Equal(new DateTime(2031, 2, 3), picker.SelectedDate);
+        Assert.Equal(FlowDirection.LeftToRight, picker.FlowDirection);
+        var inProgress = new LocalizationService(fixture.Locale).Get("task.status.inProgress");
+        Assert.Contains(Controls<WrapPanel>(window).Single(panel => panel.Name == "TaskStatusChips").Children.OfType<Button>(),
+            chip => chip.Classes.Contains("selected") && Equals(chip.Content, inProgress));
+        Click(window, "انصراف");
+        Assert.DoesNotContain(Controls<Control>(window), control => control.Name == "TaskDialog");
         tabs.SelectedIndex = 0;
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
-        Assert.Contains(Controls<TextBlock>(window), control => control.Text == "نام پروژه *");
+        UiWait.Click(Controls<Button>(window).Single(button => button.Name == "EditProjectButton"));
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
         Assert.Equal(ProjectStage.Portfolio, stage.SelectedItem);
         Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "پرتفوی");
+        fixture.Locale.SetLanguage("en");
+        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
+        Click(window, "Cancel");
+        fixture.Locale.SetLanguage("fa");
         tabs.SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
         Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button).StartsWith("ارائه معرفی کسب‌وکار ·"));
-        fixture.Locale.SetLanguage("en");
-        tabs.SelectedIndex = 0;
-        Dispatcher.UIThread.RunJobs();
-        window.UpdateLayout();
-        Assert.Contains(Controls<TextBlock>(window), control => control.Text == "Project name *");
-        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
-        tabs.SelectedIndex = 2;
-        Dispatcher.UIThread.RunJobs();
-        window.UpdateLayout();
-        Assert.Equal("2031-02-03 10:15", due.Text);
-        Assert.Contains(Controls<TextBlock>(window), control => control.Text == "Task title *");
-        Assert.Contains(status.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "In progress");
         fixture.Locale.SetLanguage("en");
         tabs.SelectedIndex = 3;
         Dispatcher.UIThread.RunJobs();
@@ -206,6 +197,12 @@ public sealed class MainWindowLocalizationTests
     }
     private static void Click(Window window, string text) => UiWait.Click(window, button => MainWindowTests.ButtonText(button) == text, $"\"{text}\"");
     private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, button => MainWindowTests.ButtonText(button).StartsWith(prefix), $"starting with \"{prefix}\"");
+    // Projects without open tasks are not on the dashboard, so tests reach them through All projects.
+    private static void OpenProject(Window window, string name)
+    {
+        Click(window, "All projects");
+        ClickPrefix(window, name + " ·");
+    }
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

@@ -23,7 +23,6 @@ internal sealed class OverviewView : PresentationView
         cards.Children.Add(ListCard("presentation.openQuestions", Icons.Question, project.State.OpenQuestions, "OpenQuestionsCard"));
         cards.Children.Add(ListCard("presentation.followUps", Icons.ArrowBendUpRight, project.State.FollowUps, "FollowUpsCard"));
         Children.Add(cards);
-        Children.Add(DetailsCard());
     }
 
     private Control StateCard()
@@ -45,6 +44,7 @@ internal sealed class OverviewView : PresentationView
         Fact(() => T("presentation.followUps"), () => N(_project.State.FollowUps.Count));
         foreach (var (key, value) in new[] { ("overview.summary", (Func<string>)(() => _project.State.Summary)), ("field.notes", () => _project.Notes) })
         {
+            if (key == "overview.summary" && string.IsNullOrWhiteSpace(value())) continue;
             var section = new StackPanel { Spacing = 6 };
             section.Children.Add(Label(key, "Body", "TextSecondary"));
             section.Children.Add(Label(() => string.IsNullOrWhiteSpace(value()) ? T("date.notSet") : value(), "Body", string.IsNullOrWhiteSpace(value()) ? "TextTertiary" : "TextPrimary"));
@@ -109,34 +109,4 @@ internal sealed class OverviewView : PresentationView
         return panel;
     }
 
-    private Control DetailsCard()
-    {
-        var card = new SectionCard(Context, "presentation.detailsTitle") { Name = "ProjectDetailsCard" };
-        var panel = card.Body; panel.Spacing = 12;
-        var name = Input(_project.Name); var company = Input(_project.CompanyName); var owner = Input(_project.Owner);
-        var notes = Input(_project.Notes, true); var stage = Choice(_project.Stage); var status = Choice(_project.Status);
-        var fields = new AdaptiveGrid { MinItemWidth = 220, Gap = 12 };
-        foreach (var (label, input) in new (string, Control)[] { ("project.name", name), ("project.company", company), ("project.owner", owner), ("project.stage", stage), ("field.status", status) })
-            fields.Children.Add(FieldGroup(label, input));
-        panel.Children.Add(fields);
-        var state = Input(_project.State.Summary, true);
-        var questions = Input(string.Join('\n', _project.State.OpenQuestions), true);
-        var followups = Input(string.Join('\n', _project.State.FollowUps), true);
-        var texts = new AdaptiveGrid { MinItemWidth = 260, Gap = 12 };
-        texts.Children.Add(FieldGroup("field.notes", notes)); texts.Children.Add(FieldGroup("overview.currentState", state));
-        texts.Children.Add(FieldGroup("overview.questions", questions)); texts.Children.Add(FieldGroup("overview.followUps", followups));
-        panel.Children.Add(texts);
-        panel.Children.Add(Action("overview.save", async () =>
-        {
-            if (string.IsNullOrWhiteSpace(name.Text)) { ShowError("validation.projectNameRequired"); return; }
-            _project.Name = name.Text.Trim(); _project.CompanyName = company.Text ?? ""; _project.Owner = owner.Text ?? "";
-            _project.Stage = (ProjectStage)stage.SelectedItem!; _project.Status = (ProjectStatus)status.SelectedItem!; _project.Notes = notes.Text ?? "";
-            _project.State.Summary = state.Text ?? "";
-            _project.State.OpenQuestions = Lines(questions.Text); _project.State.FollowUps = Lines(followups.Text);
-            await SaveAsync(_project); await OpenProjectAsync(_project.Id);
-        }, "primary"));
-        return card;
-    }
-
-    private static List<string> Lines(string? value) => (value ?? "").Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
 }

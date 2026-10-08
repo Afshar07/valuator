@@ -56,7 +56,7 @@ public sealed class PresentationTests
         Dispatcher.UIThread.RunJobs();
         var requirement = new DomainDisplay(text).Requirement(project.Requirements[0]);
         ClickPrefix(window, requirement + " ·");
-        Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == text.Get("requirement.save"));
+        Assert.Contains(Controls<Control>(window), control => control.Name == "RequirementDetail");
         Capture("requirement-editor");
         tabs.SelectedIndex = 2;
         Dispatcher.UIThread.RunJobs();
@@ -128,21 +128,21 @@ public sealed class PresentationTests
         var project = await fixture.Projects.CreateAsync("Mixed Atlas اطلس", "Company", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
-        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
+        OpenProject(window, project.Name);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
-        ClickPrefix(window, "Pitch deck · Document");
-        var value = LabeledInput(window, "Value / information (Document)");
+        ClickPrefix(window, "Operations information / execution process · Text");
+        var value = Controls<TextBox>(window).Single(box => box.Name == "RequirementValue");
         value.Text = "Unsaved English / فارسی";
         fixture.Locale.SetLanguage("fa");
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("Unsaved English / فارسی", value.Text);
         Assert.Equal(FlowDirection.RightToLeft, value.FlowDirection);
         Assert.Equal(1, tabs.SelectedIndex);
-        Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Requirements[0].Value);
+        Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Requirements[1].Value);
 
         fixture.Locale.SetLanguage("en");
         tabs.SelectedIndex = 3;
@@ -167,27 +167,28 @@ public sealed class PresentationTests
         var project = await fixture.Projects.CreateAsync("Milestone project", "Company", ProjectStage.Screening, ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith(project.Name + " ·") && button.IsEffectivelyEnabled));
-        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
+        OpenProject(window, project.Name);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Buttons(window).First(button => MainWindowTests.ButtonText(button) == "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 2;
         Dispatcher.UIThread.RunJobs();
         var text = new LocalizationService(fixture.Locale);
-        Click(window, text.Get("milestone.new"));
-        LabeledInput(window, text.Get("milestone.title")).Text = "Synthetic review";
-        LabeledInput(window, text.Get("milestone.date")).Text = "2030-01-15 09:30";
-        Click(window, text.Get("milestone.save"));
+        Click(window, text.Get("v3.newMs"));
+        Controls<TextBox>(window).Single(box => box.Name == "MilestoneTitleInput").Text = "Synthetic review";
+        Controls<CalendarDatePicker>(window).Single().SelectedDate = new DateTime(2030, 1, 15);
+        Click(window, text.Get("v3.createMs"));
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Synthetic review ·") && button.IsEffectivelyEnabled));
         Assert.Single((await fixture.Projects.GetAsync(project.Id))!.Milestones);
         ClickPrefix(window, "Synthetic review ·");
-        LabeledInput(window, text.Get("milestone.title")).Text = "Reviewed milestone";
-        Controls<CheckBox>(window).Single(check => Equals(check.Content, text.Get("milestone.complete"))).IsChecked = true;
-        Click(window, text.Get("milestone.save"));
+        Controls<TextBox>(window).Single(box => box.Name == "MilestoneTitleInput").Text = "Reviewed milestone";
+        Controls<CheckBox>(window).Single(check => check.Name == "MilestoneReached").IsChecked = true;
+        Click(window, text.Get("v3.saveB"));
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Reviewed milestone ·") && button.IsEffectivelyEnabled));
         Assert.True((await fixture.Projects.GetAsync(project.Id))!.Milestones.Single().IsComplete);
         ClickPrefix(window, "Reviewed milestone ·");
-        Click(window, text.Get("milestone.delete"));
-        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == text.Get("milestone.new")) && Buttons(window).First(button => MainWindowTests.ButtonText(button) == text.Get("navigation.projects")).IsEffectivelyEnabled);
+        Click(window, text.Get("v3.del"));
+        await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == text.Get("v3.newMs")) && Buttons(window).First(button => MainWindowTests.ButtonText(button) == text.Get("navigation.projects")).IsEffectivelyEnabled
+            && !Buttons(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Reviewed milestone ·")));
         Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Milestones);
         window.Close();
     }
@@ -202,6 +203,12 @@ public sealed class PresentationTests
     }
     private static void Click(Window window, string text) => UiWait.Click(window, button => MainWindowTests.ButtonText(button) == text, $"\"{text}\"");
     private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, button => MainWindowTests.ButtonText(button).StartsWith(prefix), $"starting with \"{prefix}\"");
+    // Projects without open tasks are not on the dashboard, so tests reach them through All projects.
+    private static void OpenProject(Window window, string name)
+    {
+        Click(window, "All projects");
+        ClickPrefix(window, name + " ·");
+    }
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

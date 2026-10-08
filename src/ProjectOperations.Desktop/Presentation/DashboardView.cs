@@ -7,10 +7,9 @@ using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-/// <summary>Attention home: counts, the top priority items and this week's agenda. Deterministic summaries only, no agent or LLM involvement.</summary>
+/// <summary>Attention home: counts, projects with open work and this week's agenda. Deterministic summaries only, no agent or LLM involvement.</summary>
 internal sealed class DashboardView : PresentationView
 {
-    private const int PriorityLimit = 5;
     public DashboardView(PresentationContext context) : base(context) { }
 
     public async Task LoadAsync()
@@ -18,7 +17,6 @@ internal sealed class DashboardView : PresentationView
         var now = DateTimeOffset.Now;
         var projects = await _projects.ListAsync();
         var dashboard = ProjectSummaries.Dashboard(projects, now);
-        var live = dashboard.Projects.Where(summary => summary.Project.Status is ProjectStatus.Active or ProjectStatus.OnHold).ToList();
 
         Children.Add(PageHeader("dashboard.title", "dashboard.subtitle", AssistantButton()));
         if (dashboard.Projects.Count == 0)
@@ -32,53 +30,63 @@ internal sealed class DashboardView : PresentationView
         }
 
         var stats = new AdaptiveGrid { MinItemWidth = 170, Gap = 12, StretchRows = true };
-        stats.Children.Add(new StatCard(Context, "DashboardOverdueStat", "presentation.stat.overdue", dashboard.OverdueTasks.Count, Icons.WarningCircle, "Error", "Error"));
+        stats.Children.Add(new StatCard(Context, "DashboardOverdueStat", "presentation.stat.overdue", dashboard.OverdueTasks.Count, Icons.WarningCircle, "Error", dashboard.OverdueTasks.Count > 0 ? "Error" : "TextPrimary"));
         stats.Children.Add(new StatCard(Context, "DashboardUpcomingStat", "presentation.stat.upcoming", dashboard.UpcomingTasks.Count, Icons.Clock, "Warning"));
         stats.Children.Add(new StatCard(Context, "DashboardMilestonesStat", "presentation.stat.milestones", dashboard.UpcomingMilestones.Count, Icons.Flag, "Accent"));
         stats.Children.Add(new StatCard(Context, "DashboardActiveStat", "presentation.stat.active", dashboard.Projects.Count(summary => summary.Project.Status == ProjectStatus.Active), Icons.Briefcase, "TextSecondary"));
         Children.Add(stats);
 
         var columns = new AdaptiveGrid { MinItemWidth = 320 };
-        columns.Children.Add(PriorityCard(dashboard, live, now));
+        columns.Children.Add(PriorityCard(projects, now));
         columns.Children.Add(AgendaCard(projects, now));
         Children.Add(columns);
     }
 
-    private Control PriorityCard(DashboardSummary dashboard, List<ProjectSummary> live, DateTimeOffset now)
+    /// <summary>Live projects that still have open tasks, most overdue first, each with its next task.</summary>
+    private Control PriorityCard(IReadOnlyList<Project> projects, DateTimeOffset now)
     {
-        var card = new ListCard(Context, () => T("presentation.priority")) { Name = "PriorityItems" };
-        var rows = new List<Control>();
-        foreach (var item in dashboard.OverdueTasks)
-            rows.Add(Row(item.ProjectName, () => item.Task.Title, () => T("presentation.pill.overdue"), Tone.Error, () => LateText(item.Task.DueAt!.Value, now), "Error",
-                () => F("dashboard.overdue", item.ProjectName, item.Task.Title, Due(item.Task.DueAt)), () => OpenProjectAsync(item.ProjectId, 2)));
-        foreach (var item in dashboard.UpcomingTasks)
-            rows.Add(Row(item.ProjectName, () => item.Task.Title, () => T("presentation.pill.upcoming"), Tone.Warning, () => DayTime(item.Task.DueAt!.Value), "TextSecondary",
-                () => F("dashboard.soon", item.ProjectName, item.Task.Title, Due(item.Task.DueAt)), () => OpenProjectAsync(item.ProjectId, 2)));
-        foreach (var item in dashboard.UpcomingMilestones)
-            rows.Add(Row(item.ProjectName, () => item.Milestone.Title, () => T("presentation.pill.milestone"), Tone.Accent, () => Day(item.Milestone.DueAt!.Value), "TextSecondary",
-                () => F("dashboard.milestone", item.ProjectName, item.Milestone.Title, Due(item.Milestone.DueAt)), () => OpenProjectAsync(item.ProjectId, 2)));
-        foreach (var status in new[] { RequirementStatus.NeedsReview, RequirementStatus.Missing })
-            foreach (var summary in live)
-                foreach (var requirement in summary.Project.Requirements.Where(item => item.Status == status))
-                {
-                    var project = summary.Project; var captured = requirement; var state = status;
-                    rows.Add(Row(project.Name, () => RequirementTitle(captured), () => EnumText(state), StatusVisuals.Requirement(state).Tone, () => "", "TextSecondary",
-                        () => $"{project.Name} · {RequirementTitle(captured)} · {EnumText(state)}", () => OpenProjectAsync(project.Id, 1)));
-                }
-        if (rows.Count == 0) card.Add(new Border { Padding = new Thickness(16, 12), Child = Label("presentation.priority.empty", "Body", "TextSecondary") });
-        foreach (var row in rows.Take(PriorityLimit)) card.Add(row);
+        var rows = projects.Where(project => project.Status is ProjectStatus.Active or ProjectStatus.OnHold)
+            .Select(project => (Project: project, Open: project.Tasks.Where(task => task.Status is ProjectTaskStatus.Todo or ProjectTaskStatus.InProgress).ToList()))
+            .Where(item => item.Open.Count > 0)
+            .Select(item => (item.Project, item.Open, Overdue: item.Open.Count(task => task.DueAt < now),
+                Week: item.Open.Count(task => task.DueAt >= now && task.DueAt <= now.AddDays(7)),
+                Next: item.Open.OrderBy(task => task.DueAt ?? DateTimeOffset.MaxValue).First()))
+            .OrderByDescending(item => item.Overdue).ThenBy(item => item.Next.DueAt ?? DateTimeOffset.MaxValue).ToList();
+        var card = new ListCard(Context, () => T("v3.projOpen"), Label(() => N(rows.Count), "Caption", "TextSecondary")) { Name = "PriorityItems" };
+        if (rows.Count == 0) card.Add(new Border { Padding = new Thickness(16, 14), Child = Label("v3.noOpen", "Body", "TextSecondary") });
+        foreach (var item in rows) card.Add(ProjectRow(item.Project, item.Open.Count, item.Overdue, item.Week, item.Next, now));
         return card;
     }
 
-    private ListRow Row(string projectName, Func<string> title, Func<string> pill, Tone tone, Func<string> date, string dateColor, Func<string> accessibleName, Func<Task> action)
+    private ListRow ProjectRow(Project project, int open, int overdue, int week, ProjectTask next, DateTimeOffset now)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
-        var pillHost = new Panel { MinWidth = 78, VerticalAlignment = VerticalAlignment.Center }; pillHost.Children.Add(Ui.Pill(Context, pill, tone)); grid.Children.Add(pillHost);
-        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        labels.Children.Add(Label(title, "BodyMedium")); labels.Children.Add(Label(() => projectName, "Caption", "TextSecondary"));
+        var late = next.DueAt < now;
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), ColumnSpacing = 12 };
+        grid.Children.Add(Ui.Initial(project.Name, 32));
+        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 3 };
+        var title = new WrapPanel { ItemSpacing = 8 };
+        title.Children.Add(Label(() => project.Name, "BodyStrong"));
+        title.Children.Add(Label(() => EnumText(project.Stage), "Caption", "TextTertiary"));
+        labels.Children.Add(title);
+        var line = Label(() => "", "Small", "TextSecondary"); line.TextWrapping = TextWrapping.NoWrap; line.TextTrimming = TextTrimming.CharacterEllipsis;
+        Bind(line, control =>
+        {
+            var date = next.DueAt is null ? T("date.none") : $"{Context.ShortDate(next.DueAt)} · {Context.Relative(next.DueAt, true)}";
+            var when = new Avalonia.Controls.Documents.Run(date) { FontWeight = late ? FontWeight.SemiBold : FontWeight.Normal };
+            when.Paint(Avalonia.Controls.Documents.TextElement.ForegroundProperty, late ? "Error" : "TextSecondary");
+            control.Inlines = [new Avalonia.Controls.Documents.Run($"{T("v3.nextL")}: {next.Title} · "), when];
+        });
+        labels.Children.Add(line);
         Grid.SetColumn(labels, 1); grid.Children.Add(labels);
-        var when = Label(date, "Caption", dateColor); when.TextWrapping = TextWrapping.NoWrap; when.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(when, 2); grid.Children.Add(when);
-        return new ListRow(Context, grid, accessibleName, action) { Name = "PriorityRow", Padding = new Thickness(16, 11) };
+        var pills = new WrapPanel { ItemSpacing = 4, LineSpacing = 4, MaxWidth = 190, VerticalAlignment = VerticalAlignment.Center };
+        if (overdue > 0) pills.Children.Add(Ui.Pill(Context, () => F("v3.nOverdue", N(overdue)), Tone.Error));
+        if (week > 0) pills.Children.Add(Ui.Pill(Context, () => F("v3.nWeek", N(week)), Tone.Warning));
+        pills.Children.Add(Ui.Pill(Context, () => F("v3.nOpen", N(open)), Tone.Neutral));
+        Grid.SetColumn(pills, 2); grid.Children.Add(pills);
+        var caret = Icons.Glyph(Icons.CaretRight, 14, "TextTertiary");
+        Bind(caret, control => control.Text = _locale.LanguageCode == "fa" ? Icons.CaretLeft : Icons.CaretRight);
+        Grid.SetColumn(caret, 3); grid.Children.Add(caret);
+        return new ListRow(Context, grid, () => $"{project.Name} · {F("v3.nOpen", N(open))}", () => OpenProjectAsync(project.Id, 2)) { Name = "PriorityRow", Padding = new Thickness(16, 12) };
     }
 
     private Control AgendaCard(IReadOnlyList<Project> projects, DateTimeOffset now)
@@ -116,12 +124,4 @@ internal sealed class DashboardView : PresentationView
         }
         return card;
     }
-
-    private string LateText(DateTimeOffset due, DateTimeOffset now)
-    {
-        var days = Math.Max(1, (int)Math.Floor((now - due).TotalDays));
-        return days == 1 ? F("presentation.dueLateOne", Context.ShortDate(due)) : F("presentation.dueLate", Context.ShortDate(due), days);
-    }
-    private string Day(DateTimeOffset date) => date.ToLocalTime().ToString("ddd MMM d", _locale.Culture);
-    private string DayTime(DateTimeOffset date) => date.ToLocalTime().TimeOfDay == TimeSpan.Zero ? Day(date) : date.ToLocalTime().ToString("ddd MMM d, HH:mm", _locale.Culture);
 }

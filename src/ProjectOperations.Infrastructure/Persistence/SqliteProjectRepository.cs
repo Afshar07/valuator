@@ -109,10 +109,10 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
             cancellationToken.ThrowIfCancellationRequested();
             var task = project.Tasks[position];
             using var command = SqliteDatabase.Command(connection, transaction,
-                "INSERT INTO tasks VALUES($id,$project,$position,$title,$description,$status,$due,$created,$updated);",
+                "INSERT INTO tasks VALUES($id,$project,$position,$title,$description,$status,$due,$created,$updated,$requirement);",
                 ("$id", task.Id), ("$project", project.Id), ("$position", position), ("$title", task.Title),
                 ("$description", task.Description), ("$status", task.Status), ("$due", task.DueAt),
-                ("$created", task.CreatedAt), ("$updated", task.UpdatedAt));
+                ("$created", task.CreatedAt), ("$updated", task.UpdatedAt), ("$requirement", task.RequirementId));
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         for (var position = 0; position < project.Milestones.Count; position++)
@@ -214,7 +214,7 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
             }
         }
         using (var command = SqliteDatabase.Command(connection, transaction,
-            "SELECT id,title,description,status,due_at,created_at,updated_at FROM tasks WHERE project_id=$id ORDER BY position;", ("$id", project.Id)))
+            "SELECT id,title,description,status,due_at,created_at,updated_at,requirement_id FROM tasks WHERE project_id=$id ORDER BY position;", ("$id", project.Id)))
         using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -228,7 +228,8 @@ public sealed class SqliteProjectRepository(string databasePath) : IProjectRepos
                     Status = (ProjectTaskStatus)reader.GetInt32(3),
                     DueAt = SqliteDatabase.NullableDate(reader, 4),
                     CreatedAt = SqliteDatabase.Date(reader, 5),
-                    UpdatedAt = SqliteDatabase.Date(reader, 6)
+                    UpdatedAt = SqliteDatabase.Date(reader, 6),
+                    RequirementId = reader.IsDBNull(7) ? null : Guid.Parse(reader.GetString(7))
                 });
             }
         using (var command = SqliteDatabase.Command(connection, transaction,

@@ -62,7 +62,7 @@ internal sealed class ProjectsView : PresentationView
                 || project.CompanyName.Contains(query, StringComparison.CurrentCultureIgnoreCase) || project.Owner.Contains(query, StringComparison.CurrentCultureIgnoreCase));
     }
 
-    private void ShowCreate() => Context.Shell.ShowModal(new CreateProjectView(Context));
+    private void ShowCreate() => Context.Shell.ShowWizard(fromWelcome: false);
 
     private sealed class ProjectRow : ListRow
     {

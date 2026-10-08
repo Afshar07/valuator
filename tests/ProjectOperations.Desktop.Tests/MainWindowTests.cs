@@ -22,60 +22,51 @@ public sealed class MainWindowTests
         await fixture.InitializeAsync();
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        Assert.True(HasText(window, "No projects yet. Create your first project to start organizing the work."));
-        Click(window, "All projects");
-        await UntilAsync(() => Buttons(window).Any(b => ButtonText(b) == "New project" && b.IsEffectivelyEnabled));
-        Click(window, "New project");
-        Click(window, "Create project");
-        Assert.True(Controls<TextBlock>(window).Single(block => block.Name == "CreateProjectError").IsVisible);
-        Assert.Empty(await fixture.Projects.ListAsync());
-        Input(window, "Project name *").Text = "Synthetic investment";
-        Input(window, "Company").Text = "Example company";
-        Input(window, "Owner").Text = "Test owner";
-        Click(window, "Create project");
+        await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
+        Assert.Contains(Controls<Control>(window), control => control.Name == "WelcomeScreen" && control.IsVisible);
+        Click(window, "Start my first project");
+        Assert.False(Controls<Button>(window).Single(b => b.Name == "WizardPrimary").IsEnabled);
+        Controls<TextBox>(window).Single(box => box.Name == "WizardName").Text = "Synthetic investment";
+        Controls<TextBox>(window).Single(box => box.Name == "WizardCompany").Text = "Example company";
+        Click(window, "Continue");
+        Click(window, "Continue");
+        Click(window, "Skip for now");
         await UntilAsync(() => HasText(window, "Synthetic investment") && Button(window, "All projects").IsEffectivelyEnabled);
+        Assert.False(Controls<Control>(window).Single(control => control.Name == "OnboardingOverlay").IsVisible);
+        Assert.Contains(Controls<Control>(window), control => control.Name == "Toast" && control.IsVisible);
         Assert.Single(await fixture.Projects.ListAsync());
         Assert.True(HasText(window, "Pitch deck") && HasText(window, "Missing"));
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 1;
-        ClickPrefix(window, "Pitch deck · Document");
-        Input(window, "Value / information (Document)").Text = "Awaiting revised deck";
-        Input(window, "Notes").Text = "Synthetic review note";
-        var status = LabeledControl<ComboBox>(window, "Status (explicitly reviewed by you)");
-        status.SelectedItem = RequirementStatus.Provided;
-        Click(window, "Save requirement");
-        await UntilAsync(() => ReadinessRatio(window) == "0/16" && !Buttons(window).Any(b => ButtonText(b) == "Save requirement") && Button(window, "All projects").IsEffectivelyEnabled);
+        ClickPrefix(window, "Operations information / execution process · Text");
+        Controls<TextBox>(window).Single(box => box.Name == "RequirementValue").Text = "Awaiting revised deck";
+        Click(window, "Save");
+        await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Text == "Provided") && Button(window, "All projects").IsEffectivelyEnabled);
         var project = (await fixture.Projects.ListAsync()).Single();
-        Assert.Equal("Awaiting revised deck", project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Value);
-        Assert.Equal(RequirementStatus.Provided, project.Requirements.Single(r => r.DefinitionId == "pitch-deck").Status);
+        Assert.Equal("Awaiting revised deck", project.Requirements.Single(r => r.DefinitionId == "operations").Value);
+        Assert.Equal(RequirementStatus.Provided, project.Requirements.Single(r => r.DefinitionId == "operations").Status);
         Assert.Equal(1, Controls<TabControl>(window).Single().SelectedIndex);
-        ClickPrefix(window, "Pitch deck · Document");
-        LabeledControl<ComboBox>(window, "Status (explicitly reviewed by you)").SelectedItem = RequirementStatus.Complete;
-        Click(window, "Save requirement");
+        Click(window, "Complete");
         await UntilAsync(() => ReadinessRatio(window) == "1/16" && Button(window, "All projects").IsEffectivelyEnabled);
+        Assert.Equal(RequirementStatus.Complete, (await fixture.Projects.ListAsync()).Single().Requirements.Single(r => r.DefinitionId == "operations").Status);
         Controls<TabControl>(window).Single().SelectedIndex = 2;
         Click(window, "New task");
-        Input(window, "Task title *").Text = "Request financial plan";
-        Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "2030-01-15 09:30";
-        Click(window, "Save task");
+        Controls<TextBox>(window).Single(box => box.Name == "TaskTitleInput").Text = "Request financial plan";
+        Controls<CalendarDatePicker>(window).Single().SelectedDate = new DateTime(2030, 1, 15);
+        Click(window, "Add task");
         await UntilAsync(() => Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan · To do")) && Button(window, "All projects").IsEffectivelyEnabled);
         project = (await fixture.Projects.ListAsync()).Single();
-        Assert.Equal("2030-01-15 09:30", project.Tasks.Single().DueAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
-        Controls<TabControl>(window).Single().SelectedIndex = 2;
+        Assert.Equal("2030-01-15", project.Tasks.Single().DueAt!.Value.ToLocalTime().ToString("yyyy-MM-dd"));
         ClickPrefix(window, "Request financial plan · To do");
-        Input(window, "Notes").Text = "Synthetic task note";
-        Input(window, "Optional due date · local time · yyyy-MM-dd HH:mm").Text = "";
-        Click(window, "Save task");
+        Click(window, "No date");
+        Click(window, "Save changes");
         await UntilAsync(() => Buttons(window).Any(b => ButtonText(b) == "Request financial plan · To do · No date") && Button(window, "All projects").IsEffectivelyEnabled);
-        var updatedTask = (await fixture.Projects.ListAsync()).Single().Tasks.Single();
-        Assert.Equal("Synthetic task note", updatedTask.Description);
-        Assert.Null(updatedTask.DueAt);
-        Click(window, "Complete");
+        Assert.Null((await fixture.Projects.ListAsync()).Single().Tasks.Single().DueAt);
+        UiWait.Click(Controls<Button>(window).Single(b => b.Name == "TaskToggle"));
         await UntilAsync(() => Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan · Done")) && Button(window, "All projects").IsEffectivelyEnabled);
-        Controls<TabControl>(window).Single().SelectedIndex = 2;
+        Assert.Equal(ProjectTaskStatus.Done, (await fixture.Projects.ListAsync()).Single().Tasks.Single().Status);
         ClickPrefix(window, "Request financial plan · Done");
-        Click(window, "Delete task");
+        Click(window, "Delete");
         await UntilAsync(() => !Buttons(window).Any(b => ButtonText(b).StartsWith("Request financial plan ·"))
             && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Empty((await fixture.Projects.ListAsync()).Single().Tasks);
@@ -99,15 +90,15 @@ public sealed class MainWindowTests
         await fixture.Projects.SaveAsync(project);
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
+        OpenProject(window, project.Name);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Button(window, "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 1;
         Dispatcher.UIThread.RunJobs();
         ClickPrefix(window, "Pitch deck · Document");
-        Assert.Contains(Controls<TextBox>(window), box => box.IsReadOnly && box.Text!.Contains("bytes · Added") && box.Text.Contains(path));
-        Click(window, "Remove association");
-        await UntilAsync(() => !Buttons(window).Any(button => ButtonText(button) == "Remove association") && Button(window, "All projects").IsEffectivelyEnabled);
+        Assert.Contains(Controls<TextBlock>(window), block => block.Text == "synthetic.txt");
+        Click(window, "Remove link");
+        await UntilAsync(() => !Buttons(window).Any(button => ButtonText(button) == "Remove link") && Button(window, "All projects").IsEffectivelyEnabled);
         Assert.Empty((await fixture.Projects.GetAsync(project.Id))!.Requirements.Single(r => r.DefinitionId == "pitch-deck").Files);
         Assert.True(File.Exists(path));
         Assert.Equal("Synthetic source contents", await File.ReadAllTextAsync(path));
@@ -177,8 +168,8 @@ public sealed class MainWindowTests
         var project = await fixture.Projects.CreateAsync("Synthetic project", "Example", ProjectStage.DueDiligence, ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
+        OpenProject(window, project.Name);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Button(window, "All projects").IsEffectivelyEnabled);
         var tabs = Controls<TabControl>(window).Single();
         tabs.SelectedIndex = 3;
@@ -219,8 +210,8 @@ public sealed class MainWindowTests
         var project = await fixture.Projects.CreateAsync("Close test", "Example", ProjectStage.Screening, ProjectStatus.Active, "", "");
         var window = fixture.Window;
         window.Show();
-        await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        ClickPrefix(window, project.Name + " ·");
+        await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
+        OpenProject(window, project.Name);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Button(window, "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 3;
         Dispatcher.UIThread.RunJobs();
@@ -267,6 +258,12 @@ public sealed class MainWindowTests
     }
     private static void Click(Window window, string text, bool last = false) => UiWait.Click(window, b => ButtonText(b) == text, $"\"{text}\"", last);
     private static void ClickPrefix(Window window, string prefix) => UiWait.Click(window, b => ButtonText(b).StartsWith(prefix), $"starting with \"{prefix}\"");
+    // Projects without open tasks are not on the dashboard, so tests reach them through All projects.
+    private static void OpenProject(Window window, string name)
+    {
+        Click(window, "All projects");
+        ClickPrefix(window, name + " ·");
+    }
     private static async Task UntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
@@ -277,8 +274,8 @@ public sealed class MainWindowTests
     private static async Task StartDelegationAsync(Window window, string projectName)
     {
         window.Show();
-        await UntilAsync(() => HasText(window, "What needs your attention?") && Button(window, "All projects").IsEffectivelyEnabled);
-        ClickPrefix(window, projectName + " ·");
+        await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
+        OpenProject(window, projectName);
         await UntilAsync(() => Controls<TabControl>(window).Any() && Button(window, "All projects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 3;
         Dispatcher.UIThread.RunJobs();

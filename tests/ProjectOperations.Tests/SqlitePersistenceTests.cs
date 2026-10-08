@@ -313,7 +313,7 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
         {
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA user_version = 2;";
+            command.CommandText = "PRAGMA user_version = 3;";
             await command.ExecuteNonQueryAsync();
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => Repository.InitializeAsync());
@@ -321,6 +321,39 @@ public sealed class SqlitePersistenceTests : IAsyncLifetime
         await verify.OpenAsync();
         using var version = verify.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Assert.Equal(2L, await version.ExecuteScalarAsync());
+        Assert.Equal(3L, await version.ExecuteScalarAsync());
+    }
+
+    [Fact]
+    public async Task TaskKeepsItsLinkedRequirementAcrossReload()
+    {
+        var project = CreateProject();
+        project.Tasks[0].RequirementId = project.Requirements[2].Id;
+        await Repository.SaveAsync(project);
+        var loaded = (await Repository.GetAsync(project.Id))!;
+        Assert.Equal(project.Requirements[2].Id, loaded.Tasks[0].RequirementId);
+        Assert.Null(loaded.Tasks[1].RequirementId);
+    }
+
+    [Fact]
+    public async Task VersionOneDatabaseIsMigratedWithoutLosingTasks()
+    {
+        var project = CreateProject();
+        await Repository.SaveAsync(project);
+        SqliteConnection.ClearAllPools();
+        await using (var connection = new SqliteConnection($"Data Source={DatabasePath}"))
+        {
+            await connection.OpenAsync();
+            using var downgrade = connection.CreateCommand();
+            downgrade.CommandText = "ALTER TABLE tasks DROP COLUMN requirement_id; PRAGMA user_version = 1;";
+            await downgrade.ExecuteNonQueryAsync();
+        }
+        await Repository.InitializeAsync();
+        var loaded = (await Repository.GetAsync(project.Id))!;
+        Assert.Equal(2, loaded.Tasks.Count);
+        Assert.All(loaded.Tasks, task => Assert.Null(task.RequirementId));
+        loaded.Tasks[0].RequirementId = loaded.Requirements[0].Id;
+        await Repository.SaveAsync(loaded);
+        Assert.Equal(loaded.Requirements[0].Id, (await Repository.GetAsync(project.Id))!.Tasks[0].RequirementId);
     }
 }

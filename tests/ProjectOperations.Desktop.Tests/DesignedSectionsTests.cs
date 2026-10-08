@@ -76,11 +76,10 @@ public sealed class DesignedSectionsTests
         await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "NewProjectButton" && button.IsEffectivelyEnabled));
         Capture(window, "projects", language, theme, width);
         Click(Controls<Button>(window).Single(button => button.Name == "NewProjectButton"));
-        Assert.Contains(Controls<Control>(window), control => control.Name == "CreateProjectDialog");
-        Assert.False(Controls<Button>(window).Single(button => MainWindowTests.ButtonText(button) == text.Get("template.blank")).IsEnabled);
+        Assert.Contains(Controls<Control>(window), control => control.Name == "WizardScreen");
         Capture(window, "new-project", language, theme, width);
-        window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
-        Assert.DoesNotContain(Controls<Control>(window), control => control.Name == "CreateProjectDialog");
+        Click(Controls<Button>(window).Single(button => button.Name == "WizardBack"));
+        Assert.False(Controls<Control>(window).Single(control => control.Name == "OnboardingOverlay").IsVisible);
 
         Click(Controls<Button>(window).First(button => MainWindowTests.ButtonText(button).StartsWith("Nova Logistics ·")));
         await UntilAsync(() => Controls<TabControl>(window).Any() && Nav(window, "NavigationProjects").IsEffectivelyEnabled);
@@ -137,6 +136,8 @@ public sealed class DesignedSectionsTests
         try
         {
             window.Show();
+            await UntilAsync(() => Controls<Button>(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
+            Click(Controls<Button>(window).First(button => MainWindowTests.ButtonText(button) == "All projects"));
             await UntilAsync(() => Controls<Button>(window).Any(button => MainWindowTests.ButtonText(button).StartsWith("Offline project ·") && button.IsEffectivelyEnabled));
             Click(Controls<Button>(window).First(button => MainWindowTests.ButtonText(button).StartsWith("Offline project ·")));
             await UntilAsync(() => Controls<TabControl>(window).Any());

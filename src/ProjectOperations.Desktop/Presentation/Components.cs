@@ -218,11 +218,14 @@ internal sealed class ListCard : Border
     private readonly bool _hasHeading;
     public int Count => _rows.Children.Count;
     public void Add(Control row) => _rows.Children.Add(Ui.Separated(row, first: _rows.Children.Count == 0 && !_hasHeading));
-    /// <summary>Muted band that groups the rows below it (e.g. Active / Done).</summary>
-    public void AddGroup(PresentationContext context, Func<string> label)
+    /// <summary>Muted band that groups the rows below it (e.g. Overdue / Next 7 days), with an optional muted count.</summary>
+    public void AddGroup(PresentationContext context, Func<string> label, Func<string>? count = null, string color = "TextSecondary")
     {
-        var text = context.Label(label, "MetaMedium", "TextSecondary");
-        _rows.Children.Add(new Border { Padding = new Thickness(16, 6), BorderThickness = new Thickness(0, 1, 0, 0), Child = text }
+        var text = context.Label(label, "MetaMedium", color); text.FontWeight = FontWeight.SemiBold;
+        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        line.Children.Add(text);
+        if (count is not null) { var number = context.Label(count, "MetaMedium", "TextTertiary"); number.VerticalAlignment = VerticalAlignment.Center; line.Children.Add(number); }
+        _rows.Children.Add(new Border { Padding = new Thickness(16, 6), BorderThickness = new Thickness(0, 1, 0, 0), Child = line }
             .Paint(BackgroundProperty, "BackgroundMuted").Paint(BorderBrushProperty, "BorderSubtle"));
     }
     public void Clear() => _rows.Children.Clear();
@@ -357,8 +360,11 @@ internal static class ButtonDecorations
 internal sealed class AppSidebar : Border
 {
     private readonly Dictionary<string, Button> _entries = [];
+    private readonly Dictionary<string, Border> _newBadges = [];
     private readonly TextBlock _badge;
     private readonly Border _badgeHost;
+    private readonly Border _gettingStarted = new() { Name = "GettingStarted", IsVisible = false, Margin = new Thickness(0, 0, 0, 6), Padding = new Thickness(12), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(PresentationTheme.RadiusMedium) };
+    private readonly PresentationContext _owner;
     public Segmented ThemeSelector { get; }
     public Button Language { get; }
 
@@ -408,16 +414,23 @@ internal sealed class AppSidebar : Border
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
             row.Children.Add(Icons.Glyph(icon, 16, "TextSecondary"));
             var caption = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }; Grid.SetColumn(caption, 1); row.Children.Add(caption);
-            if (page == "dashboard") { Grid.SetColumn(_badgeHost, 2); row.Children.Add(_badgeHost); }
+            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+            var freshText = context.Label("v3.newBadge", "Micro", "AccentText"); freshText.FontWeight = FontWeight.SemiBold; freshText.TextWrapping = TextWrapping.NoWrap;
+            var fresh = new Border { IsVisible = false, Padding = new Thickness(7, 1), CornerRadius = new CornerRadius(PresentationTheme.RadiusPill), Name = "NewBadge", Child = freshText }.Paint(BackgroundProperty, "AccentSoft");
+            _newBadges[page] = fresh; badges.Children.Add(fresh);
+            if (page == "dashboard") badges.Children.Add(_badgeHost);
+            Grid.SetColumn(badges, 2); row.Children.Add(badges);
             button.Content = row;
             context.Localized.Bind(button, control => { caption.Text = context.Text.Get(key); AutomationProperties.SetName(control, context.Text.Get(key)); });
             var target = page;
             button.Click += (_, _) => navigate(target);
             _entries[page] = button; entries.Children.Add(button);
         }
+        _gettingStarted.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault");
+        DockPanel.SetDock(_gettingStarted, Dock.Bottom); dock.Children.Add(_gettingStarted);
         dock.Children.Add(entries); Child = dock;
         context.Localized.Bind(this, _ => _badge.Text = _count.ToString("N0", context.Locale.Culture));
-        _context = context;
+        _context = context; _owner = context;
     }
     private readonly PresentationContext _context;
     private int _count;
@@ -429,6 +442,49 @@ internal sealed class AppSidebar : Border
             button.Classes.Set("selected", id == page);
             if (button.Content is Grid grid && grid.Children[0] is TextBlock icon) icon.Paint(TextBlock.ForegroundProperty, id == page ? "TextPrimary" : "TextSecondary");
         }
+    }
+
+    /// <summary>Shows only the sections that have something to show; Projects and Settings are always available.</summary>
+    public void SetVisible(string page, bool visible) { if (_entries.TryGetValue(page, out var button)) button.IsVisible = visible; }
+    public bool IsPageVisible(string page) => _entries.TryGetValue(page, out var button) && button.IsVisible;
+    /// <summary>Marks a section that appeared since the app started and has not been opened yet.</summary>
+    public void SetNew(string page, bool isNew) { if (_newBadges.TryGetValue(page, out var badge)) badge.IsVisible = isNew; }
+
+    /// <summary>One getting-started step: caption key, completion, optional flag and the action that moves it forward.</summary>
+    public sealed record GettingStartedItem(string Key, bool Done, bool Optional, Func<Task>? Go);
+
+    /// <summary>Shows the checklist card under the navigation, or hides it when <paramref name="items"/> is null.</summary>
+    public void SetGettingStarted(IReadOnlyList<GettingStartedItem>? items, Func<Task> hide)
+    {
+        _gettingStarted.IsVisible = items is not null;
+        if (items is null) { _gettingStarted.Child = null; return; }
+        var context = _owner; var done = items.Count(item => item.Done);
+        var stack = new StackPanel { Spacing = 8 };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        head.Children.Add(context.Label("v3.gsTitle", "SmallStrong"));
+        var count = context.Label(() => $"{context.Number(done)}/{context.Number(items.Count)}", "Meta", "TextSecondary"); count.TextWrapping = TextWrapping.NoWrap; Grid.SetColumn(count, 1); head.Children.Add(count);
+        stack.Children.Add(head);
+        var bar = Ui.Progress(100.0 * done / items.Count, 4); bar.Name = "GettingStartedProgress"; stack.Children.Add(bar);
+        var list = new StackPanel { Spacing = 1 };
+        foreach (var item in items)
+        {
+            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
+            line.Children.Add(Icons.Glyph(item.Done ? Icons.CheckCircle : Icons.Circle, 15, item.Done ? "Success" : "TextTertiary", item.Done ? IconWeight.Fill : IconWeight.Regular));
+            var label = context.Label(item.Key, "Caption", item.Done ? "TextTertiary" : "TextPrimary"); label.VerticalAlignment = VerticalAlignment.Center;
+            if (item.Done) label.TextDecorations = TextDecorations.Strikethrough;
+            Grid.SetColumn(label, 1); line.Children.Add(label);
+            if (item.Optional) { var optional = context.Label("v3.optional", "Micro", "TextTertiary"); optional.FontWeight = FontWeight.Normal; optional.VerticalAlignment = VerticalAlignment.Center; Grid.SetColumn(optional, 2); line.Children.Add(optional); }
+            var button = new Button { Content = line, Name = "GettingStartedItem", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(4, 5), MinHeight = 0, BorderThickness = new Thickness(0), CornerRadius = new CornerRadius(PresentationTheme.RadiusSmall) };
+            button.IsHitTestVisible = !item.Done && item.Go is not null;
+            button.Classes.Add("row"); button.Padding = new Thickness(4, 5);
+            context.Localized.Bind(button, control => Avalonia.Automation.AutomationProperties.SetName(control, context.Text.Get(item.Key)));
+            if (!item.Done && item.Go is { } go) button.Click += async (_, _) => await context.ActAsync(button, go);
+            list.Children.Add(button);
+        }
+        stack.Children.Add(list);
+        var hideButton = context.Action("v3.hide", hide, "link"); hideButton.Name = "GettingStartedHide"; hideButton.Padding = new Thickness(4, 0); hideButton.FontSize = 11.5;
+        stack.Children.Add(hideButton);
+        _gettingStarted.Child = stack;
     }
 
     public void SetAttentionCount(int count)
@@ -451,5 +507,88 @@ internal sealed class ReadableColumn : Decorator
     {
         Child?.Arrange(new Rect(0, 0, Math.Min(finalSize.Width, MaxContentWidth), finalSize.Height));
         return finalSize;
+    }
+}
+
+/// <summary>Form building blocks for modal dialogs (project, task, milestone, wizard). Sizes follow the v3 design: 36px inputs, 28px chips.</summary>
+internal static class Forms
+{
+    public static TextBox Input(string value = "", double height = 36) => new()
+    {
+        Text = value,
+        TextWrapping = TextWrapping.NoWrap,
+        TextAlignment = TextAlignment.Start,
+        MinHeight = height,
+        VerticalContentAlignment = VerticalAlignment.Center,
+        HorizontalAlignment = HorizontalAlignment.Stretch
+    };
+
+    public static ComboBox Choice<T>(PresentationContext context, T selected, Func<T, string> text) where T : struct, Enum => new()
+    {
+        ItemsSource = Enum.GetValues<T>(),
+        SelectedItem = selected,
+        MinHeight = 36,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<T>((value, _) => context.Label(() => text(value), "Body"))
+    };
+
+    /// <summary>Caption above an input; the label is directly followed by its input in one stack (an accessibility and test contract).</summary>
+    public static StackPanel Field(PresentationContext context, string labelKey, Control input) => Field(context, () => context.Text.Get(labelKey), input);
+    public static StackPanel Field(PresentationContext context, Func<string> label, Control input)
+    {
+        var group = new StackPanel { Spacing = 6 };
+        group.Children.Add(context.Label(label, "CaptionMedium", "TextSecondary")); group.Children.Add(input);
+        return group;
+    }
+
+    /// <summary>One-of-many pill chips. <paramref name="select"/> runs after the selection moved.</summary>
+    public static WrapPanel Chips<T>(PresentationContext context, IEnumerable<(T Value, Func<string> Label)> options, T selected, Action<T> select, string? name = null) where T : notnull
+    {
+        var panel = new WrapPanel { ItemSpacing = 6, LineSpacing = 6 };
+        if (name is not null) panel.Name = name;
+        var buttons = new List<(T Value, Button Button)>();
+        foreach (var (value, label) in options)
+        {
+            var chip = new Button { Height = 28, MinHeight = 28, Padding = new Thickness(11, 0) }; chip.Classes.Add("chip");
+            context.Localized.Bind(chip, control => { control.Content = label(); Avalonia.Automation.AutomationProperties.SetName(control, label()); });
+            chip.Classes.Set("selected", EqualityComparer<T>.Default.Equals(value, selected));
+            var captured = value;
+            chip.Click += (_, _) =>
+            {
+                foreach (var (other, button) in buttons) button.Classes.Set("selected", EqualityComparer<T>.Default.Equals(other, captured));
+                select(captured);
+            };
+            buttons.Add((value, chip)); panel.Children.Add(chip);
+        }
+        return panel;
+    }
+}
+
+/// <summary>Modal dialog chrome: title, close button, body and a footer with optional delete, cancel and save.</summary>
+internal class DialogFrame : Border
+{
+    public StackPanel Body { get; } = new() { Spacing = 16, Margin = new Thickness(18, 12, 18, 18) };
+    private readonly StackPanel _stack = new();
+
+    public DialogFrame(PresentationContext context, string name, Func<string> title, double width = 480)
+    {
+        Name = name; Width = width; MaxWidth = width; Margin = new Thickness(16);
+        BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(PresentationTheme.RadiusDialog);
+        this.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault").RaisedShadowed();
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(18, 16, 18, 4) };
+        header.Children.Add(context.Label(title, "Dialog"));
+        var close = context.IconAction("action.close", Icons.X, () => { context.Shell.CloseModal(); return Task.CompletedTask; }, "icon", iconOnly: true);
+        Grid.SetColumn(close, 1); header.Children.Add(close);
+        _stack.Children.Add(header); _stack.Children.Add(Body);
+        Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = _stack };
+    }
+
+    public void Footer(Button? delete, Button cancel, Button save)
+    {
+        var footer = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(18, 12) }.Paint(BorderBrushProperty, "BorderSubtle");
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), ColumnSpacing = 8 };
+        if (delete is not null) row.Children.Add(delete);
+        Grid.SetColumn(cancel, 2); row.Children.Add(cancel); Grid.SetColumn(save, 3); row.Children.Add(save);
+        footer.Child = row; _stack.Children.Add(footer);
     }
 }

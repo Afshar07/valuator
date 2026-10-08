@@ -172,6 +172,7 @@ internal static class PresentationTheme
         window.Styles.Add(Rule(s => s.OfType<Button>().Class("aiPrimary").Class(":disabled"), (Button.OpacityProperty, 0.45)));
         ButtonClass(window, "danger", background: "ErrorSoft", foreground: "Error", border: "Error");
         window.Styles.Add(Rule(s => s.OfType<Button>().Class("danger"), (Button.FontWeightProperty, FontWeight.SemiBold), (Button.MinHeightProperty, 36d)));
+        ButtonClass(window, "dangerGhost", background: null, foreground: "Error", border: null, hoverBackground: "ErrorSoft");
         ButtonClass(window, "ghost", background: null, foreground: "TextSecondary", border: null, hoverForeground: "TextPrimary");
         ButtonClass(window, "link", background: null, foreground: "TextSecondary", border: null, hoverForeground: "Accent");
         window.Styles.Add(Rule(s => s.OfType<Button>().Class("link"), (Button.PaddingProperty, new Thickness(0, 2)), (Button.MinHeightProperty, 0d), (Button.FontSizeProperty, 12d),
@@ -205,6 +206,13 @@ internal static class PresentationTheme
         window.Styles.Add(Rule(s => s.OfType<Button>().Class("chip"), (Button.MinHeightProperty, 28d), (Button.CornerRadiusProperty, new CornerRadius(RadiusPill)), (Button.FontSizeProperty, 12d)));
         window.Styles.Add(Rule(s => s.OfType<Button>().Class("chip").Class("selected"), (Button.BackgroundProperty, Dynamic("AccentSoft")), (Button.ForegroundProperty, Dynamic("AccentText")),
             (Button.BorderBrushProperty, Dynamic("Accent"))));
+
+        // Large first-run choice cards on the welcome screen.
+        ButtonClass(window, "welcome", background: "BackgroundCard", foreground: "TextPrimary", border: "BorderDefault", hoverBorder: "TextTertiary");
+        window.Styles.Add(Rule(s => s.OfType<Button>().Class("welcome"), (Button.HorizontalAlignmentProperty, HorizontalAlignment.Stretch), (Button.VerticalAlignmentProperty, VerticalAlignment.Stretch),
+            (Button.HorizontalContentAlignmentProperty, HorizontalAlignment.Left), (Button.VerticalContentAlignmentProperty, VerticalAlignment.Top), (Button.PaddingProperty, new Thickness(20)),
+            (Button.CornerRadiusProperty, new CornerRadius(RadiusDialog)), (Button.BorderThicknessProperty, new Thickness(1.5)), (Button.FontWeightProperty, FontWeight.Normal)));
+        ButtonClass(window, "welcomePrimary", background: "BackgroundCard", foreground: "TextPrimary", border: "Accent", hoverBackground: "AccentSoft", hoverBorder: "Accent");
 
         // Selectable option cards (assistant starting points, template choice).
         ButtonClass(window, "option", background: "BackgroundCard", foreground: "TextPrimary", border: "BorderDefault", hoverBorder: "AiBorder");

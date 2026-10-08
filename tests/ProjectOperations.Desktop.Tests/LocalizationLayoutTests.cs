@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Threading;
+using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
 using Xunit;
 
@@ -16,6 +17,9 @@ public sealed class LocalizationLayoutTests
     {
         using var fixture = new MainWindowTests.Fixture();
         await fixture.InitializeAsync();
+        var project = await fixture.Projects.CreateAsync("Layout project", "", ProjectStage.Screening, ProjectStatus.Active, "", "");
+        project.Tasks.Add(new ProjectTask { ProjectId = project.Id, Title = "Dated task", DueAt = DateTimeOffset.Now.AddDays(2) });
+        await fixture.Projects.SaveAsync(project);
         var window = fixture.Window;
         window.Show();
         var deadline = DateTime.UtcNow.AddSeconds(10);

@@ -55,10 +55,15 @@ internal sealed class ProjectDetailView : PresentationView
         var title = Label(() => _project.Name, "Title"); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis; title.Name = "ProjectTitle";
         titleLine.Children.Add(title);
         var stage = Ui.Pill(Context, () => EnumText(_project.Stage), Tone.Accent); titleLine.Children.Add(stage);
-        // Long names end in an ellipsis instead of wrapping; the stage pill stays beside the title.
-        identity.SizeChanged += (_, e) => title.MaxWidth = Math.Max(80, e.NewSize.Width - stage.DesiredSize.Width - titleLine.Spacing);
+        if (_project.Status != ProjectStatus.Active) titleLine.Children.Add(Ui.Pill(Context, () => EnumText(_project.Status), Tone.Neutral));
+        var edit = Context.IconAction("v3.editProject", Icons.PencilSimple, () => { Context.Shell.ShowModal(new EditProjectDialog(Context, _project)); return Task.CompletedTask; }, "square", iconOnly: true);
+        edit.Name = "EditProjectButton"; edit.Width = 30; edit.Height = 30; edit.VerticalAlignment = VerticalAlignment.Center;
+        edit.Paint(Button.ForegroundProperty, "TextSecondary");
+        titleLine.Children.Add(edit);
+        // Long names end in an ellipsis instead of wrapping; the pills and edit button stay beside the title.
+        identity.SizeChanged += (_, e) => title.MaxWidth = Math.Max(80, e.NewSize.Width - titleLine.Children.Where(child => child != title).Sum(child => child.DesiredSize.Width) - titleLine.Spacing * (titleLine.Children.Count - 1));
         identity.Children.Add(titleLine);
-        identity.Children.Add(Label(() => string.Join(" · ", new[] { _project.CompanyName, _project.Owner, EnumText(_project.Status) }.Where(part => !string.IsNullOrWhiteSpace(part))), "Body", "TextSecondary"));
+        identity.Children.Add(Label(() => string.Join(" · ", new[] { _project.CompanyName, _project.Owner }.Where(part => !string.IsNullOrWhiteSpace(part))), "Body", "TextSecondary"));
         row.Children.Add(identity);
 
         var end = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Bottom };

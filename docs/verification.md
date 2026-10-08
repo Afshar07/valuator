@@ -55,6 +55,18 @@ also captures dashboard, calendar, documents, settings, projects, new-project an
 frames (`en`/light/1440, `fa`/dark/1440, `en`/dark/800). The native window, real OS
 theme following (Auto), file launching and the file picker were **not** exercised here.
 
+### Valuator v3 UI (2026-10-08)
+
+Verified on 2026-10-08 with .NET SDK 10.0.401 on Windows 11: build with zero warnings/errors;
+`dotnet test` **128 passed** (88 domain/application/SQLite/runtime + 40 desktop). New coverage:
+schema v1→v2 migration and the task↔requirement link, blank projects, the first-run welcome
+screen, the wizard, sections appearing as data arrives (New badge, toast), the getting-started
+card, the isolated sample workspace, the task/milestone/project dialogs and the checklist
+accordion. `dotnet format` reports only the pre-existing CRLF working-tree findings. The native
+window, the OS file picker and the Windows date picker popup were **not** exercised
+(headless only). With `PROJECTOPS_UI_CAPTURE_DIR` set, `OnboardingTests` captures the welcome,
+wizard, checklist and sample screens (English/light and Persian/dark).
+
 ## Please verify the desktop workflow
 
 For a manual visual check, run:
@@ -63,17 +75,18 @@ For a manual visual check, run:
 dotnet run --project src/ProjectOperations.Desktop
 ```
 
-1. **Create project:** in All projects choose **New project**, create `Atlas` with
-   company and owner (`VC Investment Review`; Blank is disabled). Add notes in Overview. Reopen it from All projects. Check the four localized groups
-   contain **6 / 6 / 3 / 1** requirements (16 total).
-2. **Requirements & files:** open Pitch deck, add a local file reference and notes.
-   Check its name/path/size/added time. Remove an association and confirm the original
+1. **Create project:** on a fresh data folder choose **Start my first project** (or, later, **New project**
+   in All projects), name it `Atlas` with a company and pick `VC Investment Review`. Use the pencil
+   beside the title to add owner, stage and notes. Reopen it from All projects. Check the four localized groups
+   contain **6 / 6 / 3 / 1** requirements (16 total). Repeat with **Blank project** and add two requirements.
+2. **Requirements & files:** open Pitch deck, choose a local file and check it appears
+   (Documents then appears in the sidebar as New). Remove the link and confirm the original
    file still exists. Attach it again.
 3. **Readiness:** mark one requirement Provided, one NeedsReview and one Complete.
    Check only Complete contributes to readiness: one complete item is **6.25%** of
    the 16 requirements (the display may round it). Missing/NeedsReview must be listed.
-4. **Tasks & dates:** create one task due yesterday and another due tomorrow, using
-   local `yyyy-MM-dd HH:mm` dates. Edit a task. Check Attention shows one overdue
+4. **Tasks & dates:** create one task due yesterday and another due tomorrow with the date
+   chips or picker (Needs attention and Calendar appear). Edit a task. Check Attention shows one overdue
    task, the upcoming task, missing information, and a recent Atlas project.
 5. **Persistence:** close and reopen the app. Check metadata, requirements, file
    references and deadlines are unchanged. Complete the overdue task and confirm it

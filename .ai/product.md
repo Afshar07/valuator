@@ -89,6 +89,8 @@ Keep **Stop** clearly visible during agent work. Cancellation behavior must be t
 
 ## Experience principles and long-term boundary
 
+The product reveals itself progressively: a new workspace offers only Projects and Settings, and sections such as Needs attention, Calendar and Documents appear (flagged New) when there is data for them. Hints are dismissible and the sample workspace never saves anything.
+
 Prefer a calm attention dashboard, concise project overviews, actionable results, clear approval controls, and understandable activity over chat-heavy screens, dense file trees, raw logs, or configuration-heavy workflows.
 
 The long-term generic assistant idea may remain, but the MVP is specifically VC/finance project operations. Broader use cases do not justify software-building workflows, broad project-management features, or premature automation in this MVP.

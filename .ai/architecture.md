@@ -175,4 +175,24 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 - RTL/LTR remains localization-owned and inherited by presentation layouts.
   Live language switching updates controls in place, not by rebuilding screens.
   Paths, explicit date entries and technical/context previews stay LTR.
-- A blank project template is shown disabled until custom requirements can be added.
+- **Valuator v3 presentation (2026-10-08).** The dashboard lists live projects that still have
+  open tasks (most overdue first) beside this week's agenda. Project editing (name, company,
+  owner, stage, status, notes, current state), tasks and milestones use modal dialogs
+  (`ProjectDialogs.cs`); the requirements tab is an in-place accordion (open an item to link a
+  file or enter a value, set its review status, add a follow-up task). Task due dates are
+  whole days: a newly chosen date is stored at 23:59 local time so it only becomes overdue the
+  next day; existing times of day are kept.
+- A task may reference the requirement it follows up on (`ProjectTask.RequirementId`, SQLite
+  schema version 2; version-1 databases are migrated in place with `ALTER TABLE`).
+- Blank projects (`ProjectService.CreateBlankAsync`, template id `blank`) have no built-in
+  checklist; requirements are added by the user into the single `custom` group.
+- First run: with no projects the shell shows the welcome screen over the project list; the
+  wizard creates a VC-template or blank project. The sidebar only offers Projects and
+  Settings until there is dated work (Needs attention, Calendar) or a linked file (Documents);
+  sections that appear later are flagged New and announced with a toast. A getting-started
+  card tracks five milestones. View-state such as dismissed hints lives in `UiState` for the
+  running session only.
+- "Explore a sample deal" runs on `SampleWorkspace`: its own temporary SQLite database and
+  placeholder files, a runtime that always refuses, and the assistant reported as not
+  configured. Leaving it (or exiting the app) deletes the temporary data; the user's database
+  is never opened by the sample.

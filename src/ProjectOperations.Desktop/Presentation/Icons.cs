@@ -25,6 +25,8 @@ internal static class Icons
     public const string Scales = "", Scan = "", Sparkle = "", Stop = "", Translate = "";
     public const string Warning = "", WarningCircle = "", X = "", XCircle = "";
 
+    public const string CaretDown = "", CaretUp = "", CheckSquareOffset = "", Flask = "", Lightbulb = "", ListChecks = "", PencilSimple = "", Trash = "";
+
     /// <summary>Icon text block; icons are decorative, so they never carry accessible names or flow-dependent glyphs.</summary>
     public static TextBlock Glyph(string glyph, double size = 16, string color = "TextSecondary", IconWeight weight = IconWeight.Regular)
     {

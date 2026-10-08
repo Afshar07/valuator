@@ -59,6 +59,8 @@ internal sealed class SettingsView : PresentationView
             line.Children.Add(Icons.Glyph(icon, 16, "TextTertiary")); line.Children.Add(Label(key, "Body", "TextTertiary"));
             data.Children.Add(Row(line, Label("settings.notBuilt", "Meta", "TextTertiary")));
         }
+        var restart = Action("v3.restart", () => { Context.Shell.ShowWelcome(); return Task.CompletedTask; }); restart.Name = "ShowWelcomeAgain";
+        data.Children.Add(Row(Label("v3.restartL"), restart));
         sections.Children.Add(Card(data));
         Children.Add(sections);
     }

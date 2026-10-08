@@ -30,6 +30,34 @@ internal interface IShell
     Task ReviewInAssistantAsync(string jobId);
     void ShowModal(Control dialog);
     void CloseModal();
+    /// <summary>Shows the first-run welcome screen.</summary>
+    void ShowWelcome();
+    /// <summary>Opens the new-project wizard; <paramref name="fromWelcome"/> decides where Back on the first step returns to.</summary>
+    void ShowWizard(bool fromWelcome);
+    void CloseOverlay();
+    bool IsSample { get; }
+    Task StartSampleAsync();
+    Task ExitSampleAsync();
+    /// <summary>Opens a freshly created project on the checklist tab and announces it.</summary>
+    Task OpenCreatedProjectAsync(Guid id);
+    /// <summary>Re-evaluates what the sidebar shows (sections appear as data arrives) and the getting-started card.</summary>
+    Task RefreshShellAsync();
+    void ShowToast(string key);
+}
+
+/// <summary>View state that survives a project reload (the shell rebuilds screens after every save): expanded checklist rows, dismissed hints.</summary>
+internal sealed class UiState
+{
+    public HashSet<string> ExpandedGroups { get; } = [];
+    public HashSet<Guid> InitializedProjects { get; } = [];
+    public Guid? OpenRequirement { get; set; }
+    public bool TipHidden { get; set; }
+    public bool GettingStartedHidden { get; set; }
+    /// <summary>A checklist item whose follow-up task form should open as soon as its screen is built (getting-started shortcut).</summary>
+    public Guid? PendingFollowUp { get; set; }
+
+    /// <summary>Forgets everything tied to one workspace (used when switching between the sample and the user's own data).</summary>
+    public void Reset() { ExpandedGroups.Clear(); InitializedProjects.Clear(); OpenRequirement = null; TipHidden = false; GettingStartedHidden = false; PendingFollowUp = null; }
 }
 
 /// <summary>Shared services and localized control factories handed to views and components by the shell.</summary>
@@ -37,14 +65,15 @@ internal sealed class PresentationContext(
     ProjectService projects, AgentService agents, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
     string configuration, Func<string>? configurationText, DesktopEnvironment environment, IShell shell)
 {
-    public ProjectService Projects { get; } = projects;
-    public AgentService Agents { get; } = agents;
+    public ProjectService Projects { get; set; } = projects;
+    public AgentService Agents { get; set; } = agents;
     public LocaleContext Locale { get; } = locale;
     public AppearanceContext Appearance { get; } = appearance;
     public LocalizationService Text { get; } = text;
     public LocalizedControls Localized { get; } = localized;
-    public DesktopEnvironment Environment { get; } = environment;
+    public DesktopEnvironment Environment { get; set; } = environment;
     public IShell Shell { get; } = shell;
+    public UiState State { get; } = new();
     public string ConfigurationText() => configurationText?.Invoke() ?? configuration;
     public Task OpenProjectAsync(Guid id, int tab = 0) => Shell.OpenProjectAsync(id, tab);
     public Task ActAsync(Button button, Func<Task> action) => Shell.ActAsync(button, action);
@@ -66,6 +95,21 @@ internal sealed class PresentationContext(
     public string Due(DateTimeOffset? date) => date is null ? Text.Get("date.none") : new LocaleDateFormatter(Locale).Display(date);
     public string ShortDate(DateTimeOffset? date) => date is null ? Text.Get("date.none") : date.Value.ToLocalTime().ToString("MMM d", Locale.Culture);
     public string Number(int value) => value.ToString("N0", Locale.Culture);
+
+    /// <summary>Whole local days from today to the date, as friendly relative text. Open work past its date reads "late", closed work "ago".</summary>
+    public string Relative(DateTimeOffset? date, bool open)
+    {
+        if (date is null) return "";
+        var days = (date.Value.ToLocalTime().Date - DateTime.Today).Days;
+        return days switch
+        {
+            0 => Text.Get("v3.relToday"),
+            1 => Text.Get("v3.relTomorrow"),
+            -1 => open ? Text.Get("v3.relLateOne") : Text.Get("v3.relYesterday"),
+            > 0 => Text.Format("v3.relIn", Number(days)),
+            _ => Text.Format(open ? "v3.relLate" : "v3.relAgo", Number(-days))
+        };
+    }
 
     public TextBlock Label(string key, string style = "Body", string color = "TextPrimary") => Label(() => Text.Get(key), style, color);
     public TextBlock Label(Func<string> text, string style = "Body", string color = "TextPrimary")

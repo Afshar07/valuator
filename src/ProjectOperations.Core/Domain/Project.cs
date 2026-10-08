@@ -63,6 +63,8 @@ public sealed class ProjectTask
     public string Description { get; set; } = "";
     public ProjectTaskStatus Status { get; set; }
     public DateTimeOffset? DueAt { get; set; }
+    /// <summary>The requirement this task follows up on, when it was created from one.</summary>
+    public Guid? RequirementId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
