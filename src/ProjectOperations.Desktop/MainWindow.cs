@@ -4,8 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Updates;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
@@ -56,13 +58,13 @@ public sealed class MainWindow : Window, IShell
     private bool _shellKnown;
 
     public MainWindow(ProjectService projects, AgentService agents, Func<Task> initialize, string configuration, LocaleContext? locale = null, Func<string>? configurationText = null,
-        AppearanceContext? appearance = null, DesktopEnvironment? environment = null)
+        AppearanceContext? appearance = null, DesktopEnvironment? environment = null, IAppUpdater? updater = null)
     {
         _locale = locale ?? new LocaleContext();
         _appearance = appearance ?? new AppearanceContext();
         _text = new LocalizationService(_locale);
         _localized = new LocalizedControls(_locale);
-        _context = new PresentationContext(projects, agents, _locale, _appearance, _text, _localized, configuration, configurationText, environment ?? new DesktopEnvironment(), this);
+        _context = new PresentationContext(projects, agents, _locale, _appearance, _text, _localized, configuration, configurationText, environment ?? new DesktopEnvironment(), this, new UpdateController(updater ?? new NoAppUpdater()));
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         PresentationTheme.Typeset(_error, "Small", "TextPrimary");
@@ -73,6 +75,7 @@ public sealed class MainWindow : Window, IShell
         ApplyLocalePresentation();
         RequestedThemeVariant = PresentationTheme.Variant(_appearance.Theme);
         Width = 1280; Height = 860; MinWidth = 800; MinHeight = 600;
+        Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://ProjectOperations.Desktop/Assets/Icons/app.ico")));
 
         _navigation = new AppSidebar(_context, Pages, page => _ = GuardAsync(() => NavigateAsync(page)));
         _assistant = new AssistantPanel(_context) { Name = "AssistantPanel", IsVisible = false, Width = 360 };

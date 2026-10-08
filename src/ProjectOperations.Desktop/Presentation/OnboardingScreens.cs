@@ -22,7 +22,7 @@ internal abstract class OnboardingScreen : Border
 
         var top = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, Margin = new Thickness(20, 16) };
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        brand.Children.Add(Ui.Tile(Icons.Glyph(Icons.Scales, 15, "OnAccent", IconWeight.Bold), 28, 8, "Accent"));
+        brand.Children.Add(Ui.Logo(30));
         var title = context.Label("app.title", "BodyStrong"); title.VerticalAlignment = VerticalAlignment.Center; brand.Children.Add(title);
         top.Children.Add(brand);
         var theme = new Segmented(context, AppearanceContext.Themes.Select(id => (id, (Func<string>)(() => context.Text.Get("theme." + id)))), () => context.Appearance.Theme, id => context.SetTheme(id), optionWidth: 56, name: "OnboardingTheme");

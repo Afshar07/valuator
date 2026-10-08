@@ -27,6 +27,9 @@ internal sealed class SettingsView : PresentationView
         appearance.Children.Add(Row(language, languages));
         sections.Children.Add(Card(appearance));
 
+        var updates = Section("updates.title"); updates.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 12), Child = new UpdatePanel(Context) }));
+        sections.Children.Add(Card(updates));
+
         var stages = Section("stages.title"); stages.Children.Add(new StageEditor(Context));
         sections.Children.Add(Card(stages));
 

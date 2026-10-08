@@ -131,6 +131,14 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 
 ## Desktop localization
 
+- Windows distribution uses Velopack (SDK/CLI 1.2.161), pack id `ProjectOperationsApp`,
+  per-user installer only. Installation and data roots stay separate. Settings owns
+  explicit stable-release checking, plain-Markdown changelog, cancellable download
+  progress and restart-to-install; no automatic checking or startup apply. Updater
+  state belongs to the shell via `UpdateController` and SDK access is behind
+  `IAppUpdater`. GitHub release body becomes package notes; full packages and the
+  `win` feed must remain release assets. No embedded GitHub credentials.
+
 - Desktop localization services own embedded English (`en`) and Persian (`fa`)
   resources, stable presentation keys, domain display mapping, and date formatting.
   Views do not load resource files. Missing translations fall back to English, then

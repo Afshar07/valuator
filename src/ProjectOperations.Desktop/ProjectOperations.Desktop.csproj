@@ -4,12 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Assets/Icons/app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/Fonts/**/*.ttf" />
+    <AvaloniaResource Include="Assets/Icons/app.ico;Assets/Icons/*.png" />
     <EmbeddedResource Include="Localization/Resources/*.json" WithCulture="false" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <ProjectReference Include="../ProjectOperations.Core/ProjectOperations.Core.csproj" />
     <ProjectReference Include="../ProjectOperations.Infrastructure/ProjectOperations.Infrastructure.csproj" />
   </ItemGroup>

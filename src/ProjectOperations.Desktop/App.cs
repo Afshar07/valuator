@@ -4,6 +4,7 @@ using Avalonia.Themes.Fluent;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Updates;
 using ProjectOperations.Infrastructure.Agents;
 using ProjectOperations.Infrastructure.Persistence;
 
@@ -42,7 +43,7 @@ public sealed class App : Application
                 endpointConfigured ? $"{endpoint!.Scheme}://{endpoint.Host}:{endpoint.Port}" : null,
                 string.IsNullOrWhiteSpace(options.ConfigDirectory) ? null : options.ConfigDirectory, database);
             desktop.MainWindow = new MainWindow(projects, agents, () => repository.InitializeAsync(),
-                ConfigurationText(), locale, ConfigurationText, appearance, environment);
+                ConfigurationText(), locale, ConfigurationText, appearance, environment, new VelopackAppUpdater());
             desktop.Exit += (_, _) => runtime.Dispose();
         }
         base.OnFrameworkInitializationCompleted();

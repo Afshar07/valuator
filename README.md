@@ -7,8 +7,15 @@ not the application's source of project truth.
 ## Download
 
 Each [GitHub release](https://github.com/Afshar07/unnamed-harness/releases) includes a
-self-contained Windows build, `ProjectOperations-<tag>-win-x64.exe`. It needs no .NET
-install. The build is unsigned, so Windows SmartScreen may warn on first launch.
+per-user Windows x64 installer, `ProjectOperationsApp-win-Setup.exe`. It includes
+the .NET runtime and does not require administrator rights. The build is unsigned,
+so Windows SmartScreen may warn. No portable build is distributed.
+
+In **Settings → Application updates**, choose **Check for updates** to see a newer
+stable version and its changelog, then download it with progress and cancellation.
+Choose **Restart and install** when ready; checking and installation are not automatic.
+Release notes are displayed as plain Markdown. Checking contacts GitHub but does not
+send project data. Development/standalone copies cannot self-update.
 
 ## Run from source
 
@@ -73,9 +80,18 @@ tests/                               Native unit/integration and desktop tests
 ## Releases
 
 Publishing a GitHub release runs `.github/workflows/release.yml` on a Windows runner:
-restore, build, test, then a self-contained single-file `win-x64` publish of
-`ProjectOperations.Desktop`, attached to the release as
-`ProjectOperations-<tag>-win-x64.exe`. A semver tag (`v1.2.3`) sets the app version.
+restore, build, test, then a self-contained `win-x64` directory publish and Velopack
+packaging. A valid SemVer tag (`v1.2.3`) is required and sets the app/package version.
+The release body supplies the in-app changelog. The installer, full `.nupkg`, and
+`releases.win.json` update feed are attached to that same release; keep the package
+and feed assets because the installed app needs them. This workflow publishes full
+updates, not delta packages. Prereleases are not offered by the stable update checker.
+
+Velopack SDK and CLI are both pinned to `1.2.161`. The installation is under
+`%LocalAppData%\ProjectOperationsApp`; project data remains separate under
+`%LocalAppData%\ProjectOperations`, so uninstalling does not delete it. The built-in
+GitHub update source requires this repository and release assets to be publicly
+accessible; no GitHub credentials are embedded in the app.
 
 ## Checks
 

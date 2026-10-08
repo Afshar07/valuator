@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Project Operations app icon">
+  <title>Project Operations app icon</title>
+  <defs>
+    <linearGradient id="navy" x2="1" y2="1"><stop stop-color="#0F1F44"/><stop offset="1" stop-color="#3156B7"/></linearGradient>
+    <linearGradient id="indigo" x2="1" y2="1"><stop stop-color="#667EFF"/><stop offset="1" stop-color="#425CF0"/></linearGradient>
+    <linearGradient id="teal" x2="1" y2="1"><stop stop-color="#42C7C1"/><stop offset="1" stop-color="#148EB7"/></linearGradient>
+    <linearGradient id="ocean" x2="1" y2="1"><stop stop-color="#209AB9"/><stop offset="1" stop-color="#163A80"/></linearGradient>
+  </defs>
+  <rect id="tile-background" width="512" height="512" rx="112" fill="#F8FAFF"/>
+  <g id="logo" transform="translate(50 50) scale(.80)">
+    <path id="north-projects" fill="url(#navy)" d="M145 56 H278 Q312 56 312 90 V149 Q312 178 281 196 H227 Q206 196 196 180 Q189 168 177 168 H99 V133 Q99 98 121 77 Z"/>
+    <path id="east-documents" fill="url(#indigo)" d="M320 127 H365 Q413 127 413 175 V309 Q413 352 371 352 H287 Q253 352 253 318 Q253 303 266 290 L289 267 Q307 249 307 222 V127 Z"/>
+    <path id="south-tasks" fill="url(#ocean)" d="M283 358 H364 V374 Q364 397 347 413 L324 435 Q310 449 286 449 H204 Q168 449 168 413 V320 Q168 294 190 294 Q202 294 216 308 L246 338 Q263 358 283 358 Z"/>
+    <path id="west-coordination" fill="url(#teal)" d="M99 195 H139 Q171 195 171 229 V350 H132 Q108 350 91 333 L70 312 Q54 296 54 272 V241 Q54 195 99 195 Z"/>
+  </g>
+</svg>

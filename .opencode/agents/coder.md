@@ -1,7 +1,7 @@
 ---
 description: Implements tightly scoped code changes and runs targeted verification under lead supervision.
 mode: subagent
-model: cpa-gui/claude-sonnet-5-5
+model: cpa-gui/gpt-6.1-sol
 steps: 24
 permissions:
   - action: read

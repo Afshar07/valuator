@@ -6,6 +6,7 @@ using Avalonia.Media;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Updates;
 
 namespace ProjectOperations.Desktop;
 
@@ -63,8 +64,9 @@ internal sealed class UiState
 /// <summary>Shared services and localized control factories handed to views and components by the shell.</summary>
 internal sealed class PresentationContext(
     ProjectService projects, AgentService agents, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
-    string configuration, Func<string>? configurationText, DesktopEnvironment environment, IShell shell)
+    string configuration, Func<string>? configurationText, DesktopEnvironment environment, IShell shell, UpdateController updates)
 {
+    public UpdateController Updates { get; } = updates;
     public ProjectService Projects { get; set; } = projects;
     public AgentService Agents { get; set; } = agents;
     public LocaleContext Locale { get; } = locale;

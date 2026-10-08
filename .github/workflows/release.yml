@@ -13,6 +13,7 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,36 +34,75 @@ jobs:
         id: version
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
-            echo "Tag '$GITHUB_REF_NAME' is not semver; building with the default version." >&2
-            version=""
+          version="${RELEASE_TAG#v}"
+          number='(0|[1-9][0-9]*)'
+          prerelease='(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+          semver="^${number}\\.${number}\\.${number}(-${prerelease}(\\.${prerelease})*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+          if [[ ! "$version" =~ $semver ]]; then
+            echo "Release tag '$RELEASE_TAG' must be a valid SemVer version, optionally prefixed with v." >&2
+            exit 1
           fi
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Publish desktop app (win-x64, self-contained, single file)
+      - name: Publish desktop app (win-x64, self-contained directory)
         shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: |
-          args=()
-          if [[ -n "${{ steps.version.outputs.value }}" ]]; then
-            args+=("-p:Version=${{ steps.version.outputs.value }}")
-          fi
           dotnet publish src/ProjectOperations.Desktop/ProjectOperations.Desktop.csproj \
             --configuration Release \
             --runtime win-x64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishSingleFile=false \
             -p:DebugType=none \
-            "${args[@]}" \
+            "-p:Version=$RELEASE_VERSION" \
             --output publish
 
-      - name: Name the asset after the release tag
-        shell: bash
-        run: mv publish/ProjectOperations.Desktop.exe "ProjectOperations-${GITHUB_REF_NAME}-win-x64.exe"
+      - name: Install Velopack CLI
+        run: dotnet tool install --global vpk --version 1.2.161
 
-      - name: Attach .exe to the release
+      - name: Write release notes
+        shell: pwsh
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/release-notes.md", [string]$env:RELEASE_BODY, [System.Text.UTF8Encoding]::new($false))
+
+      - name: Package per-user installer and update feed
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          vpk pack \
+            --packId ProjectOperationsApp \
+            --packTitle Valuator \
+            --packVersion "$RELEASE_VERSION" \
+            --packDir publish \
+            --mainExe ProjectOperations.Desktop.exe \
+            --icon src/ProjectOperations.Desktop/Assets/Icons/app.ico \
+            --runtime win-x64 \
+            --channel win \
+            --instLocation PerUser \
+            --noPortable \
+            --releaseNotes release-notes.md \
+            --outputDir Releases
+
+      - name: Attach installer and updater assets to the existing release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" "ProjectOperations-${GITHUB_REF_NAME}-win-x64.exe" --clobber
+          GH_REPO: ${{ github.repository }}
+        run: |
+          assets=(Releases/*-Setup.exe Releases/*-full.nupkg Releases/releases.win.json)
+          for asset in "${assets[@]}"; do
+            if [[ ! -f "$asset" ]]; then
+              echo "Required Velopack asset missing: $asset" >&2
+              exit 1
+            fi
+          done
+          for asset in Releases/RELEASES Releases/assets.win.json; do
+            if [[ -f "$asset" ]]; then
+              assets+=("$asset")
+            fi
+          done
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

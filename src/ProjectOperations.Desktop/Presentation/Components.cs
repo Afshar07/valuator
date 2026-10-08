@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
 
@@ -156,6 +158,17 @@ internal static class Ui
             .Paint(Border.BackgroundProperty, background);
         if (border is not null) { banner.BorderThickness = new Thickness(1); banner.Paint(Border.BorderBrushProperty, border); }
         return banner;
+    }
+
+    private static readonly Lazy<Bitmap> LogoBitmap = new(() => new Bitmap(AssetLoader.Open(new Uri("avares://ProjectOperations.Desktop/Assets/Icons/app-icon-512.png"))));
+
+    /// <summary>Application logo (app icon tile) at the given square size.</summary>
+    public static Image Logo(double size)
+    {
+        var image = new Image { Width = size, Height = size, Source = LogoBitmap.Value, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapInterpolationMode(image, BitmapInterpolationMode.HighQuality);
+        AutomationProperties.SetAccessibilityView(image, AccessibilityView.Raw);
+        return image;
     }
 
     /// <summary>Icon square used for project initials and file types.</summary>
@@ -392,7 +405,7 @@ internal sealed class AppSidebar : Border
         var dock = new DockPanel();
 
         var brand = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, Margin = new Thickness(8, 2, 8, 18) };
-        brand.Children.Add(Ui.Tile(Icons.Glyph(Icons.Scales, 18, "OnAccent", IconWeight.Bold), 34, 9, "Accent"));
+        brand.Children.Add(Ui.Logo(36));
         var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var title = context.Label("app.title", "BodyStrong"); title.FontSize = 14; title.TextWrapping = TextWrapping.NoWrap; names.Children.Add(title);
         var subtitle = context.Label("presentation.workspace", "Meta", "TextSecondary"); subtitle.TextWrapping = TextWrapping.NoWrap; names.Children.Add(subtitle);
