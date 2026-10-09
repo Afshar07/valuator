@@ -188,6 +188,6 @@ public sealed class OnboardingTests
         for (var tick = 0; tick < 3; tick++) { AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
         using var frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
-        frame.Save(Path.Combine(directory, $"{screen}.png"));
+        frame.Save(Path.Combine(directory, $"{screen}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     }
 }

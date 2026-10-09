@@ -173,6 +173,6 @@ public sealed class DesignedSectionsTests
         for (var tick = 0; tick < 3; tick++) { AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); }
         using var frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
-        frame.Save(Path.Combine(directory, $"{screen}-{language}-{theme}-{width}.png"));
+        frame.Save(Path.Combine(directory, $"{screen}-{language}-{theme}-{width}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     }
 }
