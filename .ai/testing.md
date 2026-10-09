@@ -11,3 +11,5 @@ Keep tests deterministic by supplying explicit UTC instants to attention rules.
 Persistence tests use isolated temporary databases, never the user's application data.
 Runtime tests use a transport fixture, clearly distinguished from a live provider run.
 Do not transmit real project data during verification.
+
+Google Calendar overlay tests never contact Google. `GoogleCalendarSourceTests` (core) drive `GoogleCalendarSource` through a fake HTTP handler and a real loopback listener; `GoogleCalendarUiTests` (desktop) drive the real window with a fake `IExternalCalendarSource`; `ExternalCalendarBoundaryTests` reflects over agent, domain, application and runtime types and fails if any depends on external calendar types (keep that rule when adding agent context). A real Google sign-in and Windows DPAPI storage are not covered by automated tests (see `technical-debt/google-calendar-followups.md`). In UI tests the Calendar nav is hidden until something is dated or Google is connected, and `Assert.DoesNotContain` is required over `Assert.Empty(...Where(...))` (xUnit2029 is an error).
