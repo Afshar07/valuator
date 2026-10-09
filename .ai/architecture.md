@@ -85,7 +85,7 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 
 ## First MVP implementation contracts
 
-- .NET 10, Avalonia 11.3, Microsoft.Data.Sqlite 10.0; native xUnit tests.
+- .NET 10, Avalonia 12.1, Microsoft.Data.Sqlite 10.0; native xUnit tests.
   See `.ai/testing.md` and `docs/verification.md` for verification boundaries.
 - Core owns project aggregates, the built-in `VC Investment Review` template,
   requirement definitions/statuses, task/milestone/state models, deterministic
@@ -139,7 +139,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   `calendar.readonly` only, primary calendar only, `events.list` with `fields=id,status,summary,start,end`. Setup and limits:
   `docs/google-calendar.md`.
 - **Availability:** offered only when `PROJECTOPS_GOOGLE_CLIENT_ID` is set (and `PROJECTOPS_GOOGLE_CLIENT_SECRET` if Google issued
-  one; it is configuration, not a protection) and secure token storage exists. `App.cs` otherwise composes `NoExternalCalendar`,
+  one; it is configuration, not a protection) and secure token storage exists. `AppServices.cs` otherwise composes `NoExternalCalendar`,
   and Settings shows no Google card.
 - **Credential:** only the refresh token is stored, via `ITokenStore`; `DpapiTokenStore` (Windows, current user) writes
   `google-calendar.token` in the data directory. Other platforms get no Google option rather than plain-text storage. Tokens never

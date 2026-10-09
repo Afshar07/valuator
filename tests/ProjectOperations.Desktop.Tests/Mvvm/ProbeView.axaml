@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:common="clr-namespace:ProjectOperations.Desktop.Common;assembly=ProjectOperations.Desktop"
+             xmlns:local="clr-namespace:ProjectOperations.Desktop.Tests.Mvvm"
+             x:Class="ProjectOperations.Desktop.Tests.Mvvm.ProbeView"
+             x:DataType="local:ProbeViewModel"
+             FlowDirection="{Binding L.FlowDirection}">
+  <StackPanel>
+    <TextBlock Name="Title" Text="{Binding L[app.title]}" />
+    <TextBlock Name="Due">
+      <TextBlock.Text>
+        <MultiBinding Converter="{x:Static common:DateConverters.ShortDate}">
+          <Binding Path="Due" />
+          <Binding Path="L.Dates" />
+        </MultiBinding>
+      </TextBlock.Text>
+    </TextBlock>
+    <TextBox Name="NameBox" Text="{Binding Name}" />
+  </StackPanel>
+</UserControl>

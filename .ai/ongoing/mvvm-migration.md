@@ -32,7 +32,7 @@ State: `todo` → `in progress` → `done`.
 | # | Task | State |
 | --- | --- | --- |
 | 0 | Upgrade Avalonia and Headless to 12 on the current code; fix the C# binding API changes; tests green | done |
-| 1a | Foundation: DI composition root, `ViewModelBase`, view locator, bindable localization, date converters | todo |
+| 1a | Foundation: DI composition root, `ViewModelBase`, view locator, bindable localization, date converters | done |
 | 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | todo |
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | todo |
 | 3a | Projects list, Dashboard, Calendar, Documents | todo |
@@ -45,4 +45,15 @@ State: `todo` → `in progress` → `done`.
 ## Notes
 
 - Avalonia 12.1.3 (Headless.XUnit 12 requires xunit.v3, so the desktop test project uses `xunit.v3` 3.2.2; `xUnit1051` is silenced there). Not visually checked on Windows.
+- Foundation (1a), how to use it:
+  - `AppServices.Create` (Desktop root) is the composition root; `App` resolves `MainWindow` from it and disposes the provider on exit.
+    Tests pass `overrides` to swap platform-bound services (`IAppUpdater` needs Velopack started).
+  - `Common/ViewModelBase` (CommunityToolkit `ObservableObject`); `Common/ViewLocator` maps `XViewModel` → `XView` in the same
+    namespace and is registered in `App` and the test `TestApplication`.
+  - Localization in XAML: view-models expose `LocalizedStrings L`; bind `{Binding L[key]}`, `L.FlowDirection`. A language switch
+    raises one all-properties change, so text updates in place and form input survives.
+  - Dates in XAML: `MultiBinding` of the date and `L.Dates` with `common:DateConverters.Display|Edit|ShortDate|MonthYear`;
+    null dates convert to "" (the view-model decides the "no date" text).
+  - Compiled bindings are the default in Desktop and Desktop.Tests. `Desktop.Tests/Mvvm` holds a probe view proving the pipeline.
+  - Not yet wired: the old shell does not hand a `LocalizedStrings` to hosted views; do that in 1b with the navigator.
 - Open questions: —

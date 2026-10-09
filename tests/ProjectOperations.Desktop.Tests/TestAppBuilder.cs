@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Themes.Fluent;
+using ProjectOperations.Desktop.Common;
 
 [assembly: AvaloniaTestApplication(typeof(ProjectOperations.Desktop.Tests.TestAppBuilder))]
 
@@ -19,5 +20,9 @@ public static class TestAppBuilder
 
 public sealed class TestApplication : Application
 {
-    public override void Initialize() => Styles.Add(new FluentTheme());
+    public override void Initialize()
+    {
+        Styles.Add(new FluentTheme());
+        DataTemplates.Add(new ViewLocator());
+    }
 }
