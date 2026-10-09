@@ -95,7 +95,9 @@ internal sealed class PresentationContext(
 
     public string EnumText<T>(T value) where T : struct, Enum => new DomainDisplay(Text).Enum(value);
     public string Due(DateTimeOffset? date) => date is null ? Text.Get("date.none") : new LocaleDateFormatter(Locale).Display(date);
-    public string ShortDate(DateTimeOffset? date) => date is null ? Text.Get("date.none") : date.Value.ToLocalTime().ToString("MMM d", Locale.Culture);
+    public string ShortDate(DateTimeOffset? date) => date is null ? Text.Get("date.none") : ShortDate(date.Value.ToLocalTime().DateTime);
+    public string ShortDate(DateTime date) => new LocaleDateFormatter(Locale).ShortDate(date);
+    public string MonthYear(DateTime date) => new LocaleDateFormatter(Locale).MonthYear(date);
     public string Number(int value) => value.ToString("N0", Locale.Culture);
 
     /// <summary>Whole local days from today to the date, as friendly relative text. Open work past its date reads "late", closed work "ago".</summary>

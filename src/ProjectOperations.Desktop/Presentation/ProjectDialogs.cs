@@ -1,8 +1,10 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Localization;
 
 namespace ProjectOperations.Desktop;
 
@@ -65,13 +67,15 @@ internal sealed class DeleteProjectDialog : DialogFrame
     }
 }
 
-/// <summary>Shared date row of the task and milestone dialogs: quick chips, a date picker and the relative hint.</summary>
+/// <summary>Shared date row of the task and milestone dialogs: quick chips, a date picker (Jalali in Persian, Gregorian in English) and the relative hint.</summary>
 internal sealed class DateRow : StackPanel
 {
     private readonly PresentationContext _context;
     private readonly CalendarDatePicker _picker = new() { MinHeight = 36, HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160, Name = "DialogDate", FlowDirection = FlowDirection.LeftToRight };
+    private readonly JalaliDatePicker _jalali;
     private readonly List<(int? Offset, Button Button)> _chips = [];
     private readonly TextBlock _relative;
+    private readonly TextBlock _converted;
     private readonly TimeSpan _time;
     private bool _syncing;
 
@@ -94,19 +98,30 @@ internal sealed class DateRow : StackPanel
         }
         Children.Add(chips);
         _picker.SelectedDateChanged += (_, e) => { if (!_syncing) { Date = e.AddedItems.Count > 0 ? ((DateTime?)e.AddedItems[0])?.Date : null; Sync(); } };
+        _jalali = new JalaliDatePicker(context, allowNone);
+        _jalali.SelectedDateChanged += (_, _) => { Date = _jalali.SelectedDate; Sync(); };
         _relative = context.Label(RelativeText, "Small", "TextSecondary");
         _relative.VerticalAlignment = VerticalAlignment.Center;
         var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        line.Children.Add(_picker); line.Children.Add(_relative);
+        line.Children.Add(_picker); line.Children.Add(_jalali); line.Children.Add(_relative);
+        // One picker per calendar system; both stay in sync, so a language switch keeps the chosen day.
+        context.Localized.Bind(line, _ => { var persian = context.Locale.LanguageCode == "fa"; _picker.IsVisible = !persian; _jalali.IsVisible = persian; });
         Children.Add(line);
+        // Automatic conversion: whichever calendar the picker shows, the day in the other one is spelled out beneath it.
+        _converted = context.Label(ConvertedText, "Small", "TextSecondary"); _converted.Name = "DateConverted";
+        Children.Add(_converted);
         Sync();
     }
 
     private string RelativeText() => Date is not { } day ? "" : _context.Relative(new DateTimeOffset(day, TimeZoneInfo.Local.GetUtcOffset(day)), false);
 
+    private string ConvertedText() => Date is { } day && _context.Locale.LanguageCode == "fa" && JalaliDate.IsSupported(day)
+        ? _context.Text.Format("date.gregorianHint", JalaliDate.KeepLeftToRight(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))) : "";
+
     private void Sync()
     {
         _syncing = true; _picker.SelectedDate = Date; _syncing = false;
+        _jalali.SelectedDate = Date; _converted.Text = ConvertedText();
         foreach (var (offset, button) in _chips)
             button.Classes.Set("selected", offset is { } days ? Date == DateTime.Today.AddDays(days) : Date is null);
         _relative.Text = RelativeText();

@@ -15,9 +15,13 @@ Captured from the app's built-in synthetic sample workspace (no real project dat
 | ![Requirements checklist](docs/screenshots/checklist.png) | ![Tasks and milestones](docs/screenshots/tasks.png) |
 | **Checklist** — 16 requirements, files and readiness | **Tasks & dates** — grouped by urgency, with agent proposals to review |
 
-Persian (RTL) with the dark theme:
+Persian (RTL) with the dark theme and Jalali dates:
 
 ![Dashboard in Persian, dark theme](docs/screenshots/dashboard-persian-dark.png)
+
+Jalali date picker in the task dialog (type a Jalali or Gregorian date, or pick from the month):
+
+![Jalali date picker](docs/screenshots/jalali-date-picker.png)
 
 To regenerate them, run the desktop tests with `PROJECTOPS_UI_CAPTURE_DIR` set
 (see [verification](docs/verification.md)); the `sample-*` and `welcome` frames are the ones used here.
@@ -53,8 +57,11 @@ Choose **English** or **فارسی** in the language selector. Labels and layout
 switch live (English LTR, Persian RTL), without changing project data. The selection
 is saved in `settings.json` in the same data directory, as is the Light / Dark / Auto
 theme chosen in the sidebar or Settings. Agent responses use the
-selected language; structured proposal fields remain unchanged. Date entry uses
-Gregorian `yyyy-MM-dd HH:mm` in both languages; Jalali display is deferred.
+selected language; structured proposal fields remain unchanged. In Persian, dates are shown in
+the Jalali (Solar Hijri) calendar and the task and milestone dialogs use a Jalali date picker.
+Typing a Jalali (`1405/07/17`, Persian digits allowed) or Gregorian (`2026-10-09`) date there is
+converted automatically, and the Gregorian equivalent is shown beneath. Stored dates stay
+Gregorian instants, so switching language never changes project data.
 See [localization boundaries and extension guidance](docs/localization.md).
 
 ## Workflow
