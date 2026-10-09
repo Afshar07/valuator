@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Dashboard"
+             x:Class="ProjectOperations.Desktop.Features.Dashboard.AgendaEntryView"
+             x:DataType="vm:AgendaEntryViewModel">
+  <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+    <Border Classes="dot" Classes.milestone="{Binding IsMilestone}" Classes.overdue="{Binding IsOverdue}" />
+    <TextBlock Grid.Column="1" Classes="Body" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+    <TextBlock Grid.Column="2" Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" TextWrapping="NoWrap"
+               TextTrimming="CharacterEllipsis" Text="{Binding ProjectName}" />
+  </Grid>
+</UserControl>

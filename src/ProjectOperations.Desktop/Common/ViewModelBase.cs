@@ -15,5 +15,15 @@ public abstract class ViewModelBase : ObservableObject, ILanguageAware
     /// </summary>
     protected void RefreshOnLanguageChange(LocalizedStrings strings) => strings.Register(this);
 
-    void ILanguageAware.OnLanguageChanged() => OnPropertyChanged(string.Empty);
+    void ILanguageAware.OnLanguageChanged()
+    {
+        OnLanguageChanged();
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>
+    /// Runs after a language switch, before every property is announced as changed. Override to rebuild state that depends on the
+    /// language itself (for example a calendar that changes between Gregorian and Jalali months).
+    /// </summary>
+    protected virtual void OnLanguageChanged() { }
 }

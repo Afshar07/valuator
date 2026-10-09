@@ -5,7 +5,12 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using ProjectOperations.Desktop.Features.Calendar;
+using ProjectOperations.Desktop.Features.Dashboard;
+using ProjectOperations.Desktop.Features.Documents;
+using ProjectOperations.Desktop.Features.Projects;
 using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Shell;
 using ProjectOperations.Desktop.Updates;
@@ -16,7 +21,7 @@ using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-public sealed class MainWindow : Window, IShell, IProjectHost
+public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileLauncher
 {
     /// <summary>Below this window width the assistant panel slides over the content instead of docking beside it.</summary>
     private const double DockedPanelMinWidth = 1280;
@@ -64,7 +69,7 @@ public sealed class MainWindow : Window, IShell, IProjectHost
         _runLock = new AgentRunLock(_messages);
         _navigator = new Navigator(ShowRouteAsync);
         _workspace = new WorkspaceSession(projects, agents, environment ?? new DesktopEnvironment(), calendar ?? new NoExternalCalendar());
-        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()), _dialogs, this);
+        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()), _dialogs, this, this, this, _navigator);
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         _locale.Changed += LocaleChanged;
@@ -136,6 +141,7 @@ public sealed class MainWindow : Window, IShell, IProjectHost
         FontFamily = _locale.LanguageCode == "fa" ? PresentationTheme.PersianFontFamily : PresentationTheme.LatinFontFamily;
     }
     public void ShowError(string key) => _messages.ShowError(key);
+    void IPageHost.ShowWizard() => ShowWizard(fromWelcome: false);
     private void HideError() => _messages.HideError();
 
     public async Task RunAsync(Func<Task> action)
@@ -184,21 +190,23 @@ public sealed class MainWindow : Window, IShell, IProjectHost
         var page = route.Page;
         _projectTabs = null; _navigation.Select(page);
         _fresh.Remove(page); _navigation.SetNew(page, false);
+        var services = _context.Page;
+        CalendarViewModel? calendar = null;
         Control view = page switch
         {
-            AppPage.Projects => await Load(new ProjectsView(_context), view => view.LoadAsync()),
-            AppPage.Calendar => await Load(new CalendarView(_context), view => view.LoadAsync()),
-            AppPage.Documents => await Load(new DocumentsView(_context), view => view.LoadAsync()),
+            AppPage.Projects => new ContentControl { Content = await ProjectsViewModel.LoadAsync(services) },
+            AppPage.Calendar => new ContentControl { Content = calendar = await CalendarViewModel.LoadAsync(services) },
+            AppPage.Documents => new ContentControl { Content = await DocumentsViewModel.LoadAsync(services) },
             AppPage.Settings => new SettingsView(_context),
-            _ => await Load(new DashboardView(_context), view => view.LoadAsync())
+            _ => new ContentControl { Content = await DashboardViewModel.LoadAsync(services) }
         };
         Show(view);
+        // The opt-in external overlay loads after the page is shown and does nothing unless Google Calendar is connected.
+        if (calendar is not null) _ = calendar.StartAsync();
         await _assistant.ShowPickerAsync();
         await RefreshAttentionAsync();
         if (route.NewProject) ShowWizard(fromWelcome: false);
     }
-
-    private static async Task<T> Load<T>(T view, Func<T, Task> load) where T : Control { await load(view); return view; }
 
     private async Task<bool> ShowProjectAsync(ProjectRoute route)
     {
@@ -347,6 +355,9 @@ public sealed class MainWindow : Window, IShell, IProjectHost
         _assistant.IsVisible = open; PlaceAssistant();
     }
     public void ToggleAssistant() => SetAssistantOpen(!_assistant.IsVisible);
+
+    async Task<bool> IFileLauncher.OpenFileAsync(string path) => await Launcher.LaunchFileInfoAsync(new FileInfo(path));
+    async Task<bool> IFileLauncher.OpenFolderAsync(string path) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
     public async Task ReviewInAssistantAsync(string jobId) { SetAssistantOpen(true); await _assistant.ReviewAsync(jobId); }
 
     private void PlaceAssistant()

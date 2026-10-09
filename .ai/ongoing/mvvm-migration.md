@@ -34,8 +34,8 @@ State: `todo` → `in progress` → `done`.
 | 0 | Upgrade Avalonia and Headless to 12 on the current code; fix the C# binding API changes; tests green | done |
 | 1a | Foundation: DI composition root, `ViewModelBase`, view locator, bindable localization, date converters | done |
 | 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | done |
-| 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | done (awaiting review) |
-| 3a | Projects list, Dashboard, Calendar, Documents | todo |
+| 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | done |
+| 3a | Projects list, Dashboard, Calendar, Documents | done |
 | 3b | Settings, stage editor, update panel, Google Calendar panel | todo |
 | 3c | Project detail, Overview, Requirements, remaining project dialogs | todo |
 | 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | todo |
@@ -81,4 +81,20 @@ State: `todo` → `in progress` → `done`.
   - Tests: `Mvvm/TasksFeatureTests` (plain xUnit, fixed clock). `UiWait.Click` now invokes the button through its automation peer, because a raw `ClickEvent` does not run a bound
     `Command`. Controls inside a `ControlTemplate` are not in the logical tree, so tests cannot find them there: keep buttons the tests need in content, not in a template.
   - One deliberate behaviour change: a new task or milestone now defaults to end of day (23:59), as `architecture.md` says; the old dialog kept the current clock time of day.
-- Open questions: user review of the pilot (gate before 3a).
+- Pages (3a), `Desktop/Features/{Projects,Dashboard,Calendar,Documents}/`; copy this for 3b and for pages that are not project screens:
+  - Seam: `PageServices` (`PresentationContext.Page`) is `ProjectScreenServices` for top-level pages: projects, strings, dialogs, `INavigator`, `IPageHost`
+    (`RunAsync`, `ShowError`, `ToggleAssistant`, `ShowWizard`, `RefreshShellAsync`), `IFileLauncher` (open file / folder) and the active `IExternalCalendarSource`
+    (so the sample workspace gets none). `services.GoAsync(route)` is navigation under the busy state. `MainWindow` implements `IPageHost` and `IFileLauncher`.
+  - Each page has `static LoadAsync(PageServices)` that reads the data and returns the view-model; `MainWindow.ShowPageAsync` hosts it as `ContentControl { Content = vm }`.
+    Rows are view-models shown by the locator; commands are `[RelayCommand]` and wrap their work in `Host.RunAsync` (or `GoAsync`).
+    Calendar's opt-in Google overlay starts with `CalendarViewModel.StartAsync()` after the page is shown; `Refreshing` is the latest fetch, for tests.
+  - `ViewModelBase.OnLanguageChanged()` (virtual) runs before the all-properties notification, for state that depends on the language itself (the calendar's Gregorian/Jalali months).
+  - New shared controls in `Common/`, all code-built (no template, so tests still find their text): `PageHeader` (title, subtitle, trailing content), `Pill` + `PillKind`,
+    `StagePill`, `ProgressTrack`, `InitialTile`, `StatCard`, `TableGrid` (a grid whose columns drop when the inherited `TableGrid.IsCompact` is set; `CompactColumn` = -1 hides a
+    cell), `EqualColumnsPanel` (equal columns that ellipsize instead of widening). `Styles.axaml` gained `Border.card`, `Border.rule` (+ `.first`) and `Border.dot` (+ `.milestone`,
+    `.overdue`, `.external`). Styles do apply to `Run`, so a coloured part of a line is `<Run Classes="when" Classes.late="{Binding IsLate}"/>`. Write `<Run/><Run/>` on one line: whitespace between them renders as a space.
+  - Names the UI tests rely on are kept: `NewProjectButton`, `ProjectRow`, `DeleteProjectButton`, `ConfirmDeleteProjectButton`, `PriorityItems`, `PriorityRow`, `AgendaCard`, `Dashboard*Stat`,
+    `StatValue`, `CalendarEvent`, `CalendarGoogleEvent`, `CalendarGoogleLegend`, `CalendarNotice`, `DocumentRow`, `DocumentPath`.
+  - Tests: `Mvvm/{Projects,Dashboard,Calendar,Documents}FeatureTests` over `Mvvm/PageScenario`. `PresentationTests` presses the delete buttons with `UiWait.Click` because they are bound commands now.
+  - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` (English/Persian, light/dark, 800 and 1440 wide): same layout. Not checked on Windows.
+  - Still code-built and still reached through `IShell`: Settings, the project detail, the assistant panel, onboarding. `ListCard`, `TableHeader`, `SectionCard` and `ListRow` stay in `Components.cs` for them until phase 6.

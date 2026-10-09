@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Dashboard"
+             x:Class="ProjectOperations.Desktop.Features.Dashboard.AgendaDayView"
+             x:DataType="vm:AgendaDayViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.Micro.day">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.BodyStrong.day">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="FontSize" Value="15" />
+    </Style>
+    <Style Selector="TextBlock.Micro.day.today">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.BodyStrong.day.today">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="rule" Padding="0,8">
+    <Grid ColumnDefinitions="60,*" ColumnSpacing="12">
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Classes="Micro day" Classes.today="{Binding IsToday}" Text="{Binding DayName}" />
+        <TextBlock Classes="BodyStrong day" Classes.today="{Binding IsToday}" TextWrapping="NoWrap" Text="{Binding DateText}" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+        <TextBlock Classes="Body" Foreground="{DynamicResource TextTertiaryBrush}" Text="—" IsVisible="{Binding IsEmpty}" />
+        <ItemsControl ItemsSource="{Binding Entries}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="4" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Calendar"
+             x:Class="ProjectOperations.Desktop.Features.Calendar.CalendarDayView"
+             x:DataType="vm:CalendarDayViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.day">
+      <Setter Property="Background" Value="{DynamicResource BackgroundCardBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
+    <Style Selector="Border.day.outside">
+      <Setter Property="Background" Value="{DynamicResource BackgroundMutedBrush}" />
+    </Style>
+    <Style Selector="Border.day.startRule">
+      <Setter Property="BorderThickness" Value="1,0,0,0" />
+    </Style>
+    <Style Selector="Border.day.topRule">
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Border.day.topRule.startRule">
+      <Setter Property="BorderThickness" Value="1,1,0,0" />
+    </Style>
+    <Style Selector="Border.badge.today">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.Caption.number">
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="TextBlock.Caption.number.outside">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.Caption.number.today">
+      <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="day" Classes.outside="{Binding IsOutside}" Classes.startRule="{Binding HasStartRule}" Classes.topRule="{Binding HasTopRule}" MinHeight="96" Padding="6,6,6,8">
+    <StackPanel Spacing="3">
+      <Border Classes="badge" Classes.today="{Binding IsToday}" MinWidth="22" Height="22" Padding="5,0" CornerRadius="11" HorizontalAlignment="Left">
+        <TextBlock Classes="Caption number" Classes.outside="{Binding IsOutside}" Classes.today="{Binding IsToday}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Number}" />
+      </Border>
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="3" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+      </ItemsControl>
+      <TextBlock Classes="Micro" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding HasOverflow}" Text="{Binding OverflowText}" />
+    </StackPanel>
+  </Border>
+</UserControl>

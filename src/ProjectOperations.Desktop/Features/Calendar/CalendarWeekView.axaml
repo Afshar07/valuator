@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Calendar"
+             x:Class="ProjectOperations.Desktop.Features.Calendar.CalendarWeekView"
+             x:DataType="vm:CalendarWeekViewModel">
+  <ItemsControl ItemsSource="{Binding Days}">
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate>
+        <c:EqualColumnsPanel />
+      </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+  </ItemsControl>
+</UserControl>

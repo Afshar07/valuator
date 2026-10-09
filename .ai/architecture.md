@@ -144,7 +144,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
 - **Credential:** only the refresh token is stored, via `ITokenStore`; `DpapiTokenStore` (Windows, current user) writes
   `google-calendar.token` in the data directory. Other platforms get no Google option rather than plain-text storage. Tokens never
   go to SQLite or `settings.json`.
-- **Display only:** events are fetched for the visible month grid after the page is shown, held in memory by `CalendarView`, and
+- **Display only:** events are fetched for the visible month grid after the page is shown, held in memory by `CalendarViewModel`, and
   drawn as non-clickable bordered chips distinct from tasks, milestones and overdue work. They are never persisted, never part of a
   `Project`, and **never part of an agent context snapshot, prompt or proposal**. `ExternalCalendarBoundaryTests` fails if any
   agent, domain, application or runtime type gains a dependency on the external calendar types.
@@ -251,10 +251,10 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   last stage of a template. Projects may move to any stage. Databases older than version 3 are discarded, not migrated.
   Stages are managed in Settings (`StageEditor`) and shown with `Ui.StagePill` in the header, list, dashboard and overview.
 - **Project deletion UI.** The only entry point is the trash icon in the last column of the All projects
-  table (`ProjectsView`; also kept in the compact layout). It opens `DeleteProjectDialog`
-  (`ProjectDialogs.cs`), which names the project and states that deletion is permanent and linked files
-  are untouched; only its confirm button calls `ProjectService.DeleteAsync` and then navigates to the
-  refreshed list. Cancel, close and scrim click keep the project. The icon handles its own `Click`
-  (marked handled) so the enclosing row does not also open the project. It is deliberately not in the
-  Edit project dialog, where Save/Cancel sit beside it. Strings: `v3.delProject`, `v3.delProjectT`,
-  `v3.delProjectBody` (English and Persian).
+  table (`Features/Projects/ProjectsView.axaml`; also kept in the compact layout). It opens
+  `DeleteProjectDialogView`, which names the project and states that deletion is permanent and linked files
+  are untouched; only its confirm button (`DeleteProjectDialogViewModel.ConfirmCommand`) calls
+  `ProjectService.DeleteAsync` and then navigates to the refreshed list. Cancel, close and scrim click keep the
+  project. The icon is its own button with its own command inside the row button, so pressing it does not also open
+  the project. It is deliberately not in the Edit project dialog, where Save/Cancel sit beside it. Strings:
+  `v3.delProject`, `v3.delProjectT`, `v3.delProjectBody` (English and Persian).

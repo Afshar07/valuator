@@ -204,8 +204,7 @@ public sealed class PresentationTests
         await UntilAsync(() => Buttons(window).Any(button => MainWindowTests.ButtonText(button) == "All projects" && button.IsEffectivelyEnabled));
         Click(window, "All projects");
         await UntilAsync(() => Buttons(window).Any(button => button.Name == "DeleteProjectButton"));
-        static void Press(Window window, string name) =>
-            Buttons(window).Single(button => button.Name == name).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        static void Press(Window window, string name) => UiWait.Click(Buttons(window).Single(button => button.Name == name));
 
         // Cancelling the confirmation keeps the project, and the list stays on screen (the row did not open the project).
         Press(window, "DeleteProjectButton");

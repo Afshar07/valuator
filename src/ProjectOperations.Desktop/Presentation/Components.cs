@@ -280,21 +280,6 @@ internal sealed class TableHeader : Border
     }
 }
 
-internal sealed class StatCard : Border
-{
-    public StatCard(PresentationContext context, string name, string labelKey, int value, string icon, string iconColor, string numberColor = "TextPrimary")
-    {
-        Name = name; BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(PresentationTheme.RadiusCard); Padding = new Thickness(16, 14);
-        this.Paint(BackgroundProperty, "BackgroundCard").Paint(BorderBrushProperty, "BorderDefault").CardShadowed();
-        var stack = new StackPanel { Spacing = 6 };
-        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        line.Children.Add(Icons.Glyph(icon, 15, iconColor)); var label = context.Label(labelKey, "Caption", "TextSecondary"); label.VerticalAlignment = VerticalAlignment.Center; line.Children.Add(label);
-        stack.Children.Add(line);
-        var number = context.Label(() => value.ToString("N0", context.Locale.Culture), "Stat", numberColor); number.Name = "StatValue"; stack.Children.Add(number);
-        Child = stack;
-    }
-}
-
 /// <summary>Whole-row button inside a list card; the accessible name describes the row for assistive technology and tests.</summary>
 internal class ListRow : Button
 {
