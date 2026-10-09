@@ -183,6 +183,9 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   guidance and no Run action.
 - Calendar and the dashboard agenda use `ProjectSummaries.Schedule` (open dated tasks
   and milestones of Active/OnHold projects); the projects table uses `NextDeadline`.
+  In Persian the Calendar pages through Jalali months (grid and headings), while the
+  schedule query itself stays Gregorian; the task/milestone dialogs' `DateRow` shows a
+  `CalendarDatePicker` in English and a `JalaliDatePicker` in Persian, kept in sync.
   Documents lists stored file references only: existence is checked, contents are
   never read or previewed, and open/reveal are explicit user actions. Settings shows
   runtime configuration and the database path read-only; backup and encryption are
