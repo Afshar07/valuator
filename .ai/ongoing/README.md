@@ -7,7 +7,7 @@ instructions.
 
 | Task | Read when you're... |
 | --- | --- |
-| None | — |
+| [MVVM migration and Avalonia 12](mvvm-migration.md) | working on the desktop UI, MVVM, XAML views or the Avalonia upgrade |
 
 Move durable conventions into the appropriate focused context document when a
 task finishes, then remove its ongoing-task entry and task document.
