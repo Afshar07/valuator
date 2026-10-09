@@ -167,6 +167,10 @@ internal static class PresentationTheme
                 (Border.BackgroundProperty, Dynamic(state == ":disabled" ? "BackgroundCard" : "BackgroundMuted")),
                 (Border.BorderBrushProperty, Dynamic(state == ":focus" ? "Accent" : "BorderDefault"))));
         window.Styles.Add(Rule(s => s.OfType<TextBox>().Class(":focus"), (TextBox.ForegroundProperty, Dynamic("TextPrimary"))));
+        // Avalonia places the caret of a no-wrap, right-to-left box far from its text unless the alignment follows the content.
+        // Single-line boxes therefore detect it (Persian right-aligned, Latin left-aligned); multi-line boxes wrap and start at the reading edge.
+        window.Styles.Add(Rule(s => s.OfType<TextBox>(), (TextBox.TextAlignmentProperty, TextAlignment.DetectFromContent)));
+        window.Styles.Add(Rule(s => s.OfType<TextBox>().PropertyEquals(TextBox.AcceptsReturnProperty, true), (TextBox.TextAlignmentProperty, TextAlignment.Start)));
         window.Styles.Add(Rule(s => s.OfType<ComboBox>(), (ComboBox.BackgroundProperty, Dynamic("BackgroundMuted")), (ComboBox.BorderBrushProperty, Dynamic("BorderDefault")),
             (ComboBox.ForegroundProperty, Dynamic("TextPrimary")), (ComboBox.CornerRadiusProperty, new CornerRadius(RadiusControl)), (ComboBox.FontSizeProperty, 13d), (ComboBox.MinHeightProperty, 34d)));
         window.Styles.Add(Rule(s => s.OfType<Expander>(), (Expander.BackgroundProperty, Brushes.Transparent)));
