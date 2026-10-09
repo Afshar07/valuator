@@ -16,11 +16,13 @@ namespace ProjectOperations.Desktop;
 /// <summary>Runtime facts the shell displays (never edits): agent configuration and local storage location.</summary>
 public sealed record DesktopEnvironment(bool AgentConfigured = true, string? Endpoint = null, string? ConfigDirectory = null, string? DatabasePath = null);
 
-/// <summary>Shell operations available to screens. <see cref="MainWindow"/> owns navigation, locking and the assistant panel.</summary>
+/// <summary>
+/// What the code-built screens still left (the assistant panel and the Delegate tab) ask of the shell. The shell itself is
+/// <see cref="MainWindowViewModel"/>; phase 5 moves these screens to MVVM and removes this interface.
+/// </summary>
 internal interface IShell
 {
     Task OpenProjectAsync(Guid id, ProjectTab tab);
-    Task NavigateAsync(AppPage page, bool newProject = false);
     /// <summary>Reloads the open project on its current tab (after reviews or runs); the assistant keeps its controls.</summary>
     Task RefreshProjectAsync();
     Task ActAsync(Button button, Func<Task> action);
@@ -30,85 +32,47 @@ internal interface IShell
     void CancelRun();
     bool IsAgentRunning { get; }
     void SetAssistantOpen(bool open);
-    void ToggleAssistant();
     Task ReviewInAssistantAsync(string jobId);
-    void ShowModal(Control dialog);
-    void CloseModal();
-    /// <summary>Shows the first-run welcome screen.</summary>
-    void ShowWelcome();
-    /// <summary>Opens the new-project wizard; <paramref name="fromWelcome"/> decides where Back on the first step returns to.</summary>
-    void ShowWizard(bool fromWelcome);
-    void CloseOverlay();
-    bool IsSample { get; }
-    Task StartSampleAsync();
-    Task ExitSampleAsync();
-    /// <summary>Opens a freshly created project on the checklist tab and announces it.</summary>
-    Task OpenCreatedProjectAsync(Guid id);
-    /// <summary>Re-evaluates what the sidebar shows (sections appear as data arrives) and the getting-started card.</summary>
-    Task RefreshShellAsync();
-    void ShowToast(string key);
 }
 
-/// <summary>View state that survives a project reload (the shell rebuilds screens after every save): expanded checklist rows, dismissed hints.</summary>
-internal sealed class UiState
+/// <summary><see cref="IShell"/> over the shell view-model.</summary>
+internal sealed class ShellAdapter(MainWindowViewModel shell) : IShell
 {
-    public HashSet<string> ExpandedGroups { get; } = [];
-    public HashSet<Guid> InitializedProjects { get; } = [];
-    public Guid? OpenRequirement { get; set; }
-    public bool TipHidden { get; set; }
-    public bool GettingStartedHidden { get; set; }
-    /// <summary>A checklist item whose follow-up task form should open as soon as its screen is built (getting-started shortcut).</summary>
-    public Guid? PendingFollowUp { get; set; }
-
-    /// <summary>Forgets everything tied to one workspace (used when switching between the sample and the user's own data).</summary>
-    public void Reset() { ExpandedGroups.Clear(); InitializedProjects.Clear(); OpenRequirement = null; TipHidden = false; GettingStartedHidden = false; PendingFollowUp = null; }
+    public Task OpenProjectAsync(Guid id, ProjectTab tab) => shell.OpenProjectAsync(id, tab);
+    public Task RefreshProjectAsync() => shell.RefreshProjectAsync();
+    public async Task ActAsync(Button button, Func<Task> action)
+    {
+        button.IsEnabled = false;
+        try { await shell.RunAsync(action); }
+        finally { button.IsEnabled = true; }
+    }
+    public void ShowError(string key) => shell.ShowError(key);
+    public Task RunAgentAsync(Func<CancellationToken, Task> run, Func<Task> refresh) => shell.RunAgentAsync(run, refresh);
+    public void CancelRun() => shell.CancelRun();
+    public bool IsAgentRunning => shell.IsAgentRunning;
+    public void SetAssistantOpen(bool open) => shell.SetAssistantOpen(open);
+    public Task ReviewInAssistantAsync(string jobId) => shell.ReviewInAssistantAsync(jobId);
 }
 
-/// <summary>Shared services and localized control factories handed to views and components by the shell.</summary>
+/// <summary>Shared services and localized control factories for the code-built screens (the assistant panel and the Delegate tab).</summary>
 internal sealed class PresentationContext(
-    WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
-    LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates,
-    IDialogService dialogs, IProjectHost projectHost, IPageHost pageHost, IFileLauncher files, INavigator navigator)
+    WorkspaceSession workspace, LocaleContext locale, LocalizationService text, LocalizedControls localized,
+    LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell)
 {
-    public UpdateController Updates { get; } = updates;
     public WorkspaceSession Workspace { get; } = workspace;
     public ProjectService Projects => Workspace.Projects;
     public AgentService Agents => Workspace.Agents;
     public LocaleContext Locale { get; } = locale;
-    public AppearanceContext Appearance { get; } = appearance;
     public LocalizationService Text { get; } = text;
     public LocalizedControls Localized { get; } = localized;
-    /// <summary>Bindable strings for XAML views hosted by the shell.</summary>
+    /// <summary>Bindable strings.</summary>
     public LocalizedStrings Strings { get; } = strings;
     public DesktopEnvironment Environment => Workspace.Environment;
     public IShell Shell { get; } = shell;
-    public IDialogService Dialogs { get; } = dialogs;
-    public TimeProvider Clock { get; } = TimeProvider.System;
-    /// <summary>The services handed to view-models of the open project's screens (they follow the sample workspace).</summary>
-    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, projectHost, Clock);
-    /// <summary>The services handed to view-models of the top-level pages. They follow the sample workspace, including its (absent) external calendar.</summary>
-    public PageServices Page => new(Projects, Strings, Dialogs, navigator, pageHost, files, Calendar, Clock);
-    /// <summary>The services handed to the Settings page: the page services plus the preferences, runtime facts and updater only it shows.</summary>
-    public SettingsServices Settings => new(Page, Locale, Appearance, Environment, Updates);
-    public UiState State { get; } = new();
-    /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
-    public IExternalCalendarSource Calendar => Workspace.Calendar;
     public string ConfigurationText() => configurationText?.Invoke() ?? configuration;
     public Task OpenProjectAsync(Guid id, ProjectTab tab = ProjectTab.Overview) => Shell.OpenProjectAsync(id, tab);
     public Task ActAsync(Button button, Func<Task> action) => Shell.ActAsync(button, action);
     public void ShowError(string key) => Shell.ShowError(key);
-
-    public void SetLanguage(string code)
-    {
-        try { Locale.SetLanguage(code); }
-        catch (Exception) { ShowError("validation.languageSaveFailed"); }
-    }
-
-    public void SetTheme(string theme)
-    {
-        try { Appearance.SetTheme(theme); }
-        catch (Exception) { ShowError("validation.themeSaveFailed"); }
-    }
 
     public string EnumText<T>(T value) where T : struct, Enum => new DomainDisplay(Text).Enum(value);
     public string Due(DateTimeOffset? date) => Strings.Due(date);

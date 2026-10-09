@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Onboarding"
+             x:Class="ProjectOperations.Desktop.Features.Onboarding.WizardStepView"
+             x:DataType="vm:WizardStepViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.marker">
+      <Setter Property="Background" Value="{DynamicResource BackgroundTrackBrush}" />
+    </Style>
+    <Style Selector="Border.marker.reached">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.stepNumber">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.stepNumber.reached">
+      <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel.reached">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.stepLabel.current">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+  <DockPanel LastChildFill="True" HorizontalSpacing="8" VerticalAlignment="Center">
+    <Border DockPanel.Dock="Left" Classes="marker" Classes.reached="{Binding Reached}" Width="22" Height="22" CornerRadius="11" VerticalAlignment="Center">
+      <Panel>
+        <TextBlock Classes="MetaMedium stepNumber" Classes.reached="{Binding Reached}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding ShowNumber}" Text="{Binding NumberText}" />
+        <c:IconGlyph Icon="{x:Static app:Icons.Check}" Weight="Bold" Size="11" Token="OnAccent" IsVisible="{Binding Done}" />
+      </Panel>
+    </Border>
+    <TextBlock DockPanel.Dock="Left" Classes="Small stepLabel" Classes.reached="{Binding Reached}" Classes.current="{Binding Current}" TextWrapping="NoWrap"
+               VerticalAlignment="Center" Text="{Binding Label}" />
+    <Border IsVisible="{Binding HasLine}" Height="1" MinWidth="16" VerticalAlignment="Center" Background="{DynamicResource BorderDefaultBrush}" />
+  </DockPanel>
+</UserControl>

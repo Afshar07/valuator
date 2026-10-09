@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Onboarding"
+             x:Class="ProjectOperations.Desktop.Features.Onboarding.TemplateOptionView"
+             x:DataType="vm:TemplateOptionViewModel">
+  <Button Name="TemplateButton" Classes="option committed" Classes.selected="{Binding IsSelected}" Padding="14,12"
+          Command="{Binding ChooseCommand}" AutomationProperties.Name="{Binding Title}">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+      <c:IconGlyph Icon="{Binding Icon}" Weight="{Binding Weight}" Token="{Binding IconToken}" Size="18" />
+      <StackPanel Grid.Column="1">
+        <TextBlock Classes="BodyStrong" Text="{Binding Title}" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding Subtitle}" />
+      </StackPanel>
+    </Grid>
+  </Button>
+</UserControl>

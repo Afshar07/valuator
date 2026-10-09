@@ -33,29 +33,6 @@ internal abstract class PresentationView : StackPanel
     protected Button Action(string text, Func<Task> action, string? appearance = null) => Context.Action(text, action, appearance);
     protected Button Action(Func<string> text, Func<Task> action, string? appearance = null) => Context.Action(text, action, appearance);
 
-    /// <summary>Page title row: heading with optional subtitle and trailing controls.</summary>
-    protected Control PageHeader(string titleKey, string? subtitleKey = null, params Control[] trailing)
-    {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
-        var titles = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Bottom };
-        titles.Children.Add(Label(titleKey, "Title"));
-        if (subtitleKey is not null) titles.Children.Add(Label(subtitleKey, "Body", "TextSecondary"));
-        grid.Children.Add(titles);
-        if (trailing.Length > 0)
-        {
-            var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = subtitleKey is null ? VerticalAlignment.Center : VerticalAlignment.Bottom };
-            foreach (var control in trailing) { control.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(control); }
-            Grid.SetColumn(actions, 1); grid.Children.Add(actions);
-        }
-        return grid;
-    }
-
-    protected Button AssistantButton()
-    {
-        var button = Context.IconAction("agent.assistant", Icons.Sparkle, () => { Context.Shell.ToggleAssistant(); return Task.CompletedTask; }, "ai");
-        button.Name = "AssistantToggle"; button.MinHeight = 34; return button;
-    }
-
     protected static TextBox Input(string value = "", bool multiline = false) => new()
     {
         Text = value,

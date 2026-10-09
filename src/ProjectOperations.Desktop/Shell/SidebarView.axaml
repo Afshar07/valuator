@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:shell="using:ProjectOperations.Desktop.Shell"
+             x:Class="ProjectOperations.Desktop.Shell.SidebarView"
+             x:DataType="shell:SidebarViewModel">
+  <Border Name="AppSidebar" Width="232" Padding="12,18,12,14" BorderThickness="0,0,1,0"
+          Background="{DynamicResource BackgroundSidebarBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+    <DockPanel>
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="8,2,8,18">
+        <Image Width="36" Height="36" Stretch="Uniform" VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality"
+               AutomationProperties.AccessibilityView="Raw" Source="avares://ProjectOperations.Desktop/Assets/Icons/app-icon-512.png" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Classes="BodyStrong" FontSize="14" TextWrapping="NoWrap" Text="{Binding L[app.title]}" />
+          <TextBlock Classes="Meta" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" Text="{Binding L[presentation.workspace]}" />
+        </StackPanel>
+      </Grid>
+
+      <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0,10,4">
+          <c:IconGlyph Icon="{x:Static app:Icons.HardDrives}" Size="14" Token="TextSecondary" />
+          <TextBlock Classes="Meta" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[presentation.localMvp]}" />
+        </StackPanel>
+        <Border Name="ThemeSelector" Classes="segmented" HorizontalAlignment="Stretch">
+          <ItemsControl ItemsSource="{Binding Display.Theme.Options}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:ChipOptionViewModel">
+                <Button Classes="segment" Classes.selected="{Binding IsSelected}" Margin="1,0" Command="{Binding SelectCommand}"
+                        Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+        <Button Name="LanguageSelector" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinHeight="36" Padding="10,0" CornerRadius="9"
+                Command="{Binding Display.ToggleLanguageCommand}" AutomationProperties.Name="{Binding L[settings.language]}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <c:IconGlyph Icon="{x:Static app:Icons.Translate}" Size="15" Token="TextPrimary" />
+            <TextBlock Grid.Column="1" Classes="BodyMedium" VerticalAlignment="Center" Text="{Binding Display.CurrentLanguageName}" />
+            <TextBlock Grid.Column="2" Classes="Micro" FontWeight="Normal" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}"
+                       FontFamily="{Binding Display.IsPersian, Converter={x:Static c:PresentationConverters.OtherLanguageFont}}" Text="{Binding Display.OtherLanguageName}" />
+          </Grid>
+        </Button>
+      </StackPanel>
+
+      <Border Name="GettingStarted" DockPanel.Dock="Bottom" IsVisible="{Binding HasGettingStarted}" Margin="0,0,0,6" Padding="12" BorderThickness="1" CornerRadius="10"
+              Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+        <ContentControl Content="{Binding GettingStarted}" />
+      </Border>
+
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.Styles>
+          <!-- A hidden entry must not leave its container (and the spacing around it) behind. -->
+          <Style Selector="ContentPresenter" x:DataType="shell:NavItemViewModel">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}" />
+          </Style>
+        </ItemsControl.Styles>
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="4" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+      </ItemsControl>
+    </DockPanel>
+  </Border>
+</UserControl>

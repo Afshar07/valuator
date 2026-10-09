@@ -37,12 +37,19 @@ public sealed class LocalizedStrings : INotifyPropertyChanged, IDisposable
     public string LanguageCode => _locale.LanguageCode;
     public CultureInfo Culture => _locale.Culture;
     public FlowDirection FlowDirection => _locale.FlowDirection;
+    public bool IsRightToLeft => _locale.FlowDirection == FlowDirection.RightToLeft;
 
     /// <summary>Localized name of a domain enum value (task status, project status, ...).</summary>
     public string Enum<T>(T value) where T : struct, Enum => new DomainDisplay(_text).Enum(value);
 
     /// <summary>Localized title of a requirement; custom requirements keep the user's own title.</summary>
     public string Requirement(ProjectRequirement requirement) => new DomainDisplay(_text).Requirement(requirement);
+
+    /// <summary>Localized title of a built-in requirement by its template id; any other id keeps <paramref name="original"/>.</summary>
+    public string Requirement(string id, string original) => new DomainDisplay(_text).Requirement(id, original);
+
+    /// <summary>Localized title of a requirement group; custom groups keep the user's own title.</summary>
+    public string Group(string id, string original) => new DomainDisplay(_text).Group(id, original);
 
     /// <summary>Localized name of a project template; only the built-in one is translated.</summary>
     public string Template(ProjectTemplate template) => new DomainDisplay(_text).Template(template);

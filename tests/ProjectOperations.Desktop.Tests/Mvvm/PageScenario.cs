@@ -129,6 +129,13 @@ internal sealed class PageScenario : IDisposable
         public void Close() => Shown = null;
     }
 
+    internal sealed class FakePicker : IFilePicker
+    {
+        public List<PickedFile> Next { get; set; } = [];
+        public List<string> Titles { get; } = [];
+        public Task<IReadOnlyList<PickedFile>> PickAsync(string title) { Titles.Add(title); return System.Threading.Tasks.Task.FromResult<IReadOnlyList<PickedFile>>(Next); }
+    }
+
     internal sealed class FakeFiles : IFileLauncher
     {
         public bool Succeeds { get; set; } = true;

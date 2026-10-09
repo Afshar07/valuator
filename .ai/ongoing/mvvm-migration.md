@@ -37,8 +37,8 @@ State: `todo` → `in progress` → `done`.
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | done |
 | 3a | Projects list, Dashboard, Calendar, Documents | done |
 | 3b | Settings, stage editor, update panel, Google Calendar panel | done |
-| 3c | Project detail, Overview, Requirements, remaining project dialogs | todo |
-| 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | todo |
+| 3c | Project detail, Overview, Requirements, remaining project dialogs | done |
+| 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | done |
 | 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | todo |
 | 6 | Cleanup: replace `Components.cs` with styles and controls; update `architecture.md` and `testing.md`; delete this file and its index entry | todo |
 
@@ -116,3 +116,52 @@ State: `todo` → `in progress` → `done`.
     Update/Google UI tests now treat a hidden control as absent (`IsEffectivelyVisible`) and read a command-disabled button with `IsEffectivelyEnabled`.
   - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Settings (English light, English dark at 800, Persian dark) and the Google-connected, update-offered and
     download-in-progress states in English light and Persian dark are pixel-identical. Not checked on Windows.
+- Project detail (3c), `Desktop/Features/{ProjectDetail,Overview,Requirements}/`; copy this for the assistant (phase 5):
+  - Seam: `ProjectScreenServices` now also holds `INavigator`, `IFilePicker` (`PickAsync(title)` returns `PickedFile(Name, LocalPath?)`; `MainWindow` implements it over the storage provider) and `UiState`.
+    `IProjectHost` gained `ShowError`, `ShowToast`, `ToggleAssistant`, `OpenAssistant` and `SelectTab` (records the picked tab so a reload returns to it).
+  - `ProjectDetailViewModel` (`LoadAsync(project, tab, services, agents, delegation)`) owns the header and four tab view-models; `ProjectDetailView.axaml` is a `TabControl` whose
+    `SelectedIndex` is two-way bound (choosing Delegate calls `OpenAssistant`). The run lock reaches the tabs through `IsLocked` (`MainWindow.ApplyLock` sets it); the header's two
+    responsive tricks (title ellipsis width, readiness dropping below when narrow) stay in `ProjectDetailView.axaml.cs`.
+  - The Delegate tab is still code-built: `DelegationTabViewModel`/`DelegationTabView` carry `PresentationContext` and host `DelegationView`. Phase 5 deletes both.
+  - `EditProjectDialogViewModel`: blank name sets `ShowNameError` (cleared on the next edit) and saves nothing; save is under `Host.RunAsync` and ends with `RefreshProjectAsync`.
+  - Overview: `OverviewViewModel` (facts, `MissingItemViewModel` rows) plus two `StateListViewModel` cards (add line is `IsAdding`, `NewText`, `Save`/`Cancel`).
+  - Requirements: `RequirementsViewModel` → `RequirementGroupViewModel` → `RequirementRowViewModel` → `RequirementDetailViewModel` (editor: value draft, linked files, status chips
+    `RequirementStatusChipViewModel`, `FollowUpFormViewModel`). Expanded groups, the open item, the dismissed tip and a pending follow-up still live in `UiState` (until phase 4), so a
+    reload restores them. Opening an item builds its editor from scratch and closing drops it, which is what discarded typed drafts before. Language switches keep the draft (it is a property).
+  - Hidden-but-present: the add lines and the value/document branches use `IsVisible`, so they stay in the logical tree. A tab the user visited also stays in the logical tree after leaving it,
+    detached from the visual tree. `UiWait.Click` therefore skips a button unless it and every logical ancestor are visible (`UiWait.IsShown`).
+  - Behaviour changes: choosing the status that is already selected no longer re-saves (it used to refresh `LastReviewedAt`); the add-line input now takes focus visibly; the follow-up chips are
+    `ChipOptionViewModel`s styled to the old 26 px height.
+  - Tests: `Mvvm/{ProjectDetail,Overview,Requirements}FeatureTests` over `Mvvm/ProjectScenario` (a `PageScenario` plus `FakeProjectHost`, `FakePicker` and a fresh `UiState`);
+    `ProjectScreensUiTests` for the XAML wiring (edit dialog, focus, RTL indent, follow-up, add requirement). Existing window tests keep passing unchanged.
+  - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Overview, Requirements, Tasks, Delegate and the dashboard (English/Persian, 800 and
+    1440 wide) differ by at most 5/255 in shadow pixels; the edit dialog, its error, the open document row, the follow-up form and the add line match, except the dialog title sits 4 px lower
+    (the `DialogChrome` header is 4 px taller than the old frame; not compared against the task dialogs). Not checked on Windows or in dark theme.
+- Shell (4), `Desktop/Shell/` and `Desktop/Features/Onboarding/`; phase 5 builds on it:
+  - `MainWindow.axaml` is a thin window over `MainWindowViewModel` (the constructor `MainWindow(projects, agents, initialize, configuration, ...)` is unchanged, so `AppServices` and the tests did not move).
+    The view-model owns the sidebar, the shown page (`Page`), the first-run `Overlay`, `Dialogs` (`DialogService`: `Content`, `IsOpen`), the error banner and toast (through `ShellMessages`; `HasError`, `ErrorText`,
+    `HasToast`, `ToastText`), `IsSidebarEnabled`/`IsPageEnabled`, the run lock, `IsAssistantOpen`, `SampleBanner` and the theme id. It implements `IProjectHost`, `IPageHost`, `IOnboardingHost` and `ISidebarHost`,
+    builds `PageServices`/`SettingsServices`/`ProjectScreenServices` from the workspace session (so they follow the sample), and routes (`ShowRouteAsync`, `NavigateAsync`, `OpenProjectAsync`, `RefreshProjectAsync`).
+  - What stays in `MainWindow.axaml.cs` needs controls: the system file dialogs (`WindowDialogs` is the `IFilePicker` and `IFileLauncher`), mounting the code-built assistant panel and docking or overlaying it
+    (`PlaceAssistant`), resetting the scroll position when `Page` changes (a new page opens at the top, as a fresh scroll viewer did), the toast timer, Escape/scrim closing the modal, and the closing handshake.
+  - `SidebarPolicy` (pure) decides which sections show (`Sections`) and which getting-started steps are done (`GettingStartedDone`). `SidebarViewModel` keeps the state: `Apply` returns the sections that
+    appeared after the first call (flagged New, announced by the shell with a toast), `Reset` forgets them, `MarkSeen` clears a flag. `NavItemViewModel` and `GettingStartedViewModel` feed `NavItemView` and
+    `GettingStartedView`/`GettingStartedItemView`; `NavItemView` sets the button's `Name` (`NavigationDashboard`...) from the view-model. A hidden entry needs its item container hidden too (a style on
+    `ContentPresenter`), or its spacing stays.
+  - `DisplayOptionsViewModel` is the theme chips and language toggle shared by the sidebar and the first-run top bar; an unsaveable choice shows the error and puts the chips back.
+  - First run: `WelcomeViewModel` and `WizardViewModel` (`Features/Onboarding`) take `IOnboardingHost` (`Projects` is read live, because leaving the sample swaps it). The wizard's three steps are all in the view
+    and shown with `IsVisible`; step markers use a `DockPanel` with `HorizontalSpacing` (a grid with an empty column still adds its spacing). `OnboardingTopBar` is a plain user control, not a template,
+    so its buttons stay findable in the logical tree.
+  - Still code-built and still reached through `IShell` and `PresentationContext`: the assistant panel and the Delegate tab (`DelegationView`), which is all phase 5 has left. `IShell` is down to what they use
+    (`OpenProjectAsync`, `RefreshProjectAsync`, `ActAsync`, `ShowError`, `RunAgentAsync`, `CancelRun`, `IsAgentRunning`, `SetAssistantOpen`, `ReviewInAssistantAsync`) and `ShellAdapter` implements it over the view-model.
+    `AssistantPanel` implements `IAssistantPanel` (`ShowPickerAsync`, `ShowProjectAsync`, `ReviewAsync`), which is how the shell talks to it; `DelegationFactory` builds the Delegate tab's stand-in view-model.
+    `UiState` stays: it is shell-owned view state (open checklist row, expanded groups, dismissed hints) that `ProjectScreenServices` hands to the Requirements tab and the getting-started card writes to.
+  - Removed: `AppSidebar`, `Segmented`, `ButtonDecorations`, `DialogFrame`, `OnboardingScreens`, `ShellMessageViews`, the unused `Forms` helpers, `PresentationView.PageHeader`/`AssistantButton`.
+  - Hidden-but-present again: the wizard's Skip button and the other steps' inputs exist while hidden, so a test that means "not offered" asserts `UiWait.IsShown`. Overlay content (welcome, wizard) is created
+    when the layout runs, not when the view-model is set, so tests wait for it (`UntilAsync`) before looking.
+  - Tests: `Mvvm/{SidebarFeatureTests,OnboardingFeatureTests,ShellViewModelTests}` over `Mvvm/ShellScenario` (real SQLite, a refusing runtime, fake updater, calendar, file dialogs and assistant);
+    the window tests are unchanged apart from the two points above.
+  - Checked against the previous commit with `PROJECTOPS_UI_CAPTURE_DIR` (onboarding captures and the designed screens, English/Persian, light/dark, 800 and 1440 wide): the sidebar, welcome and the sample
+    screens are pixel-equal (within 8/255); the wizard differs only in sub-pixel text and caret placement. In the Persian dark capture the theme chip now follows the click at once (the old segmented
+    control lagged one frame). Not checked on Windows.
+

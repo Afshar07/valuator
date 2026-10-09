@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:domain="using:ProjectOperations.Core.Domain"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.ProjectDetail"
+             x:Class="ProjectOperations.Desktop.Features.ProjectDetail.EditProjectDialogView"
+             x:DataType="vm:EditProjectDialogViewModel">
+  <c:DialogChrome Name="EditProjectDialog" Title="{Binding Heading}" CloseCommand="{Binding CancelCommand}" CloseLabel="{Binding L[action.close]}">
+    <StackPanel>
+      <StackPanel Spacing="16" Margin="18,12,18,18">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.projNameL]}" />
+          <TextBox Name="ProjectNameInput" MinHeight="36" Text="{Binding Name, Mode=TwoWay}" />
+          <TextBlock Name="EditProjectError" Classes="Small" Foreground="{DynamicResource ErrorBrush}" IsVisible="{Binding ShowNameError}"
+                     Text="{Binding L[validation.projectNameRequired]}" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.company]}" />
+            <TextBox MinHeight="36" Text="{Binding Company, Mode=TwoWay}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="6">
+            <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.owner]}" />
+            <TextBox MinHeight="36" Text="{Binding Owner, Mode=TwoWay}" />
+          </StackPanel>
+        </Grid>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.stage]}" />
+          <ComboBox Name="ProjectStageChoice" MinHeight="36" HorizontalAlignment="Stretch" ItemsSource="{Binding Stages}" SelectedItem="{Binding SelectedStage, Mode=TwoWay}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="domain:ProjectStage">
+                <c:StagePill Stage="{Binding}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.statusP]}" />
+          <ItemsControl Name="ProjectStatusChips" ItemsSource="{Binding Status.Options}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel ItemSpacing="6" LineSpacing="6" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[field.notes]}" />
+          <TextBox Name="ProjectNotesInput" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="76" VerticalContentAlignment="Top" Text="{Binding Notes, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[overview.currentState]}" />
+          <TextBox Name="ProjectSummaryInput" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="76" VerticalContentAlignment="Top" Text="{Binding Summary, Mode=TwoWay}" />
+        </StackPanel>
+      </StackPanel>
+      <Border Classes="dialogFooter">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <Button Grid.Column="1" HorizontalAlignment="Left" Content="{Binding L[action.cancel]}" Command="{Binding CancelCommand}" />
+          <Button Grid.Column="2" Name="SaveProjectButton" Classes="primary" HorizontalAlignment="Left" Content="{Binding L[v3.saveB]}" Command="{Binding SaveCommand}" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </c:DialogChrome>
+</UserControl>

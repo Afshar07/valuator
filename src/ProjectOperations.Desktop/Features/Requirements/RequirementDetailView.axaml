@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Requirements"
+             x:Class="ProjectOperations.Desktop.Features.Requirements.RequirementDetailView"
+             x:DataType="vm:RequirementDetailViewModel">
+  <UserControl.Styles>
+    <!-- The editor is indented from the start edge; thickness does not mirror by itself. -->
+    <Style Selector="Border.detail">
+      <Setter Property="Padding" Value="48,4,16,16" />
+    </Style>
+    <Style Selector="Border.detail.rtl">
+      <Setter Property="Padding" Value="16,4,48,16" />
+    </Style>
+    <!-- The chosen review status takes the colour of its status. -->
+    <Style Selector="Button.chip.selected.missing">
+      <Setter Property="Background" Value="{DynamicResource ErrorSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+    <Style Selector="Button.chip.selected.provided">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+    </Style>
+    <Style Selector="Button.chip.selected.review">
+      <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="Button.chip.selected.complete">
+      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Border Name="RequirementDetail" Classes="detail" Classes.rtl="{Binding L.IsRightToLeft}" Background="{DynamicResource BackgroundMutedBrush}">
+    <StackPanel Spacing="12">
+      <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}"><Run Text="{Binding TypeLabel}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" /><Run Text=" " /><Run Text="{Binding Hint}" /></TextBlock>
+
+      <StackPanel Spacing="8" IsVisible="{Binding IsDocument}">
+        <ItemsControl ItemsSource="{Binding Files}" IsVisible="{Binding HasFiles}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LinkedFileViewModel">
+              <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                <Border Height="30" Padding="10,0" CornerRadius="8" BorderThickness="1" VerticalAlignment="Center"
+                        Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <c:IconGlyph Icon="{Binding Icon}" Size="14" Token="TextSecondary" />
+                    <TextBlock Classes="Small" FlowDirection="LeftToRight" VerticalAlignment="Center" Text="{Binding FileName}" />
+                  </StackPanel>
+                </Border>
+                <Button Name="UnlinkFile" Classes="ghost" MinHeight="30" Padding="8,0" VerticalAlignment="Center" Command="{Binding UnlinkCommand}"
+                        Content="{Binding L[documents.unlink]}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Name="ChooseFile" MinHeight="30" HorizontalAlignment="Left" Command="{Binding PickFilesCommand}" AutomationProperties.Name="{Binding L[v3.chooseFile]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <c:IconGlyph Icon="{x:Static app:Icons.FolderOpen}" Size="14" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.chooseFile]}" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsValue}">
+        <TextBox Name="RequirementValue" MinHeight="34" Text="{Binding Draft, Mode=TwoWay}" PlaceholderText="{Binding L[v3.valuePh]}" />
+        <Button Grid.Column="1" Name="SaveValue" Classes="primary" MinHeight="34" HorizontalAlignment="Left" Content="{Binding L[v3.saveV]}" Command="{Binding SaveValueCommand}" />
+      </Grid>
+
+      <WrapPanel ItemSpacing="8" LineSpacing="6">
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" MinWidth="52" VerticalAlignment="Center" Text="{Binding L[v3.statusL]}" />
+        <ItemsControl Name="RequirementStatusChips" ItemsSource="{Binding Statuses}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel ItemSpacing="4" LineSpacing="4" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RequirementStatusChipViewModel">
+              <Button Classes="chip" Classes.selected="{Binding IsSelected}" Classes.missing="{Binding IsMissing}" Classes.provided="{Binding IsProvided}"
+                      Classes.review="{Binding IsNeedsReview}" Classes.complete="{Binding IsComplete}" Height="26" MinHeight="26" Padding="10,0"
+                      Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" Command="{Binding SelectCommand}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </WrapPanel>
+
+      <Button Name="AddFollowUpTask" Classes="link" IsVisible="{Binding HasNoForm}" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextBrush}"
+              Command="{Binding AddTaskCommand}" AutomationProperties.Name="{Binding L[v3.addTask]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <c:IconGlyph Icon="{x:Static app:Icons.Plus}" Size="14" />
+          <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.addTask]}" />
+        </StackPanel>
+      </Button>
+      <ContentControl Content="{Binding Form}" IsVisible="{Binding HasForm}" />
+    </StackPanel>
+  </Border>
+</UserControl>

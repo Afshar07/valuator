@@ -23,7 +23,7 @@ public sealed class MainWindowTests
         var window = fixture.Window;
         window.Show();
         await UntilAsync(() => Button(window, "All projects").IsEffectivelyEnabled);
-        Assert.Contains(Controls<Control>(window), control => control.Name == "WelcomeScreen" && control.IsVisible);
+        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "WelcomeScreen" && control.IsVisible));
         Click(window, "Start my first project");
         Assert.False(Controls<Button>(window).Single(b => b.Name == "WizardPrimary").IsEnabled);
         Controls<TextBox>(window).Single(box => box.Name == "WizardName").Text = "Synthetic investment";

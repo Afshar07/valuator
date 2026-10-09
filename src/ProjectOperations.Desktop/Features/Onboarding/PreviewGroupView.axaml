@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Onboarding"
+             x:Class="ProjectOperations.Desktop.Features.Onboarding.PreviewGroupView"
+             x:DataType="vm:PreviewGroupViewModel">
+  <Border Classes="rule" Classes.first="{Binding IsFirst}" Padding="14,9">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <StackPanel>
+        <TextBlock Classes="BodyMedium" Text="{Binding Title}" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Items}" />
+      </StackPanel>
+      <TextBlock Grid.Column="1" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding CountText}" />
+    </Grid>
+  </Border>
+</UserControl>

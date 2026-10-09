@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Requirements"
+             x:Class="ProjectOperations.Desktop.Features.Requirements.FollowUpFormView"
+             x:DataType="vm:FollowUpFormViewModel">
+  <Border Padding="12" BorderThickness="1" CornerRadius="10" MaxWidth="560" HorizontalAlignment="Left"
+          Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+    <StackPanel Spacing="10">
+      <TextBox Name="FollowUpTitle" MinWidth="320" MinHeight="34" Background="{DynamicResource BackgroundMutedBrush}"
+               Text="{Binding Title, Mode=TwoWay}" PlaceholderText="{Binding L[v3.taskPh]}" />
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <WrapPanel ItemSpacing="6" LineSpacing="6" VerticalAlignment="Center">
+          <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[proposal.due]}" />
+          <ItemsControl ItemsSource="{Binding Due.Options}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel ItemSpacing="6" LineSpacing="6" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:ChipOptionViewModel">
+                <Button Classes="chip" Classes.selected="{Binding IsSelected}" Height="26" MinHeight="26" Padding="10,0"
+                        Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" Command="{Binding SelectCommand}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </WrapPanel>
+        <Button Grid.Column="2" Classes="ghost" MinHeight="30" HorizontalAlignment="Left" Content="{Binding L[action.cancel]}" Command="{Binding CancelCommand}" />
+        <Button Grid.Column="3" Name="AddFollowUpSubmit" Classes="primary" MinHeight="30" HorizontalAlignment="Left" Content="{Binding L[v3.createTask]}" Command="{Binding CreateCommand}" />
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

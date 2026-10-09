@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Onboarding"
+             x:Class="ProjectOperations.Desktop.Features.Onboarding.WelcomeView"
+             x:DataType="vm:WelcomeViewModel">
+  <Border Name="WelcomeScreen" Background="{DynamicResource BackgroundAppBrush}">
+    <Grid RowDefinitions="Auto,*">
+      <vm:OnboardingTopBar DataContext="{Binding Display}" />
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <Border Padding="24,24,24,64">
+          <StackPanel Spacing="28" MaxWidth="660" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="Title" FontSize="32" LineHeight="38" LetterSpacing="-0.64" Text="{Binding L[v3.welcomeTitle]}" />
+              <TextBlock Classes="Body" FontSize="14.5" MaxWidth="540" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.welcomeSub]}" />
+            </StackPanel>
+            <app:AdaptiveGrid MinItemWidth="260" Gap="12" StretchRows="True">
+              <Button Name="StartOwnProject" Classes="welcome welcomePrimary" Command="{Binding StartOwnCommand}" AutomationProperties.Name="{Binding L[v3.startOwn]}">
+                <StackPanel Spacing="8">
+                  <Border Width="36" Height="36" CornerRadius="10" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}">
+                    <c:IconGlyph Icon="{x:Static app:Icons.Plus}" Weight="Bold" Size="18" Token="OnAccent" />
+                  </Border>
+                  <TextBlock Classes="PanelTitle" Margin="0,6,0,0" Text="{Binding L[v3.startOwn]}" />
+                  <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.startOwnSub]}" />
+                </StackPanel>
+              </Button>
+              <Button Name="StartSample" Classes="welcome" Command="{Binding StartSampleCommand}" AutomationProperties.Name="{Binding L[v3.startSample]}">
+                <StackPanel Spacing="8">
+                  <Border Width="36" Height="36" CornerRadius="10" HorizontalAlignment="Left" Background="{DynamicResource BackgroundTrackBrush}">
+                    <c:IconGlyph Icon="{x:Static app:Icons.Flask}" Size="18" Token="TextSecondary" />
+                  </Border>
+                  <TextBlock Classes="PanelTitle" Margin="0,6,0,0" Text="{Binding L[v3.startSample]}" />
+                  <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.startSampleSub]}" />
+                </StackPanel>
+              </Button>
+            </app:AdaptiveGrid>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <c:IconGlyph Icon="{x:Static app:Icons.HardDrives}" Size="14" Token="TextTertiary" />
+              <TextBlock Classes="Caption" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[v3.noAccount]}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

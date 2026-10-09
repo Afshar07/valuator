@@ -399,6 +399,11 @@ public sealed class TasksFeatureTests
         public Task RefreshProjectAsync() { Refreshes++; return Task.CompletedTask; }
         public Task ReviewInAssistantAsync(string jobId) { Reviewed = jobId; return Task.CompletedTask; }
         public Task RunAsync(Func<Task> action) => action();
+        public void ShowError(string key) { }
+        public void ShowToast(string key) { }
+        public void ToggleAssistant() { }
+        public void OpenAssistant() { }
+        public void SelectTab(ProjectTab tab) { }
     }
 
     private sealed class Dialogs : IDialogService
@@ -419,7 +424,7 @@ public sealed class TasksFeatureTests
         {
             _directory = directory; Projects = projects; Project = project; Locale = locale;
             _strings = new LocalizedStrings(locale, new LocalizationService(locale));
-            Services = new ProjectScreenServices(projects, _strings, Dialogs, Host, Clock);
+            Services = new ProjectScreenServices(projects, _strings, Dialogs, Host, Clock, new PageScenario.FakeNavigator(), new PageScenario.FakePicker(), new UiState());
         }
 
         public ProjectService Projects { get; }

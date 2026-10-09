@@ -198,10 +198,11 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   tokens as dynamic resources, so Light/Dark/Auto switches live (Auto follows the OS).
   Inter (OFL, Latin subset), IRANYekanX and Phosphor icons (MIT) are bundled under
   `Assets/Fonts` with their licenses. English uses Inter; Persian uses IRANYekanX.
-- `MainWindow` owns the shell: sidebar navigation (Needs attention, All projects,
-  Calendar, Documents, Settings), the page host, a modal layer and the assistant
-  panel. Focused views own screen construction and existing editing flows. This split
-  does not change service boundaries. A migration to MVVM is in progress; see
+- `MainWindowViewModel` (`Desktop/Shell`) is the shell: it routes between pages, owns the sidebar
+  (Needs attention, All projects, Calendar, Documents, Settings; `SidebarPolicy` decides what shows), the
+  first-run overlay, the modal layer, the error banner and toast, the run lock and the sample workspace.
+  `MainWindow.axaml` is a thin view over it, plus the system file dialogs and the code-built assistant
+  panel. This split does not change service boundaries. A migration to MVVM is in progress; see
   `.ai/ongoing/mvvm-migration.md`.
 - The assistant is a project-scoped panel docked at the end edge (it overlays the
   content below 1280 px). It keeps one set of request, preview and consent controls per
@@ -224,7 +225,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   Paths, explicit date entries and technical/context previews stay LTR.
 - **Valuator v3 presentation (2026-10-08).** The dashboard lists live projects that still have
   open tasks (most overdue first) beside this week's agenda. Project editing (name, company,
-  owner, stage, status, notes, current state) is a modal dialog (`ProjectDialogs.cs`); tasks and
+  owner, stage, status, notes, current state) is a modal dialog (`Features/ProjectDetail/EditProjectDialog*`); tasks and
   milestones are XAML dialogs with view-models (`Features/Tasks`); the requirements tab is an in-place accordion (open an item to link a
   file or enter a value, set its review status, add a follow-up task). Task due dates are
   whole days: a newly chosen date is stored at 23:59 local time so it only becomes overdue the

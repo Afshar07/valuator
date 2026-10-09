@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Requirements"
+             x:Class="ProjectOperations.Desktop.Features.Requirements.RequirementRowView"
+             x:DataType="vm:RequirementRowViewModel">
+  <Border Classes="rule">
+    <StackPanel>
+      <Button Name="RequirementRow" Classes="row" Classes.selected="{Binding IsOpen}" Padding="16,10" Command="{Binding ToggleCommand}"
+              AutomationProperties.Name="{Binding AccessibleName}">
+        <Grid ColumnDefinitions="20,*,200,112,14" ColumnSpacing="12">
+          <c:IconGlyph Icon="{Binding Icon}" Weight="{Binding Weight}" Token="{Binding Token}" Size="17" />
+          <TextBlock Grid.Column="1" Classes="BodyMedium" VerticalAlignment="Center" Text="{Binding Title}" />
+          <Border Grid.Column="2" IsVisible="{Binding HasFiles}" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="8,3" CornerRadius="6" BorderThickness="1"
+                  Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <c:IconGlyph Icon="{x:Static app:Icons.LinkSimple}" Size="12" Token="TextSecondary" />
+              <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxWidth="150"
+                         FlowDirection="LeftToRight" Text="{Binding FirstFileName}" />
+              <TextBlock Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding HasMoreFiles}" Text="{Binding MoreFilesText}" />
+            </StackPanel>
+          </Border>
+          <TextBlock Grid.Column="2" Classes="BodyStrong" IsVisible="{Binding HasValue}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                     TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding ValueText}" />
+          <c:Pill Grid.Column="3" HorizontalAlignment="Right" Text="{Binding StatusText}" Kind="{Binding StatusKind}" />
+          <c:IconGlyph Grid.Column="4" Icon="{Binding CaretIcon}" Size="14" Token="TextTertiary" />
+        </Grid>
+      </Button>
+      <ContentControl Content="{Binding Detail}" />
+    </StackPanel>
+  </Border>
+</UserControl>

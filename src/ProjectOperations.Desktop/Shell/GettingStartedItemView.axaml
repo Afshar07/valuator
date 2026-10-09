@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:shell="using:ProjectOperations.Desktop.Shell"
+             x:Class="ProjectOperations.Desktop.Shell.GettingStartedItemView"
+             x:DataType="shell:GettingStartedItemViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.step.done">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+      <Setter Property="TextDecorations" Value="Strikethrough" />
+    </Style>
+  </UserControl.Styles>
+  <Button Name="GettingStartedItem" Classes="row" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="4,5" MinHeight="0" BorderThickness="0"
+          CornerRadius="6" IsHitTestVisible="{Binding CanGo}" Command="{Binding GoCommand}" AutomationProperties.Name="{Binding Title}">
+    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+      <c:IconGlyph Icon="{Binding Icon}" Weight="{Binding Weight}" Token="{Binding IconToken}" Size="15" />
+      <TextBlock Grid.Column="1" Classes="Caption step" Classes.done="{Binding IsDone}" VerticalAlignment="Center" Text="{Binding Title}" />
+      <TextBlock Grid.Column="2" Classes="Micro" FontWeight="Normal" VerticalAlignment="Center" IsVisible="{Binding IsOptional}"
+                 Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[v3.optional]}" />
+    </Grid>
+  </Button>
+</UserControl>
