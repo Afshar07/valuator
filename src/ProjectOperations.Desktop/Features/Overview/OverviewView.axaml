@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Overview"
+             x:Class="ProjectOperations.Desktop.Features.Overview.OverviewView"
+             x:DataType="vm:OverviewViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.fact">
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+      <Setter Property="Padding" Value="0,8" />
+    </Style>
+    <Style Selector="TextBlock.value">
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="TextAlignment" Value="End" />
+    </Style>
+    <Style Selector="TextBlock.value.late">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+    <Style Selector="TextBlock.Meta.state">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="TextBlock.Meta.state.missing">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+    <Style Selector="TextBlock.note.empty">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <app:AdaptiveGrid MinItemWidth="300">
+    <Border Name="CurrentStateCard" Classes="card" Padding="16,14">
+      <StackPanel>
+        <Grid MinHeight="26" Margin="0,0,0,8">
+          <TextBlock Classes="Heading" VerticalAlignment="Center" Text="{Binding L[overview.currentState]}" />
+        </Grid>
+        <Border Classes="fact">
+          <Grid Name="OverviewStage" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[project.stage]}" />
+            <c:StagePill Grid.Column="1" Stage="{Binding Stage}" HorizontalAlignment="Right" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[presentation.nextMilestone]}" />
+            <TextBlock Grid.Column="1" Classes="BodyStrong value" Text="{Binding NextMilestoneText}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[project.column.readiness]}" />
+            <TextBlock Grid.Column="1" Classes="BodyStrong value" Text="{Binding ReadinessText}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[presentation.stat.overdue]}" />
+            <TextBlock Grid.Column="1" Classes="BodyStrong value" Classes.late="{Binding HasOverdue}" Text="{Binding OverdueText}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[presentation.openQuestions]}" />
+            <TextBlock Grid.Column="1" Classes="BodyStrong value" Text="{Binding OpenQuestionsCount}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[presentation.followUps]}" />
+            <TextBlock Grid.Column="1" Classes="BodyStrong value" Text="{Binding FollowUpsCount}" />
+          </Grid>
+        </Border>
+        <Border Classes="rule" Padding="0,12,0,4" IsVisible="{Binding HasSummary}">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[overview.summary]}" />
+            <TextBlock Classes="Body" Text="{Binding SummaryText}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="rule" Padding="0,12,0,4">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[field.notes]}" />
+            <TextBlock Classes="Body note" Classes.empty="{Binding !HasNotes}" Text="{Binding NotesText}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+
+    <Border Name="MissingCard" Classes="card" Padding="16,14">
+      <StackPanel>
+        <Grid ColumnDefinitions="*,Auto" MinHeight="26" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Classes="Heading" VerticalAlignment="Center" Text="{Binding L[overview.missing]}" />
+            <TextBlock Classes="MetaMedium" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding MissingCount}" />
+          </StackPanel>
+        </Grid>
+        <TextBlock Classes="Body" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding HasNoMissing}" Text="{Binding L[overview.noMissing]}" />
+        <ItemsControl ItemsSource="{Binding MissingItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MissingItemViewModel">
+              <Border Classes="rule" Padding="0,7">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <c:IconGlyph Icon="{Binding Icon}" Weight="{Binding Weight}" Token="{Binding Token}" Size="16" />
+                  <TextBlock Grid.Column="1" Classes="Body" VerticalAlignment="Center" Text="{Binding Title}" />
+                  <TextBlock Grid.Column="2" Classes="Meta state" Classes.missing="{Binding IsMissing}" VerticalAlignment="Center" TextWrapping="NoWrap" Text="{Binding StatusText}" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+    <ContentControl Content="{Binding OpenQuestions}" />
+    <ContentControl Content="{Binding FollowUps}" />
+  </app:AdaptiveGrid>
+</UserControl>

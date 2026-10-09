@@ -8,7 +8,7 @@ using Xunit;
 namespace ProjectOperations.Desktop.Tests;
 
 /// <summary>
-/// Clicks that wait for the target to exist and be enabled. Navigation and button handlers finish asynchronously,
+/// Clicks that wait for the target to exist, be shown and be enabled (a view-model may hide a control that stays in the logical tree). Navigation and button handlers finish asynchronously,
 /// so on a slow machine the next control may not be there yet when a test reaches for it.
 /// </summary>
 internal static class UiWait
@@ -26,7 +26,7 @@ internal static class UiWait
     {
         Button? Find()
         {
-            var matches = window.GetLogicalDescendants().OfType<Button>().Distinct().Where(match).Where(button => button.IsEffectivelyEnabled);
+            var matches = window.GetLogicalDescendants().OfType<Button>().Distinct().Where(match).Where(button => IsShown(button) && button.IsEffectivelyEnabled);
             return last ? matches.LastOrDefault() : matches.FirstOrDefault();
         }
         Pump(() => Find() is not null);
@@ -34,6 +34,12 @@ internal static class UiWait
         Assert.True(button is not null, $"No enabled button {description} appeared within {Limit.TotalSeconds:0} seconds.");
         Click(button!);
     }
+
+    /// <summary>
+    /// A control is shown when it and every logical ancestor are visible. <c>IsEffectivelyVisible</c> alone is not enough: content a tab
+    /// showed earlier stays in the logical tree after the tab is left, detached from the visual tree, so its hidden parts still report visible.
+    /// </summary>
+    public static bool IsShown(Control control) => control.IsEffectivelyVisible && control.GetLogicalAncestors().OfType<Control>().All(ancestor => ancestor.IsVisible);
 
     public static void Click(Button button)
     {

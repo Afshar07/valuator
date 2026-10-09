@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using ProjectOperations.Desktop.Features.Calendar;
 using ProjectOperations.Desktop.Features.Dashboard;
 using ProjectOperations.Desktop.Features.Documents;
+using ProjectOperations.Desktop.Features.ProjectDetail;
 using ProjectOperations.Desktop.Features.Projects;
 using ProjectOperations.Desktop.Features.Settings;
 using ProjectOperations.Desktop.Localization;
@@ -22,7 +23,7 @@ using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileLauncher
+public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileLauncher, IFilePicker
 {
     /// <summary>Below this window width the assistant panel slides over the content instead of docking beside it.</summary>
     private const double DockedPanelMinWidth = 1280;
@@ -42,7 +43,8 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
     private readonly AssistantPanel _assistant;
     private readonly Grid _shell;
     private readonly DialogHost _dialogs = new();
-    private TabControl? _projectTabs;
+    /// <summary>The open project's view-model, so the run lock can disable its tabs.</summary>
+    private ProjectDetailViewModel? _projectModel;
     /// <summary>The shown page's view-model when it holds something to release (a pending sign-in, an event subscription); disposed when the page is replaced.</summary>
     private IDisposable? _pageModel;
     private bool _closing;
@@ -72,7 +74,7 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
         _runLock = new AgentRunLock(_messages);
         _navigator = new Navigator(ShowRouteAsync);
         _workspace = new WorkspaceSession(projects, agents, environment ?? new DesktopEnvironment(), calendar ?? new NoExternalCalendar());
-        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()), _dialogs, this, this, this, _navigator);
+        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()), _dialogs, this, this, this, this, _navigator);
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         _locale.Changed += LocaleChanged;
@@ -135,8 +137,7 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
     private void ApplyLock(bool locked)
     {
         SetNavigationEnabled(!locked); _page.IsEnabled = !locked;
-        if (_projectTabs is not null)
-            foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = !locked;
+        if (_projectModel is not null) _projectModel.IsLocked = locked;
     }
     private void LocaleChanged(object? sender, EventArgs e) => ApplyLocalePresentation();
     private void AppearanceChanged(object? sender, EventArgs e)
@@ -200,7 +201,7 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
     private async Task ShowPageAsync(PageRoute route)
     {
         var page = route.Page;
-        _projectTabs = null; _navigation.Select(page);
+        _projectModel = null; _navigation.Select(page);
         _fresh.Remove(page); _navigation.SetNew(page, false);
         var services = _context.Page;
         CalendarViewModel? calendar = null;
@@ -226,9 +227,9 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
         var project = await _projects.GetAsync(route.ProjectId);
         if (project is null) { ShowError("validation.projectUnavailable"); return false; }
         _navigation.Select(AppPage.Projects);
-        var view = new ProjectDetailView(_context, project); await view.LoadAsync(route.Tab);
-        view.Tabs.SelectionChanged += (_, _) => { if (view.Tabs.SelectedIndex >= 0) _navigator.SelectTab((ProjectTab)view.Tabs.SelectedIndex); };
-        _projectTabs = view.Tabs; Show(view);
+        var model = await ProjectDetailViewModel.LoadAsync(project, route.Tab, _context.ProjectScreen, _workspace.Agents, jobs => new DelegationTabViewModel(_context, project, jobs));
+        model.IsLocked = _runLock.IsLocked;
+        _projectModel = model; Show(new ContentControl { Content = model });
         await _assistant.ShowProjectAsync(project);
         if (route.Tab == ProjectTab.Delegate) SetAssistantOpen(true);
         await RefreshAttentionAsync();
@@ -317,6 +318,14 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
     }
 
     public void ShowToast(string key) => _messages.ShowToast(key);
+    void IProjectHost.OpenAssistant() => SetAssistantOpen(true);
+    void IProjectHost.SelectTab(ProjectTab tab) => _navigator.SelectTab(tab);
+
+    async Task<IReadOnlyList<PickedFile>> IFilePicker.PickAsync(string title)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = true });
+        return files.Select(file => new PickedFile(file.Name, file.TryGetLocalPath())).ToList();
+    }
 
     public void ShowWelcome() => ShowOverlay(new WelcomeScreen(_context));
     public void ShowWizard(bool fromWelcome) => ShowOverlay(new WizardScreen(_context, fromWelcome));

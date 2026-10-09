@@ -68,7 +68,7 @@ internal sealed class UiState
 internal sealed class PresentationContext(
     WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
     LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates,
-    IDialogService dialogs, IProjectHost projectHost, IPageHost pageHost, IFileLauncher files, INavigator navigator)
+    IDialogService dialogs, IProjectHost projectHost, IPageHost pageHost, IFileLauncher files, IFilePicker picker, INavigator navigator)
 {
     public UpdateController Updates { get; } = updates;
     public WorkspaceSession Workspace { get; } = workspace;
@@ -85,7 +85,7 @@ internal sealed class PresentationContext(
     public IDialogService Dialogs { get; } = dialogs;
     public TimeProvider Clock { get; } = TimeProvider.System;
     /// <summary>The services handed to view-models of the open project's screens (they follow the sample workspace).</summary>
-    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, projectHost, Clock);
+    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, projectHost, Clock, navigator, picker, State);
     /// <summary>The services handed to view-models of the top-level pages. They follow the sample workspace, including its (absent) external calendar.</summary>
     public PageServices Page => new(Projects, Strings, Dialogs, navigator, pageHost, files, Calendar, Clock);
     /// <summary>The services handed to the Settings page: the page services plus the preferences, runtime facts and updater only it shows.</summary>

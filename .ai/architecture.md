@@ -224,7 +224,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   Paths, explicit date entries and technical/context previews stay LTR.
 - **Valuator v3 presentation (2026-10-08).** The dashboard lists live projects that still have
   open tasks (most overdue first) beside this week's agenda. Project editing (name, company,
-  owner, stage, status, notes, current state) is a modal dialog (`ProjectDialogs.cs`); tasks and
+  owner, stage, status, notes, current state) is a modal dialog (`Features/ProjectDetail/EditProjectDialog*`); tasks and
   milestones are XAML dialogs with view-models (`Features/Tasks`); the requirements tab is an in-place accordion (open an item to link a
   file or enter a value, set its review status, add a follow-up task). Task due dates are
   whole days: a newly chosen date is stored at 23:59 local time so it only becomes overdue the

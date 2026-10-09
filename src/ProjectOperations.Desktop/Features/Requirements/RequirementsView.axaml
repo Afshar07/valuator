@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Requirements"
+             x:Class="ProjectOperations.Desktop.Features.Requirements.RequirementsView"
+             x:DataType="vm:RequirementsViewModel">
+  <StackPanel Spacing="16">
+    <!-- How the checklist works; dismissed for good with "Got it". -->
+    <Border Name="ChecklistTip" IsVisible="{Binding IsTipVisible}" BorderThickness="1" CornerRadius="10" Padding="14,12"
+            Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <c:IconGlyph Icon="{x:Static app:Icons.Lightbulb}" Size="18" Token="Accent" VerticalAlignment="Top" Margin="0,1,0,0" />
+        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Classes="BodyStrong" Text="{Binding L[v3.howTitle]}" />
+          <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.howBody]}" />
+        </StackPanel>
+        <Button Grid.Column="2" MinHeight="28" VerticalAlignment="Top" HorizontalAlignment="Left" Content="{Binding L[v3.gotIt]}" Command="{Binding DismissTipCommand}" />
+      </Grid>
+    </Border>
+
+    <!-- The first item still missing; once nothing is missing, a note to review and verify. -->
+    <Border IsVisible="{Binding HasNextUp}" BorderThickness="1" CornerRadius="12" Padding="16,14"
+            Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentBrush}">
+      <Grid Name="NextUpCard" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="2" VerticalAlignment="Center">
+          <TextBlock Classes="Micro" FontWeight="SemiBold" LetterSpacing="0.44" Foreground="{DynamicResource AccentTextBrush}" Text="{Binding L[v3.nextUp]}" />
+          <TextBlock Classes="Heading" Text="{Binding NextUpTitle}" />
+          <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding NextUpHint}" />
+        </StackPanel>
+        <Button Grid.Column="1" Name="NextUpOpen" Classes="primary" MinHeight="32" HorizontalAlignment="Left" Content="{Binding L[v3.openItem]}" Command="{Binding OpenNextUpCommand}" />
+      </Grid>
+    </Border>
+    <Border IsVisible="{Binding !HasNextUp}" Padding="14,12" CornerRadius="10" Background="{DynamicResource SuccessSoftBrush}">
+      <Grid Name="AllTouchedBanner" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <c:IconGlyph Icon="{x:Static app:Icons.CheckCircle}" Weight="Fill" Size="16" Token="Success" />
+        <TextBlock Grid.Column="1" Classes="Small" Text="{Binding L[v3.allTouched]}" />
+      </Grid>
+    </Border>
+
+    <ItemsControl ItemsSource="{Binding Groups}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="16" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+    </ItemsControl>
+
+    <!-- Blank projects have no template, so requirements are added here. -->
+    <StackPanel IsVisible="{Binding IsBlank}">
+      <Button Name="AddRequirement" Classes="link" IsVisible="{Binding IsNotAdding}" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextBrush}"
+              Command="{Binding StartAddingCommand}" AutomationProperties.Name="{Binding L[v3.addRequirement]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <c:IconGlyph Icon="{x:Static app:Icons.Plus}" Size="14" />
+          <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.addRequirement]}" />
+        </StackPanel>
+      </Button>
+      <Grid IsVisible="{Binding IsAdding}" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" MaxWidth="560" HorizontalAlignment="Left">
+        <TextBox Name="NewRequirementTitle" MinWidth="320" MinHeight="36" Text="{Binding NewRequirementTitle, Mode=TwoWay}" PlaceholderText="{Binding L[v3.requirementPh]}" />
+        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Left" Content="{Binding L[action.cancel]}" Command="{Binding CancelAddingCommand}" />
+        <Button Grid.Column="2" Name="AddRequirementSubmit" Classes="primary" HorizontalAlignment="Left" Content="{Binding L[v3.addRequirement]}" Command="{Binding AddRequirementCommand}" />
+      </Grid>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

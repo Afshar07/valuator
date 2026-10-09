@@ -37,7 +37,7 @@ State: `todo` → `in progress` → `done`.
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | done |
 | 3a | Projects list, Dashboard, Calendar, Documents | done |
 | 3b | Settings, stage editor, update panel, Google Calendar panel | done |
-| 3c | Project detail, Overview, Requirements, remaining project dialogs | todo |
+| 3c | Project detail, Overview, Requirements, remaining project dialogs | done |
 | 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | todo |
 | 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | todo |
 | 6 | Cleanup: replace `Components.cs` with styles and controls; update `architecture.md` and `testing.md`; delete this file and its index entry | todo |
@@ -116,3 +116,25 @@ State: `todo` → `in progress` → `done`.
     Update/Google UI tests now treat a hidden control as absent (`IsEffectivelyVisible`) and read a command-disabled button with `IsEffectivelyEnabled`.
   - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Settings (English light, English dark at 800, Persian dark) and the Google-connected, update-offered and
     download-in-progress states in English light and Persian dark are pixel-identical. Not checked on Windows.
+- Project detail (3c), `Desktop/Features/{ProjectDetail,Overview,Requirements}/`; copy this for the assistant (phase 5):
+  - Seam: `ProjectScreenServices` now also holds `INavigator`, `IFilePicker` (`PickAsync(title)` returns `PickedFile(Name, LocalPath?)`; `MainWindow` implements it over the storage provider) and `UiState`.
+    `IProjectHost` gained `ShowError`, `ShowToast`, `ToggleAssistant`, `OpenAssistant` and `SelectTab` (records the picked tab so a reload returns to it).
+  - `ProjectDetailViewModel` (`LoadAsync(project, tab, services, agents, delegation)`) owns the header and four tab view-models; `ProjectDetailView.axaml` is a `TabControl` whose
+    `SelectedIndex` is two-way bound (choosing Delegate calls `OpenAssistant`). The run lock reaches the tabs through `IsLocked` (`MainWindow.ApplyLock` sets it); the header's two
+    responsive tricks (title ellipsis width, readiness dropping below when narrow) stay in `ProjectDetailView.axaml.cs`.
+  - The Delegate tab is still code-built: `DelegationTabViewModel`/`DelegationTabView` carry `PresentationContext` and host `DelegationView`. Phase 5 deletes both.
+  - `EditProjectDialogViewModel`: blank name sets `ShowNameError` (cleared on the next edit) and saves nothing; save is under `Host.RunAsync` and ends with `RefreshProjectAsync`.
+  - Overview: `OverviewViewModel` (facts, `MissingItemViewModel` rows) plus two `StateListViewModel` cards (add line is `IsAdding`, `NewText`, `Save`/`Cancel`).
+  - Requirements: `RequirementsViewModel` → `RequirementGroupViewModel` → `RequirementRowViewModel` → `RequirementDetailViewModel` (editor: value draft, linked files, status chips
+    `RequirementStatusChipViewModel`, `FollowUpFormViewModel`). Expanded groups, the open item, the dismissed tip and a pending follow-up still live in `UiState` (until phase 4), so a
+    reload restores them. Opening an item builds its editor from scratch and closing drops it, which is what discarded typed drafts before. Language switches keep the draft (it is a property).
+  - Hidden-but-present: the add lines and the value/document branches use `IsVisible`, so they stay in the logical tree. A tab the user visited also stays in the logical tree after leaving it,
+    detached from the visual tree. `UiWait.Click` therefore skips a button unless it and every logical ancestor are visible (`UiWait.IsShown`).
+  - Behaviour changes: choosing the status that is already selected no longer re-saves (it used to refresh `LastReviewedAt`); the add-line input now takes focus visibly; the follow-up chips are
+    `ChipOptionViewModel`s styled to the old 26 px height.
+  - Tests: `Mvvm/{ProjectDetail,Overview,Requirements}FeatureTests` over `Mvvm/ProjectScenario` (a `PageScenario` plus `FakeProjectHost`, `FakePicker` and a fresh `UiState`);
+    `ProjectScreensUiTests` for the XAML wiring (edit dialog, focus, RTL indent, follow-up, add requirement). Existing window tests keep passing unchanged.
+  - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Overview, Requirements, Tasks, Delegate and the dashboard (English/Persian, 800 and
+    1440 wide) differ by at most 5/255 in shadow pixels; the edit dialog, its error, the open document row, the follow-up form and the add line match, except the dialog title sits 4 px lower
+    (the `DialogChrome` header is 4 px taller than the old frame; not compared against the task dialogs). Not checked on Windows or in dark theme.
+
