@@ -12,7 +12,7 @@ Primary project in this workspace.
 - C#/.NET and Avalonia UI are the chosen MVP stack. SQLite owns structured application state; files and LLM output are not the sole source of project truth.
 - OpenCode is the first runtime implementation behind `IAgentRuntime`. UI and product concepts must not depend on OpenCode-specific APIs or session terminology.
 - Keep projects, documents, tasks, milestones/events, project state, and agent jobs explicit. Dashboard views must be queryable without an LLM call for every view.
-- Scheduling is first-class; start with internal dates, meetings, deadlines, expected responses, reporting dates, and recurring reviews, not external calendar integration.
+- Scheduling is first-class; start with internal dates, meetings, deadlines, expected responses, reporting dates, and recurring reviews. The only external calendar support is the opt-in, read-only Google Calendar overlay (see `.ai/architecture.md`); external events never become project data or agent context.
 - Preserve visible autonomy, project-oriented activity, optional technical details, and trustworthy Stop/cancellation. Agent-generated tasks are proposals requiring user approval before commitment.
 - Start with one .NET desktop application. Add a separate daemon only if a concrete technical need appears; do not prematurely generalize runtimes or workflows.
 - Scope validation to investment/portfolio project operations. Broader generic use cases are not MVP requirements.

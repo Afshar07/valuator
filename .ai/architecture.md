@@ -76,7 +76,7 @@ Examples: Reading pitch deck, Reviewing financial plan, Comparing board informat
 
 SQLite stores application-owned structured state: projects, project documents/metadata, tasks, milestones/events, project state, agent jobs, results/history, and settings. Filesystem content and LLM output are not the only source of truth.
 
-Attention dashboards, project overviews, and internal upcoming-work views query persisted state and derived workload/date information without an LLM call for every view. Scheduling is first-class but external calendars are outside MVP scope.
+Attention dashboards, project overviews, and internal upcoming-work views query persisted state and derived workload/date information without an LLM call for every view. Scheduling is first-class and internal. The only external calendar support is the opt-in Google Calendar overlay described under *Optional Google Calendar overlay*; no other external calendar is in scope.
 
 The first-MVP choices below resolve its schema, data-access, migration, file-reference
 and date rules. Retention controls, backup/recovery, recurrence and richer urgency
@@ -128,6 +128,34 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
   (each preference rewrites only its own key, atomically). There is no
   accounts/settings platform. Backup, encryption and transcript-retention controls
   are not implemented.
+
+## Optional Google Calendar overlay
+
+Opt-in and read-only. A user who never connects sees exactly the internal Calendar described above.
+
+- **Contract:** `IExternalCalendarSource` (Core, `Calendar/ExternalCalendar.cs`). The default `NoExternalCalendar` is not
+  available, never connected, makes no requests and returns no events. `PresentationContext.Calendar` holds the active source.
+- **Google implementation:** `GoogleCalendarSource` (Infrastructure). Desktop OAuth with PKCE and a loopback redirect, scope
+  `calendar.readonly` only, primary calendar only, `events.list` with `fields=id,status,summary,start,end`. Setup and limits:
+  `docs/google-calendar.md`.
+- **Availability:** offered only when `PROJECTOPS_GOOGLE_CLIENT_ID` is set (and `PROJECTOPS_GOOGLE_CLIENT_SECRET` if Google issued
+  one; it is configuration, not a protection) and secure token storage exists. `App.cs` otherwise composes `NoExternalCalendar`,
+  and Settings shows no Google card.
+- **Credential:** only the refresh token is stored, via `ITokenStore`; `DpapiTokenStore` (Windows, current user) writes
+  `google-calendar.token` in the data directory. Other platforms get no Google option rather than plain-text storage. Tokens never
+  go to SQLite or `settings.json`.
+- **Display only:** events are fetched for the visible month grid after the page is shown, held in memory by `CalendarView`, and
+  drawn as non-clickable bordered chips distinct from tasks, milestones and overdue work. They are never persisted, never part of a
+  `Project`, and **never part of an agent context snapshot, prompt or proposal**. `ExternalCalendarBoundaryTests` fails if any
+  agent, domain, application or runtime type gains a dependency on the external calendar types.
+- **Sample workspace:** `StartSampleAsync` swaps in `NoExternalCalendar` and restores the real source on exit, so the sample never
+  reads the user's account.
+- **Failure behavior:** a revoked or expired sign-in clears the stored token and shows a notice with a pointer to Settings; a
+  network failure shows a notice. Project dates always render regardless. The sidebar offers Calendar when something is dated or
+  Google is connected.
+- **Sign-in UI:** `GoogleCalendarPanel` (Settings). Connect waits for the browser up to five minutes and deliberately does not use
+  the shell's page lock, so Cancel and navigation stay available. Disconnect revokes with Google on a best-effort basis and always
+  clears the local token.
 
 ## Desktop localization
 

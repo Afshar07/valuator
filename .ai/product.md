@@ -63,7 +63,7 @@ Wed — Orbit IC preparation
 Thu — Atlas board review
 ```
 
-External calendar integration is not required for the MVP.
+External calendar integration is not required for the MVP. The one exception is an opt-in, read-only Google Calendar overlay in Calendar; it is off until the user connects and changes nothing for users who do not.
 
 ### Delegate useful work
 

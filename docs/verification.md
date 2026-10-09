@@ -142,3 +142,14 @@ reloading screens; Auto follows the operating system. Restart and confirm the th
 restored while the language preference in the same `settings.json` is unchanged. Check
 AI surfaces (assistant panel, proposal tray, pending-proposal banner) stay violet and
 visually distinct from committed tasks in both themes and both directions.
+
+## Google Calendar overlay
+
+`GoogleCalendarSourceTests` runs the OAuth flow (PKCE, loopback redirect, state check, cancellation, revoked tokens, paging,
+all-day and cancelled events) against a fake HTTP handler and a real loopback listener; no request leaves the machine.
+`GoogleCalendarUiTests` drives the real window with a fake source: default installs show nothing, connect/disconnect, Cancel
+during sign-in, failure notices that keep project dates, and the sample workspace never reading the source.
+`ExternalCalendarBoundaryTests` fails if agent, domain, application or runtime types depend on external calendar types.
+
+Not verified here: a real Google sign-in and Windows DPAPI storage. Both need a Google OAuth client and a Windows machine; follow
+`docs/google-calendar.md` and connect once manually before relying on it.

@@ -251,5 +251,20 @@
   "updates.checkFailed": "Couldn't check for updates. Check your connection and try again.",
   "updates.downloadFailed": "Couldn't download or verify the update. Try downloading again.",
   "updates.restartFailed": "Couldn't start the updater. Try again or download the installer from GitHub Releases.",
-  "updates.agentRunning": "Stop the running assistant job before restarting to install an update."
+  "updates.agentRunning": "Stop the running assistant job before restarting to install an update.",
+  "calendar.legend.google": "Google Calendar",
+  "google.title": "Google Calendar",
+  "google.note": "Optional. Shows your Google Calendar events next to project dates in Calendar, read-only. Events stay on this computer and are never sent to the assistant.",
+  "google.stateOff": "Not connected",
+  "google.stateOn": "Connected",
+  "google.connect": "Connect Google Calendar",
+  "google.disconnect": "Disconnect",
+  "google.connecting": "Finish signing in, in your browser…",
+  "google.cancel": "Cancel",
+  "google.connectFailed": "Couldn't connect to Google Calendar. Check your connection and try again.",
+  "google.connectDenied": "Google Calendar wasn't connected. Access was declined or the sign-in wasn't completed.",
+  "google.reauth": "Google Calendar needs to be connected again. Use Settings → Google Calendar.",
+  "google.loadFailed": "Couldn't load Google Calendar events. Showing project dates only.",
+  "google.allDay": "All day",
+  "google.untitled": "(No title)"
 }

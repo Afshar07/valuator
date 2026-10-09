@@ -5,22 +5,33 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Application;
+using ProjectOperations.Core.Calendar;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
 
 namespace ProjectOperations.Desktop;
 
-/// <summary>Internal month calendar of open tasks and milestones across live projects. No external calendar integration.</summary>
+/// <summary>
+/// Month calendar of open tasks and milestones across live projects. When the user has opted in and connected Google Calendar,
+/// their events are overlaid read-only (display only: never stored, never given to the assistant).
+/// </summary>
 internal sealed class CalendarView : PresentationView
 {
     private const int EventsPerDay = 3;
     private IReadOnlyList<Project> _all = [];
     private DateTime _month;
     private readonly ContentControl _grid = new() { Name = "CalendarGrid" };
+    private IReadOnlyList<ExternalCalendarEvent> _external = [];
+    private string? _noticeKey;
+    private readonly TextBlock _notice;
+    private readonly StackPanel _googleLegend = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false, Name = "CalendarGoogleLegend" };
+    private int _fetch;
+    private bool _started;
 
     public CalendarView(PresentationContext context) : base(context)
     {
         _month = MonthStart(DateTime.Today);
+        _notice = Label(() => _noticeKey is null ? "" : T(_noticeKey), "Caption", "TextSecondary"); _notice.Name = "CalendarNotice"; _notice.IsVisible = false;
     }
 
     public async Task LoadAsync()
@@ -34,7 +45,7 @@ internal sealed class CalendarView : PresentationView
         Bind(next, control => ((TextBlock)control.Content!).Text = _locale.LanguageCode == "fa" ? Icons.CaretLeft : Icons.CaretRight);
         var pager = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         pager.Children.Add(previous); pager.Children.Add(title); pager.Children.Add(next);
-        var today = Action("calendar.today", () => { _month = MonthStart(DateTime.Today); title.Text = Context.MonthYear(_month); Render(); return Task.CompletedTask; });
+        var today = Action("calendar.today", () => { _month = MonthStart(DateTime.Today); title.Text = Context.MonthYear(_month); Render(); _ = RefreshExternalAsync(); return Task.CompletedTask; });
         today.MinHeight = 30;
         Children.Add(PageHeader("presentation.navigationCalendar", null, pager, today));
 
@@ -45,14 +56,76 @@ internal sealed class CalendarView : PresentationView
             item.Children.Add(Ui.Dot(8, color, square)); var label = Label(key, "Caption", "TextSecondary"); label.VerticalAlignment = VerticalAlignment.Center; item.Children.Add(label);
             legend.Children.Add(item);
         }
+        var google = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        google.Children.Add(Ui.Dot(8, "TextSecondary")); var googleLabel = Label("calendar.legend.google", "Caption", "TextSecondary"); googleLabel.VerticalAlignment = VerticalAlignment.Center; google.Children.Add(googleLabel);
+        _googleLegend.Children.Add(google);
+        legend.Children.Add(_googleLegend);
         Children.Add(legend);
+        Children.Add(_notice);
         Children.Add(_grid);
-        Bind(_grid, _ => Render());
+        Bind(_grid, grid =>
+        {
+            Render();
+            // A language switch can move the visible range (Jalali months), so fetch it again.
+            if (_started) _ = RefreshExternalAsync();
+        });
+        _started = true;
+        // Opt-in overlay: loads after the page is shown, and only does anything when Google Calendar is connected.
+        _ = RefreshExternalAsync();
+    }
+
+    /// <summary>Fetches the visible range from the external calendar. Never throws: failures show a notice and leave project dates untouched.</summary>
+    private async Task RefreshExternalAsync()
+    {
+        var ticket = ++_fetch;
+        IReadOnlyList<ExternalCalendarEvent> events = [];
+        string? notice = null;
+        var connected = false;
+        try
+        {
+            connected = await Context.Calendar.IsConnectedAsync();
+            if (connected)
+            {
+                var (from, to) = GridRange(CurrentMonth());
+                events = await Context.Calendar.ListEventsAsync(from, to);
+            }
+        }
+        catch (ExternalCalendarAuthorizationException) { connected = false; notice = "google.reauth"; }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or TaskCanceledException or System.Text.Json.JsonException) { notice = "google.loadFailed"; }
+        if (ticket != _fetch) return; // a newer month was requested meanwhile
+        _external = events; _noticeKey = notice; _googleLegend.IsVisible = connected;
+        _notice.IsVisible = notice is not null; _notice.Text = notice is null ? "" : T(notice);
+        Render();
+        if (notice == "google.reauth") await Context.Shell.RefreshShellAsync();
+    }
+
+    /// <summary>The Monday/Saturday-aligned span of weeks the grid shows for <paramref name="month"/>.</summary>
+    private (DateTimeOffset From, DateTimeOffset To) GridRange(DateTime month)
+    {
+        var (start, weeks) = GridShape(month);
+        var from = new DateTimeOffset(start, TimeZoneInfo.Local.GetUtcOffset(start));
+        return (from, from.AddDays(weeks * 7));
+    }
+
+    private (DateTime Start, int Weeks) GridShape(DateTime month)
+    {
+        var firstDay = _locale.LanguageCode == "fa" ? DayOfWeek.Saturday : DayOfWeek.Monday;
+        var lead = ((int)month.DayOfWeek - (int)firstDay + 7) % 7;
+        var weeks = (int)Math.Ceiling((lead + (Jalali ? JalaliDate.DaysInMonth(month) : DateTime.DaysInMonth(month.Year, month.Month))) / 7.0);
+        return (month.AddDays(-lead), weeks);
+    }
+
+    /// <summary>Timed events appear on their start day; all-day events on every day they cover (Google's end date is exclusive).</summary>
+    private static bool OnDay(ExternalCalendarEvent item, DateTime date)
+    {
+        if (!item.IsAllDay) return item.Start.ToLocalTime().Date == date;
+        var first = item.Start.DateTime.Date; var after = item.End.DateTime.Date;
+        return date >= first && date < (after > first ? after : first.AddDays(1));
     }
 
     private Task Shift(int months, TextBlock title)
     {
-        _month = AddMonths(CurrentMonth(), months); title.Text = Context.MonthYear(_month); Render(); return Task.CompletedTask;
+        _month = AddMonths(CurrentMonth(), months); title.Text = Context.MonthYear(_month); Render(); _ = RefreshExternalAsync(); return Task.CompletedTask;
     }
 
     private bool Jalali => _locale.LanguageCode == "fa";
@@ -69,9 +142,7 @@ internal sealed class CalendarView : PresentationView
     {
         var month = CurrentMonth();
         var firstDay = _locale.LanguageCode == "fa" ? DayOfWeek.Saturday : DayOfWeek.Monday;
-        var lead = ((int)month.DayOfWeek - (int)firstDay + 7) % 7;
-        var start = month.AddDays(-lead);
-        var weeks = (int)Math.Ceiling((lead + (Jalali ? JalaliDate.DaysInMonth(month) : DateTime.DaysInMonth(month.Year, month.Month))) / 7.0);
+        var (start, weeks) = GridShape(month);
         var startInstant = new DateTimeOffset(start, TimeZoneInfo.Local.GetUtcOffset(start));
         var items = ProjectSummaries.Schedule(_all, startInstant, startInstant.AddDays(weeks * 7), DateTimeOffset.Now);
 
@@ -102,8 +173,11 @@ internal sealed class CalendarView : PresentationView
             if (isToday) badge.Paint(Border.BackgroundProperty, "Accent");
             cell.Children.Add(badge);
             var entries = inMonth ? items.Where(item => item.DueAt.ToLocalTime().Date == date).ToList() : [];
+            var outside = inMonth ? _external.Where(item => OnDay(item, date)).ToList() : [];
             foreach (var entry in entries.Take(EventsPerDay)) cell.Children.Add(Event(entry));
-            if (entries.Count > EventsPerDay) cell.Children.Add(Label(() => F("calendar.more", entries.Count - EventsPerDay), "Micro", "TextTertiary"));
+            foreach (var entry in outside.Take(Math.Max(0, EventsPerDay - entries.Count))) cell.Children.Add(ExternalEvent(entry));
+            var overflow = entries.Count + outside.Count - EventsPerDay;
+            if (overflow > 0) cell.Children.Add(Label(() => F("calendar.more", overflow), "Micro", "TextTertiary"));
             var border = new Border { MinHeight = 96, Padding = new Thickness(6, 6, 6, 8), BorderThickness = new Thickness(index % 7 == 0 ? 0 : 1, index < 7 ? 0 : 1, 0, 0), Child = cell, Name = isToday ? "CalendarToday" : null }
                 .Paint(Border.BorderBrushProperty, "BorderSubtle").Paint(Border.BackgroundProperty, inMonth ? "BackgroundCard" : "BackgroundMuted");
             Grid.SetColumn(border, index % 7); Grid.SetRow(border, index / 7); days.Children.Add(border);
@@ -133,5 +207,22 @@ internal sealed class CalendarView : PresentationView
         Bind(button, control => { AutomationProperties.SetName(control, $"{item.Title} · {item.ProjectName} · {Due(item.DueAt)}"); ToolTip.SetTip(control, $"{item.Title} · {item.ProjectName} · {Due(item.DueAt)}"); });
         button.Click += async (_, _) => await Context.ActAsync(button, () => OpenProjectAsync(item.ProjectId, 2));
         return button;
+    }
+
+    /// <summary>A Google event: display only (no click target), with a quiet bordered style distinct from tasks, milestones and overdue work.</summary>
+    private Border ExternalEvent(ExternalCalendarEvent item)
+    {
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 5 };
+        row.Children.Add(Ui.Dot(6, "TextSecondary"));
+        var text = Label(() => item.Title.Length == 0 ? T("google.untitled") : item.Title, "Micro"); text.FontWeight = FontWeight.Normal; text.TextWrapping = TextWrapping.NoWrap; text.TextTrimming = TextTrimming.CharacterEllipsis;
+        Grid.SetColumn(text, 1); row.Children.Add(text);
+        var border = new Border { Child = row, Padding = new Thickness(5, 2), CornerRadius = new CornerRadius(5), BorderThickness = new Thickness(1), Name = "CalendarGoogleEvent" }
+            .Paint(Border.BackgroundProperty, "BackgroundMuted").Paint(Border.BorderBrushProperty, "BorderDefault");
+        Bind(border, control =>
+        {
+            var name = $"{(item.Title.Length == 0 ? T("google.untitled") : item.Title)} · {(item.IsAllDay ? T("google.allDay") : Due(item.Start))} · {T("calendar.legend.google")}";
+            AutomationProperties.SetName(control, name); ToolTip.SetTip(control, name);
+        });
+        return border;
     }
 }

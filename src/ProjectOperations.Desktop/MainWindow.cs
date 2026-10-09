@@ -10,6 +10,7 @@ using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Updates;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
+using ProjectOperations.Core.Calendar;
 using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
@@ -52,19 +53,20 @@ public sealed class MainWindow : Window, IShell
     private readonly TextBlock _toastText = new() { TextWrapping = TextWrapping.Wrap, Name = "ToastText" };
     private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(4.8) };
     private SampleWorkspace? _sample;
-    private (ProjectService Projects, AgentService Agents, DesktopEnvironment Environment)? _real;
+    private (ProjectService Projects, AgentService Agents, DesktopEnvironment Environment, IExternalCalendarSource Calendar)? _real;
     private readonly Dictionary<string, bool> _visible = [];
     private readonly HashSet<string> _fresh = [];
     private bool _shellKnown;
 
     public MainWindow(ProjectService projects, AgentService agents, Func<Task> initialize, string configuration, LocaleContext? locale = null, Func<string>? configurationText = null,
-        AppearanceContext? appearance = null, DesktopEnvironment? environment = null, IAppUpdater? updater = null)
+        AppearanceContext? appearance = null, DesktopEnvironment? environment = null, IAppUpdater? updater = null, IExternalCalendarSource? calendar = null)
     {
         _locale = locale ?? new LocaleContext();
         _appearance = appearance ?? new AppearanceContext();
         _text = new LocalizationService(_locale);
         _localized = new LocalizedControls(_locale);
         _context = new PresentationContext(projects, agents, _locale, _appearance, _text, _localized, configuration, configurationText, environment ?? new DesktopEnvironment(), this, new UpdateController(updater ?? new NoAppUpdater()));
+        _context.Calendar = calendar ?? new NoExternalCalendar();
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         PresentationTheme.Typeset(_error, "Small", "TextPrimary");
@@ -245,7 +247,8 @@ public sealed class MainWindow : Window, IShell
         _navigation.SetAttentionCount(ProjectSummaries.Dashboard(projects, DateTimeOffset.Now).OverdueTasks.Count);
         var hasDated = projects.Any(project => project.Tasks.Any(task => task.DueAt is not null) || project.Milestones.Any(milestone => milestone.DueAt is not null));
         var hasFile = projects.Any(project => project.Requirements.Any(requirement => requirement.Files.Count > 0));
-        var shown = new Dictionary<string, bool> { ["dashboard"] = IsSample || hasDated, ["projects"] = true, ["calendar"] = IsSample || hasDated, ["documents"] = IsSample || hasFile, ["settings"] = true };
+        var googleConnected = !IsSample && await _context.Calendar.IsConnectedAsync();
+        var shown = new Dictionary<string, bool> { ["dashboard"] = IsSample || hasDated, ["projects"] = true, ["calendar"] = IsSample || hasDated || googleConnected, ["documents"] = IsSample || hasFile, ["settings"] = true };
         var revealed = new List<string>();
         foreach (var (page, show) in shown)
         {
@@ -253,7 +256,7 @@ public sealed class MainWindow : Window, IShell
             _visible[page] = show; _navigation.SetVisible(page, show); _navigation.SetNew(page, _fresh.Contains(page));
         }
         _shellKnown = true;
-        if (revealed.Contains("dashboard") || revealed.Contains("calendar")) ShowToast("v3.toastDated");
+        if (revealed.Contains("dashboard") || (revealed.Contains("calendar") && hasDated)) ShowToast("v3.toastDated");
         else if (revealed.Contains("documents")) ShowToast("v3.toastDocs");
         UpdateGettingStarted(projects);
     }
@@ -321,9 +324,10 @@ public sealed class MainWindow : Window, IShell
     {
         if (IsSample) { CloseOverlay(); return; }
         var workspace = await SampleWorkspace.CreateAsync(_locale.LanguageCode == "fa");
-        _real = (_context.Projects, _context.Agents, _context.Environment);
+        _real = (_context.Projects, _context.Agents, _context.Environment, _context.Calendar);
         _sample = workspace;
         _context.Projects = workspace.Projects; _context.Agents = workspace.Agents; _context.Environment = _real.Value.Environment with { AgentConfigured = false };
+        _context.Calendar = new NoExternalCalendar(); // the sample never touches the user's Google account
         ResetShellFacts(); CloseOverlay();
         await UpdateShellAsync();
         await NavigateAsync("dashboard");
@@ -333,7 +337,7 @@ public sealed class MainWindow : Window, IShell
     public Task ExitSampleAsync()
     {
         if (_real is not { } real) return Task.CompletedTask;
-        _context.Projects = real.Projects; _context.Agents = real.Agents; _context.Environment = real.Environment;
+        _context.Projects = real.Projects; _context.Agents = real.Agents; _context.Environment = real.Environment; _context.Calendar = real.Calendar;
         _sample?.Dispose(); _sample = null; _real = null;
         ResetShellFacts();
         return Task.CompletedTask;
