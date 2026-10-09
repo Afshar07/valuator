@@ -327,8 +327,15 @@ public sealed class MainWindowTests
         {
             Runtime.Release.TrySetResult();
             Window.Close();
-            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            Directory.Delete(_directory, recursive: true);
+            // A window that was shown and closed at once may still be finishing its start-up query, and Windows will not delete an open
+            // database file. Release the pools and retry briefly; leftover temp files must not fail a test.
+            for (var attempt = 0; attempt < 50; attempt++)
+            {
+                Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+                try { Directory.Delete(_directory, recursive: true); return; }
+                catch (IOException) { Thread.Sleep(100); }
+                catch (UnauthorizedAccessException) { Thread.Sleep(100); }
+            }
         }
     }
 
