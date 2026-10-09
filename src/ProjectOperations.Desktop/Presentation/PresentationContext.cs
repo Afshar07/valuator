@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
+using ProjectOperations.Core.Calendar;
 using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Updates;
 
@@ -76,6 +77,8 @@ internal sealed class PresentationContext(
     public DesktopEnvironment Environment { get; set; } = environment;
     public IShell Shell { get; } = shell;
     public UiState State { get; } = new();
+    /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
+    public IExternalCalendarSource Calendar { get; set; } = new NoExternalCalendar();
     public string ConfigurationText() => configurationText?.Invoke() ?? configuration;
     public Task OpenProjectAsync(Guid id, int tab = 0) => Shell.OpenProjectAsync(id, tab);
     public Task ActAsync(Button button, Func<Task> action) => Shell.ActAsync(button, action);

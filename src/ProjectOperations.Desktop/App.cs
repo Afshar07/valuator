@@ -3,9 +3,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
+using ProjectOperations.Core.Calendar;
 using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Updates;
 using ProjectOperations.Infrastructure.Agents;
+using ProjectOperations.Infrastructure.Calendar;
 using ProjectOperations.Infrastructure.Persistence;
 
 namespace ProjectOperations.Desktop;
@@ -42,10 +44,22 @@ public sealed class App : Application
             var environment = new DesktopEnvironment(endpointConfigured,
                 endpointConfigured ? $"{endpoint!.Scheme}://{endpoint.Host}:{endpoint.Port}" : null,
                 string.IsNullOrWhiteSpace(options.ConfigDirectory) ? null : options.ConfigDirectory, database);
+            // Opt-in: without a Google client id (or secure token storage) this stays the do-nothing source and the app behaves as before.
+            var google = GoogleCalendarOptions.FromEnvironment();
+            var googleHttp = google.IsConfigured && DpapiTokenStore.IsSupported ? new HttpClient() : null;
+            IExternalCalendarSource calendar = googleHttp is null ? new NoExternalCalendar()
+                : new GoogleCalendarSource(googleHttp, google, new DpapiTokenStore(Path.Combine(directory, "google-calendar.token")), OpenBrowser);
             desktop.MainWindow = new MainWindow(projects, agents, () => repository.InitializeAsync(),
-                ConfigurationText(), locale, ConfigurationText, appearance, environment, new VelopackAppUpdater());
-            desktop.Exit += (_, _) => runtime.Dispose();
+                ConfigurationText(), locale, ConfigurationText, appearance, environment, new VelopackAppUpdater(), calendar);
+            desktop.Exit += (_, _) => { runtime.Dispose(); googleHttp?.Dispose(); };
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Opens the Google sign-in page in the user's default browser.</summary>
+    private static Task OpenBrowser(Uri url, CancellationToken cancellationToken)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+        return Task.CompletedTask;
     }
 }

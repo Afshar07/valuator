@@ -37,7 +37,7 @@ The chosen MVP stack is **C#/.NET, Avalonia UI, SQLite, and OpenCode behind `IAg
 ## Explicit exclusions
 
 - Email integration.
-- Google Calendar or other external calendar integration.
+- External calendar integration, except the opt-in, read-only Google Calendar overlay (display only; see `.ai/architecture.md`). No writing to any external calendar, no two-way sync, no other providers.
 - Slack and CRM integrations.
 - Automatic external communication.
 - Portfolio-wide financial analytics.

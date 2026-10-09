@@ -30,6 +30,13 @@ internal sealed class SettingsView : PresentationView
         var updates = Section("updates.title"); updates.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 12), Child = new UpdatePanel(Context) }));
         sections.Children.Add(Card(updates));
 
+        // Opt-in: only offered when a Google OAuth client is configured, so default installs see no change here.
+        if (Context.Calendar.IsAvailable)
+        {
+            var google = Section("google.title"); google.Children.Add(Ui.Separated(new Border { Padding = new Thickness(0, 12), Child = new GoogleCalendarPanel(Context) }));
+            sections.Children.Add(Card(google));
+        }
+
         var stages = Section("stages.title"); stages.Children.Add(new StageEditor(Context));
         sections.Children.Add(Card(stages));
 

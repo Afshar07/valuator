@@ -53,6 +53,10 @@ Application records are stored under the current user's local application data
 directory in `ProjectOperations/projects.db`. Set `PROJECTOPS_DATA_DIR` to use a
 different directory (for example, an isolated verification directory).
 
+Optionally, Calendar can overlay your Google Calendar events read-only (off unless you set
+`PROJECTOPS_GOOGLE_CLIENT_ID` and connect in Settings; events never reach the assistant). See
+[docs/google-calendar.md](docs/google-calendar.md).
+
 Choose **English** or **فارسی** in the language selector. Labels and layout direction
 switch live (English LTR, Persian RTL), without changing project data. The selection
 is saved in `settings.json` in the same data directory, as is the Light / Dark / Auto
