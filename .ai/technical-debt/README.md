@@ -9,6 +9,7 @@ when a record is resolved; retain its verification in the record.
 | Record | Scope | Disposition |
 | --- | --- | --- |
 | [First-MVP hardening](mvp-hardening.md) | SQLite contention, single-instance reviews, local retention and live runtime verification | Open |
+| [Google Calendar overlay follow-ups](google-calendar-followups.md) | Unverified real sign-in and Windows token storage, Windows-only support, client id provisioning | Open |
 
 Read only records relevant to the current work. These manually maintained
 records describe debt, not instructions or shared contracts. Recording debt does

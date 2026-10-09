@@ -12,7 +12,7 @@ step 7, then follow the route exactly in order.
 | `technical-debt/README.md` | locating unresolved technical debt relevant to the current work; read only the matching record |
 | `product.md` | working on VC/finance product direction, project-operations experience, or terminology |
 | `mvp.md` | implementing or verifying the core workflow, safety, scope, or acceptance criteria |
-| `architecture.md` | working on project/domain services, scheduling, documents, runtime integration, activity translation, persistence, or infrastructure |
+| `architecture.md` | working on project/domain services, scheduling, documents, runtime integration, activity translation, persistence, infrastructure, or the optional Google Calendar overlay |
 | `testing.md` | writing or running native .NET domain, persistence, runtime, or desktop tests |
 
 ## Rules
@@ -28,6 +28,7 @@ step 7, then follow the route exactly in order.
 - Desktop localization / presentation boundaries: `product.md` → `mvp.md` → `architecture.md` → source.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
 - Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
+- Google Calendar overlay / external calendar / OAuth / calendar tokens: `mvp.md` → `architecture.md` (*Optional Google Calendar overlay*) → `docs/google-calendar.md` → source (`Core/Calendar`, `Infrastructure/Calendar`, `Desktop/Presentation/GoogleCalendarPanel.cs`, `CalendarView.cs`); relevant debt: `technical-debt/google-calendar-followups.md`. Events are display-only and must never reach agent context.
 - Native tests / verification: `testing.md` → `mvp.md` → `architecture.md` → source.
 - First-run / onboarding / sample workspace / sidebar disclosure: `product.md` → `mvp.md` → `architecture.md` → source (`Presentation/OnboardingScreens.cs`, `SampleWorkspace.cs`, `MainWindow.cs`).
 - When an ongoing task crosses one of these boundaries, read that boundary's route before source unless the task document already includes it.
