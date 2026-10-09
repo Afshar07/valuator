@@ -10,10 +10,8 @@ namespace ProjectOperations.Desktop.Tests.Mvvm;
 /// <summary>The project header, its tabs and the edit-project dialog as plain view-models.</summary>
 public sealed class ProjectDetailFeatureTests
 {
-    private sealed class StubTab : ViewModelBase;
-
     private static ProjectDetailViewModel Detail(ProjectScenario scenario, Project project, ProjectTab tab = ProjectTab.Overview) =>
-        new(project, [], tab, scenario.Services, new StubTab());
+        new(project, [], tab, scenario.Services, agentConfigured: true);
 
     [Fact]
     public async Task The_header_shows_identity_stage_status_and_readiness_from_stored_state()
@@ -128,15 +126,14 @@ public sealed class ProjectDetailFeatureTests
     public async Task The_tabs_hold_one_view_model_each_and_the_lock_is_a_plain_property()
     {
         using var scenario = await ProjectScenario.CreateAsync();
-        var delegation = new StubTab();
-        var detail = new ProjectDetailViewModel(await scenario.AddProjectAsync(), [], ProjectTab.Overview, scenario.Services, delegation);
+        var detail = new ProjectDetailViewModel(await scenario.AddProjectAsync(), [], ProjectTab.Overview, scenario.Services, agentConfigured: true);
         var changed = new List<string?>();
         detail.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         Assert.NotNull(detail.Overview);
         Assert.NotNull(detail.Requirements);
         Assert.NotNull(detail.Tasks);
-        Assert.Same(delegation, detail.Delegation);
+        Assert.NotNull(detail.Delegation);
         Assert.False(detail.IsLocked);
         detail.IsLocked = true;
         Assert.Equal([nameof(detail.IsLocked)], changed);

@@ -4,6 +4,7 @@ using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Common;
+using ProjectOperations.Desktop.Features.Delegation;
 using ProjectOperations.Desktop.Features.Overview;
 using ProjectOperations.Desktop.Features.Requirements;
 using ProjectOperations.Desktop.Features.Tasks;
@@ -14,7 +15,6 @@ namespace ProjectOperations.Desktop.Features.ProjectDetail;
 
 /// <summary>
 /// The open project: a header (name, stage, readiness, edit, assistant) over the Overview, Requirements, Tasks and Delegate tabs.
-/// The Delegate tab is still code-built; <paramref name="delegation"/> is its host until the assistant moves to MVVM.
 /// </summary>
 internal sealed partial class ProjectDetailViewModel : ViewModelBase
 {
@@ -25,14 +25,14 @@ internal sealed partial class ProjectDetailViewModel : ViewModelBase
     [ObservableProperty] private int _selectedIndex;
     [ObservableProperty] private bool _isLocked;
 
-    public ProjectDetailViewModel(Project project, IReadOnlyList<AgentJob> jobs, ProjectTab tab, ProjectScreenServices services, ViewModelBase delegation)
+    public ProjectDetailViewModel(Project project, IReadOnlyList<AgentJob> jobs, ProjectTab tab, ProjectScreenServices services, bool agentConfigured)
     {
         _project = project; _services = services; L = services.Strings;
         _summary = ProjectSummaries.Summarize(project, services.Clock.GetUtcNow());
         Overview = new OverviewViewModel(project, services);
         Requirements = new RequirementsViewModel(project, services);
         Tasks = new TasksViewModel(project, jobs, services);
-        Delegation = delegation;
+        Delegation = new DelegationViewModel(project, jobs, agentConfigured, services);
         _selectedIndex = (int)tab;
         RefreshOnLanguageChange(L);
     }
@@ -41,13 +41,12 @@ internal sealed partial class ProjectDetailViewModel : ViewModelBase
     public OverviewViewModel Overview { get; }
     public RequirementsViewModel Requirements { get; }
     public TasksViewModel Tasks { get; }
-    public ViewModelBase Delegation { get; }
+    public DelegationViewModel Delegation { get; }
 
-    public static async Task<ProjectDetailViewModel> LoadAsync(Project project, ProjectTab tab, ProjectScreenServices services, AgentService agents,
-        Func<IReadOnlyList<AgentJob>, ViewModelBase> delegation)
+    public static async Task<ProjectDetailViewModel> LoadAsync(Project project, ProjectTab tab, ProjectScreenServices services, AgentService agents, bool agentConfigured)
     {
         var jobs = await agents.HistoryAsync(project.Id);
-        return new ProjectDetailViewModel(project, jobs, tab, services, delegation(jobs));
+        return new ProjectDetailViewModel(project, jobs, tab, services, agentConfigured);
     }
 
     public string Title => _project.Name;

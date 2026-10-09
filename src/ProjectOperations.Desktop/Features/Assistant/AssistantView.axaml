@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Assistant"
+             x:Class="ProjectOperations.Desktop.Features.Assistant.AssistantView"
+             x:DataType="vm:AssistantViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="16,16,16,12" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtleBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+        <Border Width="28" Height="28" CornerRadius="8" VerticalAlignment="Center" Background="{DynamicResource AiSoftBrush}">
+          <c:IconGlyph Icon="{x:Static app:Icons.Sparkle}" Weight="Fill" Size="15" Token="Ai" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Name="AssistantTitle" Classes="BodyStrong" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+          <c:StatusLine Name="AgentStatus" Text="{Binding StatusText}" Token="{Binding StatusToken}" />
+        </StackPanel>
+        <Button Name="CloseAssistant" Grid.Column="2" Classes="icon" Command="{Binding CloseCommand}" IsEnabled="{Binding CanClose}"
+                AutomationProperties.Name="{Binding L[action.close]}" ToolTip.Tip="{Binding L[action.close]}">
+          <c:IconGlyph Icon="{x:Static app:Icons.X}" Size="15" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <Border Padding="16">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="PanelTitle" Text="{Binding L[agent.title]}" />
+
+          <!-- No project open: the projects the assistant can work on. -->
+          <StackPanel Name="AssistantPicker" Spacing="8" IsVisible="{Binding IsPickerVisible}">
+            <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.pickProject]}" />
+            <ItemsControl ItemsSource="{Binding Projects}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Classes="Small" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding IsPickerEmpty}" Text="{Binding L[dashboard.empty]}" />
+          </StackPanel>
+
+          <!-- Not configured: guidance instead of a request. -->
+          <Border Name="AssistantOff" IsVisible="{Binding IsOffVisible}" CornerRadius="10" Padding="14,10" BorderThickness="1"
+                  Background="{DynamicResource BackgroundMutedBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <c:IconGlyph Icon="{x:Static app:Icons.Plugs}" Size="17" Token="TextTertiary" VerticalAlignment="Top" Margin="0,1,0,0" />
+              <TextBlock Grid.Column="1" Classes="Small" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.offBody]}" />
+            </Grid>
+          </Border>
+
+          <!-- The job in view: live activity, partial result, Stop and the technical details. -->
+          <StackPanel Name="AgentOutcome" Spacing="10" IsVisible="{Binding IsOutcomeVisible}">
+            <Border Padding="14" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource AiBorderBrush}">
+              <StackPanel Spacing="10">
+                <TextBlock Name="AgentOutcomeLabel" Classes="SmallStrong" Text="{Binding OutcomeText}" />
+                <ItemsControl ItemsSource="{Binding Steps}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Spacing="6" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.result]}" />
+            <TextBox Name="AgentResult" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="320" FontSize="12.5"
+                     TextAlignment="Start" VerticalContentAlignment="Top" Text="{Binding ResultText, Mode=OneWay}" />
+            <Border IsVisible="{Binding IsStopping}" CornerRadius="10" Padding="14,10" Background="{DynamicResource WarningSoftBrush}">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <c:IconGlyph Icon="{x:Static app:Icons.HourglassMedium}" Size="17" Token="Warning" VerticalAlignment="Top" Margin="0,1,0,0" />
+                <TextBlock Grid.Column="1" Classes="Small" VerticalAlignment="Center" Text="{Binding L[agent.stopping]}" />
+              </Grid>
+            </Border>
+            <Border Name="AgentFailed" IsVisible="{Binding IsFailed}" CornerRadius="10" Padding="14,10" BorderThickness="1"
+                    Background="{DynamicResource ErrorSoftBrush}" BorderBrush="{DynamicResource ErrorBrush}">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <c:IconGlyph Icon="{x:Static app:Icons.XCircle}" Size="17" Token="Error" VerticalAlignment="Top" Margin="0,1,0,0" />
+                <TextBlock Grid.Column="1" Classes="Small" VerticalAlignment="Center" Text="{Binding L[validation.agentFailed]}" />
+              </Grid>
+            </Border>
+            <Button Name="StopButton" Classes="danger" HorizontalAlignment="Stretch" IsVisible="{Binding IsStopVisible}" IsEnabled="{Binding IsStopEnabled}"
+                    Command="{Binding StopCommand}" AutomationProperties.Name="{Binding L[agent.stop]}">
+              <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                <c:IconGlyph Icon="{x:Static app:Icons.Stop}" Weight="Fill" Size="13" Token="Error" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding L[agent.stop]}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="link" Command="{Binding ToggleDetailsCommand}" Content="{Binding L[agent.showDetails]}" />
+            <TextBox Name="AgentDetails" IsVisible="{Binding IsDetailsVisible}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48" MaxHeight="220"
+                     FontSize="11" FlowDirection="LeftToRight" Text="{Binding DetailsText, Mode=OneWay}" />
+          </StackPanel>
+
+          <!-- Proposals to review and the project's committed tasks. -->
+          <ContentControl Name="ProposalReview" IsVisible="{Binding HasReview}" Content="{Binding Review}" />
+
+          <!-- A new request: starting points, the request, what would be sent, the exact preview, consent and Run. -->
+          <StackPanel Name="DelegationRequest" Spacing="12" IsVisible="{Binding IsRequestVisible}">
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.pickAction]}" />
+            <ItemsControl ItemsSource="{Binding Actions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="c:ChipOptionViewModel">
+                  <Button Classes="option" Classes.selected="{Binding IsSelected}" Margin="0,0,6,6" HorizontalContentAlignment="Left"
+                          Command="{Binding SelectCommand}" AutomationProperties.Name="{Binding Label}">
+                    <TextBlock Classes="Small" FontWeight="Medium" Text="{Binding Label}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Spacing="5">
+              <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.request]}" />
+              <TextBox Name="AgentPrompt" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="76" VerticalContentAlignment="Top" TextAlignment="Start" Text="{Binding Prompt, Mode=TwoWay}" />
+            </StackPanel>
+
+            <Border CornerRadius="10" BorderThickness="1" Padding="12" Background="{DynamicResource BackgroundMutedBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+              <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <c:IconGlyph Icon="{x:Static app:Icons.Eye}" Size="13" Token="TextPrimary" />
+                  <TextBlock Classes="CaptionMedium" FontWeight="SemiBold" Text="{Binding L[agent.contextTitle]}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding SummaryLines}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Spacing="4" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                        <c:IconGlyph Icon="{x:Static app:Icons.DotOutline}" Size="13" Token="TextSecondary" VerticalAlignment="Top" Margin="0,2,0,0" />
+                        <TextBlock Grid.Column="1" Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="Meta" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding EndpointText}" />
+                <Button Name="PreviewContext" HorizontalAlignment="Left" Command="{Binding PreviewCommand}" AutomationProperties.Name="{Binding L[agent.preview]}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <c:IconGlyph Icon="{x:Static app:Icons.Eye}" Size="14" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding L[agent.preview]}" />
+                  </StackPanel>
+                </Button>
+                <TextBox Name="ContextPreview" IsVisible="{Binding IsPreviewVisible}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="260"
+                         FontSize="11" FlowDirection="LeftToRight" TextAlignment="Start" VerticalContentAlignment="Top" Background="{DynamicResource BackgroundCardBrush}"
+                         Text="{Binding PreviewText, Mode=OneWay}" />
+              </StackPanel>
+            </Border>
+
+            <c:AiCheckBox Name="ConsentBox" IsEnabled="{Binding IsConsentEnabled}" IsChecked="{Binding IsConsentChecked, Mode=TwoWay}">
+              <TextBlock Classes="Small" Text="{Binding L[agent.consent]}" />
+            </c:AiCheckBox>
+            <Button Name="RunAgent" Classes="aiPrimary" HorizontalAlignment="Stretch" IsEnabled="{Binding CanRun}" Command="{Binding RunCommand}"
+                    AutomationProperties.Name="{Binding L[agent.run]}">
+              <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                <c:IconGlyph Icon="{x:Static app:Icons.Play}" Weight="Bold" Size="13" Token="OnAccent" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding L[agent.run]}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

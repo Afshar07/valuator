@@ -132,7 +132,7 @@ internal static class PresentationTheme
             Source = new Uri("avares://ProjectOperations.Desktop/Common/Styles.axaml")
         });
 
-        // Typography for XAML text: <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>. Like the code-built Label,
+        // Typography for XAML text: <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>. Like Typeset,
         // it wraps and aligns to the start edge; set TextWrapping or TextAlignment on the element to differ. Code-built text uses Typeset.
         foreach (var (name, (size, weight)) in Typography)
         {

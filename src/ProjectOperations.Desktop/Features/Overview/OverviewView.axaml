@@ -28,7 +28,7 @@
       <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
     </Style>
   </UserControl.Styles>
-  <app:AdaptiveGrid MinItemWidth="300">
+  <c:AdaptiveGrid MinItemWidth="300">
     <Border Name="CurrentStateCard" Classes="card" Padding="16,14">
       <StackPanel>
         <Grid MinHeight="26" Margin="0,0,0,8">
@@ -112,5 +112,5 @@
 
     <ContentControl Content="{Binding OpenQuestions}" />
     <ContentControl Content="{Binding FollowUps}" />
-  </app:AdaptiveGrid>
+  </c:AdaptiveGrid>
 </UserControl>

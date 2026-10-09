@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Assistant"
+             x:Class="ProjectOperations.Desktop.Features.Assistant.AssistantStepView"
+             x:DataType="vm:AssistantStepViewModel">
+  <StackPanel Orientation="Horizontal" Spacing="8">
+    <c:IconGlyph Icon="{Binding Icon}" Weight="Bold" Size="13" Token="Ai" />
+    <TextBlock Classes="Small" Text="{Binding Text}" />
+  </StackPanel>
+</UserControl>

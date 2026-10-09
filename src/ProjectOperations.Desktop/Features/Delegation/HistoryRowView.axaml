@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Delegation"
+             x:Class="ProjectOperations.Desktop.Features.Delegation.HistoryRowView"
+             x:DataType="vm:HistoryRowViewModel">
+  <Border Classes="rule">
+    <StackPanel>
+      <Button Name="HistoryRow" Classes="row" Padding="16,11" Command="{Binding ToggleCommand}" AutomationProperties.Name="{Binding AccessibleName}">
+        <Grid ColumnDefinitions="1.4*,120,120,1.6*" ColumnSpacing="14">
+          <TextBlock Classes="BodyMedium" MaxLines="2" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Text="{Binding Request}" />
+          <c:Pill Grid.Column="1" Text="{Binding StatusText}" Kind="{Binding StatusKind}" Icon="{Binding StatusIcon}" />
+          <TextBlock Grid.Column="2" Classes="Caption" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding StartedText}" />
+          <TextBlock Grid.Column="3" Classes="Small" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding OutcomeText}" />
+        </Grid>
+      </Button>
+
+      <!-- Proposal review itself happens in the assistant, so each proposal has exactly one approval control. -->
+      <StackPanel Name="HistoryDetails" Spacing="10" Margin="16,0,16,14" IsVisible="{Binding IsExpanded}">
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding FinishedText}" />
+        <TextBlock Classes="Small" Foreground="{DynamicResource WarningBrush}" IsVisible="{Binding ShowInterrupted}" Text="{Binding L[history.interrupted]}" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.request]}" />
+        <TextBox IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" TextAlignment="Start" MinHeight="64" MaxHeight="300" FontSize="12.5"
+                 VerticalContentAlignment="Top" Text="{Binding Request, Mode=OneWay}" />
+        <StackPanel Spacing="10" IsVisible="{Binding HasResult}">
+          <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[agent.resultLabel]}" />
+          <TextBox IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" TextAlignment="Start" MinHeight="64" MaxHeight="300" FontSize="12.5"
+                   VerticalContentAlignment="Top" Text="{Binding ResultText, Mode=OneWay}" />
+        </StackPanel>
+        <Expander IsVisible="{Binding HasError}" HorizontalAlignment="Stretch" Header="{Binding L[history.outcomeDetails]}">
+          <TextBox IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" TextAlignment="Start" MinHeight="64" MaxHeight="300" FontSize="12.5"
+                   VerticalContentAlignment="Top" FlowDirection="LeftToRight" Text="{Binding ErrorText, Mode=OneWay}" />
+        </Expander>
+        <ItemsControl ItemsSource="{Binding ProposalLines}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="10" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Classes="Small" Text="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Classes="ai" HorizontalAlignment="Left" IsVisible="{Binding CanReview}" Command="{Binding ReviewCommand}" Content="{Binding L[history.reviewInAssistant]}" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

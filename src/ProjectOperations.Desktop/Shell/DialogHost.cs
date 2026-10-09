@@ -7,7 +7,7 @@ namespace ProjectOperations.Desktop.Shell;
 internal interface IDialogService
 {
     bool IsOpen { get; }
-    /// <summary>Shows a dialog: a view-model whose view the view locator supplies (or a control, for a screen that is still code-built).</summary>
+    /// <summary>Shows a dialog: a view-model whose view the view locator supplies.</summary>
     void Show(object content);
     void Close();
 }

@@ -48,7 +48,8 @@ internal sealed class ProjectScenario : IDisposable
         public int AssistantOpens { get; private set; }
         public List<ProjectTab> Tabs { get; } = [];
         public Task RefreshProjectAsync() { Refreshes++; return Task.CompletedTask; }
-        public Task ReviewInAssistantAsync(string jobId) => Task.CompletedTask;
+        public List<string> Reviewed { get; } = [];
+        public Task ReviewInAssistantAsync(string jobId) { Reviewed.Add(jobId); return Task.CompletedTask; }
         public Task RunAsync(Func<Task> action) { Runs++; return action(); }
         public void ShowError(string key) => Errors.Add(key);
         public void ShowToast(string key) => Toasts.Add(key);

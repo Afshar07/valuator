@@ -30,20 +30,23 @@
 
       <ContentControl Name="ScreenHost" IsEnabled="{Binding IsPageEnabled}">
         <ScrollViewer Name="PageScroll" HorizontalScrollBarVisibility="Disabled">
-          <app:ReadableColumn>
+          <c:ReadableColumn>
             <Border Padding="32,28,32,40">
               <StackPanel Spacing="20">
                 <ContentControl Content="{Binding SampleBanner}" IsVisible="{Binding HasSampleBanner}" />
                 <ContentControl Content="{Binding Page}" HorizontalAlignment="Stretch" />
               </StackPanel>
             </Border>
-          </app:ReadableColumn>
+          </c:ReadableColumn>
         </ScrollViewer>
       </ContentControl>
     </DockPanel>
 
-    <!-- The assistant panel is still code-built; the window puts it here and decides whether it docks or overlays the page. -->
-    <ContentControl Name="AssistantSlot" Grid.Column="2" />
+    <!-- The assistant at the end edge. The window decides whether it docks beside the page or overlays it (see PlaceAssistant). -->
+    <Border Name="AssistantPanel" Grid.Column="2" Width="360" IsVisible="{Binding IsAssistantOpen}" BorderThickness="1,0,0,0"
+            Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+      <ContentControl Content="{Binding Assistant}" />
+    </Border>
 
     <Panel Name="DialogLayer" Grid.ColumnSpan="3" ZIndex="10" IsVisible="{Binding Dialogs.IsOpen}">
       <Border Name="Scrim" Background="{DynamicResource ScrimBrush}" PointerPressed="OnScrimPressed" />

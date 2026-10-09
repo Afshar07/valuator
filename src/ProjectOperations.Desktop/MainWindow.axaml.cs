@@ -16,7 +16,7 @@ namespace ProjectOperations.Desktop;
 
 /// <summary>
 /// The application window. Everything it shows comes from <see cref="MainWindowViewModel"/>; what stays here needs controls: the system
-/// file dialogs, the code-built assistant panel (until phase 5) and where it sits, the scroll position, the toast timer and closing.
+/// file dialogs, where the assistant sits (docked or over the page), the scroll position, the toast timer and closing.
 /// </summary>
 public sealed partial class MainWindow : Window
 {
@@ -25,8 +25,6 @@ public sealed partial class MainWindow : Window
     private static readonly TimeSpan ToastDuration = TimeSpan.FromSeconds(4.8);
 
     private readonly MainWindowViewModel _model;
-    private readonly AssistantPanel _assistant;
-    private readonly LocalizedControls _localized;
     private readonly LocalizedStrings _strings;
     private readonly DispatcherTimer _toastTimer = new() { Interval = ToastDuration };
     private bool _closing;
@@ -36,29 +34,21 @@ public sealed partial class MainWindow : Window
     {
         locale ??= new LocaleContext();
         appearance ??= new AppearanceContext();
-        var text = new LocalizationService(locale);
-        _localized = new LocalizedControls(locale);
-        _strings = new LocalizedStrings(locale, text);
+        _strings = new LocalizedStrings(locale, new LocalizationService(locale));
         var workspace = new WorkspaceSession(projects, agents, environment ?? new DesktopEnvironment(), calendar ?? new NoExternalCalendar());
         var dialogs = new WindowDialogs(this);
-        _model = new MainWindowViewModel(workspace, locale, appearance, _strings, new UpdateController(updater ?? new NoAppUpdater()), dialogs, dialogs, initialize);
-        var context = new PresentationContext(workspace, locale, text, _localized, _strings, configuration, configurationText, new ShellAdapter(_model));
+        _model = new MainWindowViewModel(workspace, locale, appearance, _strings, new UpdateController(updater ?? new NoAppUpdater()), dialogs, dialogs, initialize,
+            configurationText: configurationText ?? (() => configuration));
 
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         DataContext = _model;
         InitializeComponent();
 
-        _assistant = new AssistantPanel(context) { Name = "AssistantPanel", IsVisible = false, Width = 360 };
-        AssistantSlot.Content = _assistant;
-        _model.Assistant = _assistant;
-        _model.DelegationFactory = (project, jobs) => new DelegationTabViewModel(context, project, jobs);
-
         _model.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(MainWindowViewModel.IsAssistantOpen)) { _assistant.IsVisible = _model.IsAssistantOpen; PlaceAssistant(); }
             // A new page opens at the top, as a freshly built scroll viewer did.
-            else if (e.PropertyName == nameof(MainWindowViewModel.Page)) PageScroll.ScrollToHome();
+            if (e.PropertyName == nameof(MainWindowViewModel.Page)) PageScroll.ScrollToHome();
         };
         _model.Messages.ToastShown += (_, _) => { _toastTimer.Stop(); _toastTimer.Start(); };
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); _model.Messages.DismissToast(); };
@@ -69,7 +59,7 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _toastTimer.Stop();
-            _model.Dispose(); _localized.Dispose(); _strings.Dispose();
+            _model.Dispose(); _strings.Dispose();
         };
         Opened += async (_, _) => await _model.StartAsync();
         Closing += async (_, e) =>
@@ -93,10 +83,10 @@ public sealed partial class MainWindow : Window
     private void PlaceAssistant()
     {
         var overlay = Bounds.Width > 0 ? Bounds.Width < DockedPanelMinWidth : Width < DockedPanelMinWidth;
-        Grid.SetColumn(AssistantSlot, overlay ? 1 : 2); Grid.SetColumnSpan(AssistantSlot, overlay ? 2 : 1);
-        AssistantSlot.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
-        AssistantSlot.ZIndex = overlay ? 5 : 0;
-        _assistant.SetOverlay(overlay);
+        Grid.SetColumn(AssistantPanel, overlay ? 1 : 2); Grid.SetColumnSpan(AssistantPanel, overlay ? 2 : 1);
+        AssistantPanel.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        AssistantPanel.ZIndex = overlay ? 5 : 0;
+        if (overlay) AssistantPanel.RaisedShadowed(); else AssistantPanel.ClearValue(Border.BoxShadowProperty);
     }
 
     /// <summary>The system file dialogs and launcher the view-models ask for through <see cref="IFilePicker"/> and <see cref="IFileLauncher"/>.</summary>
