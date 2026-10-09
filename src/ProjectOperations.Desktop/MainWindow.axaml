@@ -30,14 +30,14 @@
 
       <ContentControl Name="ScreenHost" IsEnabled="{Binding IsPageEnabled}">
         <ScrollViewer Name="PageScroll" HorizontalScrollBarVisibility="Disabled">
-          <app:ReadableColumn>
+          <c:ReadableColumn>
             <Border Padding="32,28,32,40">
               <StackPanel Spacing="20">
                 <ContentControl Content="{Binding SampleBanner}" IsVisible="{Binding HasSampleBanner}" />
                 <ContentControl Content="{Binding Page}" HorizontalAlignment="Stretch" />
               </StackPanel>
             </Border>
-          </app:ReadableColumn>
+          </c:ReadableColumn>
         </ScrollViewer>
       </ContentControl>
     </DockPanel>

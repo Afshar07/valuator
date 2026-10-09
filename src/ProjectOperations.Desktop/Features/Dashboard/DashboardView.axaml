@@ -28,7 +28,7 @@
     </Border>
 
     <StackPanel Spacing="20" IsVisible="{Binding HasContent}">
-      <app:AdaptiveGrid MinItemWidth="170" Gap="12" StretchRows="True">
+      <c:AdaptiveGrid MinItemWidth="170" Gap="12" StretchRows="True">
         <c:StatCard Name="DashboardOverdueStat" Label="{Binding L[presentation.stat.overdue]}" Value="{Binding OverdueText}"
                     Icon="{x:Static app:Icons.WarningCircle}" IconToken="Error" ValueToken="{Binding OverdueToken}" />
         <c:StatCard Name="DashboardUpcomingStat" Label="{Binding L[presentation.stat.upcoming]}" Value="{Binding UpcomingText}"
@@ -37,9 +37,9 @@
                     Icon="{x:Static app:Icons.Flag}" IconToken="Accent" />
         <c:StatCard Name="DashboardActiveStat" Label="{Binding L[presentation.stat.active]}" Value="{Binding ActiveText}"
                     Icon="{x:Static app:Icons.Briefcase}" IconToken="TextSecondary" />
-      </app:AdaptiveGrid>
+      </c:AdaptiveGrid>
 
-      <app:AdaptiveGrid MinItemWidth="320">
+      <c:AdaptiveGrid MinItemWidth="320">
         <Border Name="PriorityItems" Classes="card">
           <StackPanel>
             <Border Padding="16,12,16,10">
@@ -63,7 +63,7 @@
             <ItemsControl ItemsSource="{Binding Agenda}" />
           </StackPanel>
         </Border>
-      </app:AdaptiveGrid>
+      </c:AdaptiveGrid>
     </StackPanel>
   </StackPanel>
 </UserControl>

@@ -134,7 +134,7 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 Opt-in and read-only. A user who never connects sees exactly the internal Calendar described above.
 
 - **Contract:** `IExternalCalendarSource` (Core, `Calendar/ExternalCalendar.cs`). The default `NoExternalCalendar` is not
-  available, never connected, makes no requests and returns no events. `PresentationContext.Calendar` holds the active source.
+  available, never connected, makes no requests and returns no events. `WorkspaceSession.Calendar` holds the active source.
 - **Google implementation:** `GoogleCalendarSource` (Infrastructure). Desktop OAuth with PKCE and a loopback redirect, scope
   `calendar.readonly` only, primary calendar only, `events.list` with `fields=id,status,summary,start,end`. Setup and limits:
   `docs/google-calendar.md`.
@@ -204,6 +204,12 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   `MainWindow.axaml` is a thin view over it, plus the system file dialogs and the assistant's dock/overlay placement.
   The assistant is `Features/Assistant/AssistantViewModel` with XAML views. This split does not change service boundaries. A migration to MVVM is in progress; see
   `.ai/ongoing/mvvm-migration.md`.
+- **Desktop MVVM conventions** (`src/ProjectOperations.Desktop`, Avalonia 12, CommunityToolkit.Mvvm):
+  - Feature folders `Features/<Feature>/` hold `<Name>View.axaml` + `<Name>ViewModel.cs`; shared styles/controls are in `Common/` (`Styles.axaml`, `Pill`, `IconGlyph`, `StatusLine`, `AdaptiveGrid`, ...). `Common/ViewLocator` maps `XViewModel` → `XView` in the same namespace, so a view-model in a bound property or an item list with no template is shown by convention. Compiled bindings (`x:DataType`) are the default.
+  - View-models derive from `ViewModelBase`, reference no Avalonia controls, take a services record (`PageServices`, `ProjectScreenServices`, `SettingsServices`, `AssistantServices`) and ask the shell only through small host interfaces (`IPageHost`, `IProjectHost`, `IAssistantHost`, `IOnboardingHost`, `ISidebarHost`, `INavigator`, `IDialogService`, `IFilePicker`, `IFileLauncher`). Domain rules (urgency, readiness, attention) live in Core. `AppServices.Create` is the DI composition root.
+  - Text comes from `LocalizedStrings` (`{Binding L[key]}`); computed text calls `RefreshOnLanguageChange(L)` so a language switch updates in place and keeps typed input. Dates use `DateConverters` with `L.Dates`. Colours are `DynamicResource` theme tokens; state colours use classes on a more specific selector, never a local `Foreground`.
+  - Commands wrap work in `Host.RunAsync` (busy state, error banner). A page view-model that holds a subscription or a pending operation is `IDisposable`; the shell disposes it when the page is replaced. The agent run lock (`AgentRunLock`) holds navigation and close for the whole job and its reload.
+  - Buttons whose state tests assert bind `IsEnabled` as well as the command. A control a view-model hides with `IsVisible` stays in the logical tree.
 - The assistant is a project-scoped panel docked at the end edge (it overlays the
   content below 1280 px). It keeps one set of request, preview and consent controls per
   open project. Every run still needs a request, an explicit preview of the exact

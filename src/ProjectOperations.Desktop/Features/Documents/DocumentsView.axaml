@@ -23,11 +23,11 @@
       </StackPanel>
     </Border>
 
-    <app:AdaptiveGrid MinItemWidth="340" IsVisible="{Binding HasDocuments}">
+    <c:AdaptiveGrid MinItemWidth="340" IsVisible="{Binding HasDocuments}">
       <Border Name="DocumentList" Classes="card">
         <ItemsControl ItemsSource="{Binding Rows}" />
       </Border>
       <ContentControl Content="{Binding Detail}" IsVisible="{Binding HasDetail}" />
-    </app:AdaptiveGrid>
+    </c:AdaptiveGrid>
   </StackPanel>
 </UserControl>

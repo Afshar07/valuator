@@ -15,7 +15,7 @@
               <TextBlock Classes="Title" FontSize="32" LineHeight="38" LetterSpacing="-0.64" Text="{Binding L[v3.welcomeTitle]}" />
               <TextBlock Classes="Body" FontSize="14.5" MaxWidth="540" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.welcomeSub]}" />
             </StackPanel>
-            <app:AdaptiveGrid MinItemWidth="260" Gap="12" StretchRows="True">
+            <c:AdaptiveGrid MinItemWidth="260" Gap="12" StretchRows="True">
               <Button Name="StartOwnProject" Classes="welcome welcomePrimary" Command="{Binding StartOwnCommand}" AutomationProperties.Name="{Binding L[v3.startOwn]}">
                 <StackPanel Spacing="8">
                   <Border Width="36" Height="36" CornerRadius="10" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}">
@@ -34,7 +34,7 @@
                   <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.startSampleSub]}" />
                 </StackPanel>
               </Button>
-            </app:AdaptiveGrid>
+            </c:AdaptiveGrid>
             <StackPanel Orientation="Horizontal" Spacing="8">
               <c:IconGlyph Icon="{x:Static app:Icons.HardDrives}" Size="14" Token="TextTertiary" />
               <TextBlock Classes="Caption" VerticalAlignment="Center" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[v3.noAccount]}" />

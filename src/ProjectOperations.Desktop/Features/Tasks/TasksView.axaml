@@ -18,7 +18,7 @@
       <Rectangle RadiusX="10" RadiusY="10" StrokeThickness="1" StrokeDashArray="4,3" Stroke="{DynamicResource AiBorderBrush}" IsHitTestVisible="False" />
     </Panel>
 
-    <app:AdaptiveGrid Name="Columns" MinItemWidth="260">
+    <c:AdaptiveGrid Name="Columns" MinItemWidth="260">
       <Border Name="TasksCard" BorderThickness="1" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource BackgroundCardBrush}"
               BorderBrush="{DynamicResource BorderDefaultBrush}" BoxShadow="{DynamicResource CardShadow}">
         <StackPanel>
@@ -61,6 +61,6 @@
           <ItemsControl ItemsSource="{Binding Milestones}" />
         </StackPanel>
       </Border>
-    </app:AdaptiveGrid>
+    </c:AdaptiveGrid>
   </StackPanel>
 </UserControl>

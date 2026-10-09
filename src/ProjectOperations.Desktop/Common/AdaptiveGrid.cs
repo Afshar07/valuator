@@ -1,11 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Layout;
-using Avalonia.Media;
-using ProjectOperations.Core.Domain;
 
-namespace ProjectOperations.Desktop;
+namespace ProjectOperations.Desktop.Common;
 
 /// <summary>Responsive equal- or weighted-column panel. It wraps by available width instead of by breakpoint classes.</summary>
 internal sealed class AdaptiveGrid : Panel
@@ -65,61 +61,4 @@ internal sealed class AdaptiveGrid : Panel
         }
         return finalSize;
     }
-}
-
-internal static class StatusVisuals
-{
-    public static (string Icon, IconWeight Weight, Tone Tone) Requirement(RequirementStatus status) => status switch
-    {
-        RequirementStatus.Complete => (Icons.CheckCircle, IconWeight.Fill, Tone.Success),
-        RequirementStatus.Provided => (Icons.CircleHalf, IconWeight.Regular, Tone.Accent),
-        RequirementStatus.NeedsReview => (Icons.WarningCircle, IconWeight.Regular, Tone.Warning),
-        _ => (Icons.CircleDashed, IconWeight.Regular, Tone.Error)
-    };
-
-    public static Tone Project(ProjectStatus status) => status switch
-    {
-        ProjectStatus.Active => Tone.Success,
-        ProjectStatus.OnHold => Tone.Neutral,
-        ProjectStatus.Completed => Tone.Accent,
-        _ => Tone.Neutral
-    };
-
-    public static (string Icon, IconWeight Weight, string Color) Task(ProjectTaskStatus status) => status switch
-    {
-        ProjectTaskStatus.Done => (Icons.CheckCircle, IconWeight.Fill, "Success"),
-        ProjectTaskStatus.Cancelled => (Icons.Prohibit, IconWeight.Regular, "TextTertiary"),
-        ProjectTaskStatus.InProgress => (Icons.CircleHalf, IconWeight.Regular, "Accent"),
-        _ => (Icons.Circle, IconWeight.Regular, "TextTertiary")
-    };
-}
-
-/// <summary>Keeps screens at a readable maximum width, anchored to the start edge in both flow directions.</summary>
-internal sealed class ReadableColumn : Decorator
-{
-    public double MaxContentWidth { get; set; } = 1120;
-    protected override Size MeasureOverride(Size availableSize)
-    {
-        var width = Math.Min(availableSize.Width, MaxContentWidth);
-        Child?.Measure(new Size(width, double.PositiveInfinity));
-        return new Size(width, Child?.DesiredSize.Height ?? 0);
-    }
-    protected override Size ArrangeOverride(Size finalSize)
-    {
-        Child?.Arrange(new Rect(0, 0, Math.Min(finalSize.Width, MaxContentWidth), finalSize.Height));
-        return finalSize;
-    }
-}
-
-/// <summary>Form building blocks shared by code-built controls.</summary>
-internal static class Forms
-{
-    public static TextBox Input(string value = "", double height = 36) => new()
-    {
-        Text = value,
-        TextWrapping = TextWrapping.NoWrap,
-        MinHeight = height,
-        VerticalContentAlignment = VerticalAlignment.Center,
-        HorizontalAlignment = HorizontalAlignment.Stretch
-    };
 }

@@ -26,7 +26,7 @@ internal sealed class JalaliDatePicker : Grid
     public static readonly StyledProperty<bool> AllowEmptyProperty = AvaloniaProperty.Register<JalaliDatePicker, bool>(nameof(AllowEmpty));
     public static readonly StyledProperty<LocalizedStrings?> StringsProperty = AvaloniaProperty.Register<JalaliDatePicker, LocalizedStrings?>(nameof(Strings));
 
-    private readonly TextBox _text = Forms.Input("", 36);
+    private readonly TextBox _text = new() { TextWrapping = TextWrapping.NoWrap, MinHeight = 36, VerticalContentAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Button _open = new() { Name = "JalaliDateOpen" };
     private readonly Popup _popup = new() { IsLightDismissEnabled = true, Placement = PlacementMode.Bottom, Name = "JalaliDatePopup" };
     private LocalizedStrings? _subscribed;

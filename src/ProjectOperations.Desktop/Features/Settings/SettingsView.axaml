@@ -85,7 +85,7 @@
             <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[settings.agentNote]}" />
           </Border>
           <Border Classes="rule" Padding="0,12,0,0">
-            <app:AdaptiveGrid MinItemWidth="240" Gap="12">
+            <c:AdaptiveGrid MinItemWidth="240" Gap="12">
               <StackPanel Spacing="5">
                 <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding EndpointLabel}" />
                 <TextBox Name="Setting_PROJECTOPS_OPENCODE_URL" IsReadOnly="True" FlowDirection="LeftToRight"
@@ -96,7 +96,7 @@
                 <TextBox Name="Setting_PROJECTOPS_OPENCODE_CONFIG_DIR" IsReadOnly="True" FlowDirection="LeftToRight"
                          Text="{Binding ConfigDirectory, Mode=OneWay}" PlaceholderText="{Binding L[settings.notSetEnv]}" />
               </StackPanel>
-            </app:AdaptiveGrid>
+            </c:AdaptiveGrid>
           </Border>
           <Border Margin="0,12,0,0" CornerRadius="10" Padding="14,10" Background="{DynamicResource BackgroundMutedBrush}">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
