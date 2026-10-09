@@ -4,6 +4,7 @@ using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Common;
+using ProjectOperations.Desktop.Features.Assistant;
 using ProjectOperations.Desktop.Features.Calendar;
 using ProjectOperations.Desktop.Features.Dashboard;
 using ProjectOperations.Desktop.Features.Documents;
@@ -16,22 +17,12 @@ using ProjectOperations.Desktop.Updates;
 
 namespace ProjectOperations.Desktop.Shell;
 
-/// <summary>The assistant panel as the shell drives it. Code-built until the assistant moves to MVVM.</summary>
-internal interface IAssistantPanel
-{
-    /// <summary>Lists the projects the assistant can work on (shown when no project is open).</summary>
-    Task ShowPickerAsync();
-    Task ShowProjectAsync(Project project);
-    /// <summary>Opens the review tray of a finished job.</summary>
-    Task ReviewAsync(string jobId);
-}
-
 /// <summary>
 /// The application shell: the sidebar, the page on screen, the first-run overlay, the modal layer, the error banner and toast, the
 /// run lock and the assistant's open state. It routes between pages, keeps the sidebar honest as data arrives, switches between the
 /// user's workspace and the sample, and is what every screen's view-model asks for navigation, busy state and messages.
 /// </summary>
-internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost, IPageHost, IOnboardingHost, ISidebarHost, IDisposable
+internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost, IPageHost, IOnboardingHost, ISidebarHost, IAssistantHost, IDisposable
 {
     private readonly WorkspaceSession _workspace;
     private readonly LocaleContext _locale;
@@ -56,7 +47,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
     [ObservableProperty] private string _themeId;
 
     public MainWindowViewModel(WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizedStrings strings, UpdateController updates,
-        IFileLauncher files, IFilePicker picker, Func<Task> initialize, TimeProvider? clock = null)
+        IFileLauncher files, IFilePicker picker, Func<Task> initialize, TimeProvider? clock = null, Func<string>? configurationText = null)
     {
         _workspace = workspace; _locale = locale; _appearance = appearance; L = strings; _updates = updates; _files = files; _picker = picker; _initialize = initialize;
         _clock = clock ?? TimeProvider.System;
@@ -66,6 +57,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
         _navigator = new Navigator(ShowRouteAsync);
         Display = new DisplayOptionsViewModel(strings, locale, appearance, Messages.ShowError);
         Sidebar = new SidebarViewModel(strings, Display, this);
+        Assistant = new AssistantViewModel(new AssistantServices(workspace, strings, locale, _navigator, this, configurationText ?? (() => ""), _clock));
         _runLock.LockChanged += (_, _) => ApplyLock(_runLock.IsLocked);
         appearance.Changed += OnAppearanceChanged;
         Messages.PropertyChanged += (_, e) =>
@@ -86,10 +78,8 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
     public UiState State { get; } = new();
     public INavigator Navigator => _navigator;
 
-    /// <summary>The assistant panel, set once it exists (it needs the shell to exist first).</summary>
-    public IAssistantPanel? Assistant { get; set; }
-    /// <summary>Builds the code-built Delegate tab's view-model for a project; set with <see cref="Assistant"/> until the assistant moves to MVVM.</summary>
-    public Func<Project, IReadOnlyList<AgentJob>, ViewModelBase>? DelegationFactory { get; set; }
+    /// <summary>The assistant: an <see cref="AssistantViewModel"/> shown at the end edge while <see cref="IsAssistantOpen"/>. Tests may swap in a recording one.</summary>
+    public IAssistantPanel Assistant { get; set; }
 
     public bool HasError => Messages.ErrorKey is not null;
     public string ErrorText => Messages.ErrorKey is { } key ? L[key] : "";
@@ -209,7 +199,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
         Show(model, settings);
         // The opt-in external overlay loads after the page is shown and does nothing unless Google Calendar is connected.
         if (calendar is not null) _ = calendar.StartAsync();
-        if (Assistant is not null) await Assistant.ShowPickerAsync();
+        await Assistant.ShowPickerAsync();
         await RefreshShellAsync();
         if (route.NewProject) ShowWizard(fromWelcome: false);
     }
@@ -219,11 +209,10 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
         var project = await Projects.GetAsync(route.ProjectId);
         if (project is null) { ShowError("validation.projectUnavailable"); return false; }
         Sidebar.Select(AppPage.Projects);
-        var model = await ProjectDetailViewModel.LoadAsync(project, route.Tab, ProjectScreen, Agents,
-            jobs => DelegationFactory?.Invoke(project, jobs) ?? throw new InvalidOperationException("The shell has no Delegate tab factory."));
+        var model = await ProjectDetailViewModel.LoadAsync(project, route.Tab, ProjectScreen, Agents, Environment.AgentConfigured);
         model.IsLocked = _runLock.IsLocked;
         _projectModel = model; Show(model);
-        if (Assistant is not null) await Assistant.ShowProjectAsync(project);
+        await Assistant.ShowProjectAsync(project);
         if (route.Tab == ProjectTab.Delegate) SetAssistantOpen(true);
         await RefreshShellAsync();
         return true;
@@ -324,7 +313,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IProjectHost,
     public async Task ReviewInAssistantAsync(string jobId)
     {
         SetAssistantOpen(true);
-        if (Assistant is not null) await Assistant.ReviewAsync(jobId);
+        await Assistant.ReviewAsync(jobId);
     }
 
     public void Dispose()

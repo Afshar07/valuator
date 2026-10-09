@@ -28,8 +28,7 @@ internal sealed class ShellScenario : IDisposable
         Workspace = new WorkspaceSession(projects, agents, new DesktopEnvironment(AgentConfigured: false), Calendar);
         Shell = new MainWindowViewModel(Workspace, Locale, Appearance, Strings, new UpdateController(Updater), Files, Picker, () => repository.InitializeAsync(), Clock)
         {
-            Assistant = Assistant,
-            DelegationFactory = (_, _) => new StubTab()
+            Assistant = Assistant
         };
     }
 
@@ -72,8 +71,6 @@ internal sealed class ShellScenario : IDisposable
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
     }
-
-    internal sealed class StubTab : ViewModelBase;
 
     internal sealed class RefusingRuntime : IAgentRuntime
     {

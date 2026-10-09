@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Delegation"
+             x:Class="ProjectOperations.Desktop.Features.Delegation.DelegationView"
+             x:DataType="vm:DelegationViewModel">
+  <StackPanel Spacing="16">
+    <!-- Runs happen in the assistant panel; this tab keeps what was asked and what came of it. -->
+    <Border BorderThickness="1" CornerRadius="12" Padding="16,12" Background="{DynamicResource BackgroundCardBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+        <Border Width="30" Height="30" CornerRadius="8" VerticalAlignment="Center" Background="{DynamicResource AiSoftBrush}">
+          <c:IconGlyph Icon="{x:Static app:Icons.Sparkle}" Weight="Fill" Size="15" Token="Ai" />
+        </Border>
+        <TextBlock Grid.Column="1" Classes="Small" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[delegation.intro]}" />
+        <c:StatusLine Grid.Column="2" Text="{Binding StatusText}" Token="{Binding StatusToken}" />
+        <Button Grid.Column="3" Name="OpenAssistant" Classes="ai" HorizontalAlignment="Left" Command="{Binding OpenAssistantCommand}" Content="{Binding L[delegation.openAssistant]}" />
+      </Grid>
+    </Border>
+
+    <Border Name="HistoryCard" Classes="card">
+      <StackPanel>
+        <Border Padding="16,12,16,10">
+          <Grid MinHeight="26">
+            <TextBlock Classes="Heading" VerticalAlignment="Center" Text="{Binding L[history.title]}" />
+          </Grid>
+        </Border>
+        <Border Classes="rule" Padding="16,9" Background="{DynamicResource BackgroundMutedBrush}">
+          <Grid ColumnDefinitions="1.4*,120,120,1.6*" ColumnSpacing="16">
+            <TextBlock Classes="MetaMedium" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding L[history.column.request]}" />
+            <TextBlock Grid.Column="1" Classes="MetaMedium" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding L[history.column.status]}" />
+            <TextBlock Grid.Column="2" Classes="MetaMedium" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding L[history.column.started]}" />
+            <TextBlock Grid.Column="3" Classes="MetaMedium" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding L[history.column.outcome]}" />
+          </Grid>
+        </Border>
+        <Border Classes="rule" Padding="16,12" IsVisible="{Binding IsEmpty}">
+          <TextBlock Classes="Body" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[history.empty]}" />
+        </Border>
+        <ItemsControl ItemsSource="{Binding Rows}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

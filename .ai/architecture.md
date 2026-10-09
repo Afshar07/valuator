@@ -201,8 +201,8 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
 - `MainWindowViewModel` (`Desktop/Shell`) is the shell: it routes between pages, owns the sidebar
   (Needs attention, All projects, Calendar, Documents, Settings; `SidebarPolicy` decides what shows), the
   first-run overlay, the modal layer, the error banner and toast, the run lock and the sample workspace.
-  `MainWindow.axaml` is a thin view over it, plus the system file dialogs and the code-built assistant
-  panel. This split does not change service boundaries. A migration to MVVM is in progress; see
+  `MainWindow.axaml` is a thin view over it, plus the system file dialogs and the assistant's dock/overlay placement.
+  The assistant is `Features/Assistant/AssistantViewModel` with XAML views. This split does not change service boundaries. A migration to MVVM is in progress; see
   `.ai/ongoing/mvvm-migration.md`.
 - The assistant is a project-scoped panel docked at the end edge (it overlays the
   content below 1280 px). It keeps one set of request, preview and consent controls per

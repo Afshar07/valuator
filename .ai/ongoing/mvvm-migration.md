@@ -39,8 +39,8 @@ State: `todo` → `in progress` → `done`.
 | 3b | Settings, stage editor, update panel, Google Calendar panel | done |
 | 3c | Project detail, Overview, Requirements, remaining project dialogs | done |
 | 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | done |
-| 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | todo |
-| 6 | Cleanup: replace `Components.cs` with styles and controls; update `architecture.md` and `testing.md`; delete this file and its index entry | todo |
+| 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | done |
+| 6 | Cleanup: replace what is left of `Components.cs` (`AdaptiveGrid`, `ReadableColumn`, `StatusVisuals`, `Forms`) with styles and controls; delete `LocalizedControls` if unused; update `architecture.md` and `testing.md`; delete this file and its index entry | todo |
 
 ## Notes
 
@@ -164,4 +164,16 @@ State: `todo` → `in progress` → `done`.
   - Checked against the previous commit with `PROJECTOPS_UI_CAPTURE_DIR` (onboarding captures and the designed screens, English/Persian, light/dark, 800 and 1440 wide): the sidebar, welcome and the sample
     screens are pixel-equal (within 8/255); the wizard differs only in sub-pixel text and caret placement. In the Persian dark capture the theme chip now follows the click at once (the old segmented
     control lagged one frame). Not checked on Windows.
-
+- Assistant (5), `Desktop/Features/{Assistant,Delegation}/`; nothing code-built is left in the screens:
+  - `AssistantViewModel` (`IAssistantPanel`, which the shell still drives: `ShowPickerAsync`, `ShowProjectAsync`, `ReviewAsync`) is built by `MainWindowViewModel` (`Assistant`, settable so shell tests can swap a recorder).
+    It takes `AssistantServices` (live `WorkspaceSession`, strings, locale, navigator, `IAssistantHost`, configuration text) and the shell implements `IAssistantHost` (run lock, `RunAsync`, `RefreshProjectAsync`, `ShowError`, `SetAssistantOpen`).
+    `MainWindow.axaml` holds it in `Border Name="AssistantPanel"` (`IsVisible` = `IsAssistantOpen`); `MainWindow.axaml.cs` only decides dock vs overlay (`PlaceAssistant`).
+  - State machine kept as it was: preview computes the exact snapshot and enables consent; any prompt edit withdraws consent; `RunCommand` re-checks consent, prompt and that the snapshot is unchanged (else error `validation.contextConsentRequired`);
+    a changed project on re-show resets consent; Stop only requests cancellation. `IsRunning` is the VM's own flag (true inside the run, false at the start of the reload). Buttons bind `IsEnabled` to `CanRun`/`CanClose`/`IsStopEnabled`/`CanReview`
+    (not only the command) so `IsEnabled` stays meaningful in tests. Progress arrives through `Progress<T>`, which posts to the UI thread; a plain-xUnit test has no UI thread, so `AssistantScenario.UntilAsync` waits for it.
+  - Children shown by the locator: `AssistantProjectRowViewModel` (picker), `AssistantStepViewModel`, `ProposalReviewViewModel` (+ `ProposalItemViewModel`, `CommittedTaskViewModel`). The Delegate tab is `DelegationViewModel` + `HistoryRowViewModel` (expand in place, review button).
+    `ProjectDetailViewModel` now takes `agentConfigured` and builds it; the `DelegationFactory`/stand-in tab are gone.
+  - New `Common` controls: `StatusLine` (dot + text, `Token`), `AiCheckBox` (violet checked state), `Pill.Icon`. Removed: `AssistantPanel`, `DelegationView`, `DelegationTab*`, `PresentationContext`, `PresentationView`, `IShell`/`ShellAdapter`, and the code-built `Ui`, `ListCard`, `TableHeader`, `ListRow`, `DashedFrame`. `DesktopEnvironment` moved to `Shell/DesktopEnvironment.cs`.
+  - Small changes: the picker clears any stale outcome/tray (it kept them hidden-but-present before); a preset is marked whenever the prompt equals it (before: only when clicked).
+  - Tests: `Mvvm/AssistantFeatureTests` and `DelegationFeatureTests` (plain xUnit over `AssistantScenario`: real SQLite and run lock, `ControlledRuntime`, a host that reloads the open project like the shell); the window tests for Run/consent/Stop/close/proposals/unconfigured/preset buttons pass unchanged.
+  - Checked against the previous commit with `PROJECTOPS_UI_CAPTURE_DIR`: the Delegate tab page and the assistant panel (English/Persian, 800 and 1440 wide) match except a 1px vertical shift of one preset button. Not checked on Windows.

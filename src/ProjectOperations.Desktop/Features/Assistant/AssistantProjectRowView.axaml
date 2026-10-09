@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Assistant"
+             x:Class="ProjectOperations.Desktop.Features.Assistant.AssistantProjectRowView"
+             x:DataType="vm:AssistantProjectRowViewModel">
+  <Button Classes="row" Padding="8,6" CornerRadius="8" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center">
+      <c:InitialTile Text="{Binding Name}" Size="26" />
+      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+        <TextBlock Classes="BodyMedium" Text="{Binding Name}" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding HasCompany}" Text="{Binding Company}" />
+      </StackPanel>
+    </Grid>
+  </Button>
+</UserControl>
