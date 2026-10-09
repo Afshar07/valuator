@@ -25,13 +25,13 @@ public static class ProjectSummaries
 {
     public static ProjectSummary Summarize(Project project, DateTimeOffset now)
     {
-        var active = project.Tasks.Where(task => task.Status is ProjectTaskStatus.Todo or ProjectTaskStatus.InProgress);
+        var active = project.Tasks.Where(TaskUrgency.IsActive).ToList();
         return new(project,
             project.Requirements.Count(requirement => requirement.Status == RequirementStatus.Complete),
             project.Requirements.Count,
             project.Requirements.Where(requirement => requirement.Status is RequirementStatus.Missing or RequirementStatus.NeedsReview).ToList(),
-            active.Where(task => task.DueAt < now).OrderBy(task => task.DueAt).ThenBy(task => task.Id).ToList(),
-            active.Where(task => task.DueAt >= now && task.DueAt <= now.AddDays(7)).OrderBy(task => task.DueAt).ThenBy(task => task.Id).ToList(),
+            active.Where(task => TaskUrgency.BucketOf(task, now) == TaskBucket.Overdue).OrderBy(task => task.DueAt).ThenBy(task => task.Id).ToList(),
+            active.Where(task => TaskUrgency.BucketOf(task, now) == TaskBucket.ThisWeek).OrderBy(task => task.DueAt).ThenBy(task => task.Id).ToList(),
             project.Milestones.Where(milestone => !milestone.IsComplete && milestone.DueAt.HasValue)
                 .OrderBy(milestone => milestone.DueAt).ThenBy(milestone => milestone.Id).FirstOrDefault());
     }
@@ -69,7 +69,7 @@ public static class ProjectSummaries
             .Select(item => item with { IsOverdue = item.Kind == ScheduleItemKind.Task && item.DueAt < now }).FirstOrDefault();
 
     private static IEnumerable<ScheduleItem> OpenItems(Project project) =>
-        project.Tasks.Where(task => task.Status is ProjectTaskStatus.Todo or ProjectTaskStatus.InProgress && task.DueAt.HasValue)
+        project.Tasks.Where(task => TaskUrgency.IsActive(task) && task.DueAt.HasValue)
             .Select(task => new ScheduleItem(project.Id, project.Name, ScheduleItemKind.Task, task.Id, task.Title, task.DueAt!.Value, false))
             .Concat(project.Milestones.Where(milestone => !milestone.IsComplete && milestone.DueAt.HasValue)
                 .Select(milestone => new ScheduleItem(project.Id, project.Name, ScheduleItemKind.Milestone, milestone.Id, milestone.Title, milestone.DueAt!.Value, false)));

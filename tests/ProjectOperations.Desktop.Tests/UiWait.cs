@@ -1,5 +1,6 @@
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Xunit;
@@ -38,7 +39,9 @@ internal static class UiWait
     {
         Pump(() => button.IsEffectivelyEnabled);
         Assert.True(button.IsEffectivelyEnabled, "The button stayed disabled for 10 seconds.");
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        // Invoke as an assistive technology does: it runs the Click handlers and the bound Command, like a real click. Raising ClickEvent alone skips the Command.
+        var invoke = Assert.IsAssignableFrom<IInvokeProvider>(ControlAutomationPeer.CreatePeerForElement(button));
+        invoke.Invoke();
         Dispatcher.UIThread.RunJobs();
     }
 }

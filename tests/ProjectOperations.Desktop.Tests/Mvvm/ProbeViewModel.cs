@@ -5,9 +5,15 @@ using ProjectOperations.Desktop.Localization;
 namespace ProjectOperations.Desktop.Tests.Mvvm;
 
 /// <summary>Test-only view-model proving the MVVM foundation end to end: view locator, compiled bindings, localization and dates.</summary>
-public sealed partial class ProbeViewModel(LocalizedStrings strings) : ViewModelBase
+public sealed partial class ProbeViewModel : ViewModelBase
 {
-    public LocalizedStrings L { get; } = strings;
+    public ProbeViewModel(LocalizedStrings strings)
+    {
+        L = strings;
+        RefreshOnLanguageChange(strings);
+    }
+
+    public LocalizedStrings L { get; }
     public DateTimeOffset? Due { get; init; }
     [ObservableProperty] private string _name = "";
 }

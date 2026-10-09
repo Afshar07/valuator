@@ -27,6 +27,8 @@ internal static class Icons
 
     public const string CaretDown = "", CaretUp = "", CheckSquareOffset = "", Flask = "", Lightbulb = "", ListChecks = "", PencilSimple = "", Trash = "";
 
+    public static FontFamily Family(IconWeight weight) => weight switch { IconWeight.Bold => Bold, IconWeight.Fill => Fill, _ => Regular };
+
     /// <summary>Icon text block; icons are decorative, so they never carry accessible names or flow-dependent glyphs.</summary>
     public static TextBlock Glyph(string glyph, double size = 16, string color = "TextSecondary", IconWeight weight = IconWeight.Regular)
     {
@@ -34,7 +36,7 @@ internal static class Icons
         {
             Text = glyph,
             FontSize = size,
-            FontFamily = weight switch { IconWeight.Bold => Bold, IconWeight.Fill => Fill, _ => Regular },
+            FontFamily = Family(weight),
             FontWeight = FontWeight.Normal,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,

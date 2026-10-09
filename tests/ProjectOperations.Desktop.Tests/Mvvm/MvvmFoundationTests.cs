@@ -39,6 +39,29 @@ public sealed class MvvmFoundationTests
     }
 
     [Fact]
+    public void View_models_follow_the_language_without_being_kept_alive_by_the_strings()
+    {
+        var locale = new LocaleContext();
+        using var strings = new LocalizedStrings(locale, new LocalizationService(locale));
+        var model = new ProbeViewModel(strings);
+        var changes = 0;
+        model.PropertyChanged += (_, e) => { if (e.PropertyName == string.Empty) changes++; };
+
+        locale.SetLanguage("fa");
+        Assert.Equal(1, changes);
+
+        var weak = AbandonedModel(strings);
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+        Assert.False(weak.TryGetTarget(out _));
+        locale.SetLanguage("en");
+        Assert.Equal(2, changes);
+        GC.KeepAlive(model);
+
+        // A separate method, so no local of this test keeps the view-model reachable.
+        static WeakReference<ProbeViewModel> AbandonedModel(LocalizedStrings strings) => new(new ProbeViewModel(strings));
+    }
+
+    [Fact]
     public void Date_converters_format_by_the_bound_language_and_leave_missing_dates_empty()
     {
         var english = new LocaleDateFormatter(new FixedLocaleContext("en"));

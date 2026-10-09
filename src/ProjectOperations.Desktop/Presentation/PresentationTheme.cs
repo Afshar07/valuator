@@ -127,6 +127,20 @@ internal static class PresentationTheme
         window.Resources.ThemeDictionaries[ThemeVariant.Dark] = Palette(dark: true);
 
         NeutralizeFluentStates(window);
+        window.Styles.Add(new Avalonia.Markup.Xaml.Styling.StyleInclude(new Uri("avares://ProjectOperations.Desktop/"))
+        {
+            Source = new Uri("avares://ProjectOperations.Desktop/Common/Styles.axaml")
+        });
+
+        // Typography for XAML text: <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>. Like the code-built Label,
+        // it wraps and aligns to the start edge; set TextWrapping or TextAlignment on the element to differ. Code-built text uses Typeset.
+        foreach (var (name, (size, weight)) in Typography)
+        {
+            var style = Rule(s => s.OfType<TextBlock>().Class(name), (TextBlock.FontSizeProperty, size), (TextBlock.FontWeightProperty, weight),
+                (TextBlock.ForegroundProperty, Dynamic("TextPrimary")), (TextBlock.TextWrappingProperty, TextWrapping.Wrap), (TextBlock.TextAlignmentProperty, TextAlignment.Start));
+            if (name == "Title") style.Setters.Add(new Setter(TextBlock.LetterSpacingProperty, -0.24));
+            window.Styles.Add(style);
+        }
 
         window.Styles.Add(Rule(s => s.OfType<CheckBox>(), (CheckBox.ForegroundProperty, Dynamic("TextPrimary")), (CheckBox.FontSizeProperty, 12.5)));
 
