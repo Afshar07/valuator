@@ -4,6 +4,24 @@ A local, single-window VC investment project assistant built with C#/.NET,
 Avalonia and SQLite. OpenCode is an optional, explicitly configured agent runtime,
 not the application's source of project truth.
 
+## Screenshots
+
+Captured from the app's built-in synthetic sample workspace (no real project data).
+
+| | |
+| --- | --- |
+| ![Welcome screen](docs/screenshots/welcome.png) | ![Needs-attention dashboard](docs/screenshots/dashboard.png) |
+| **Welcome** — start a project or explore sample data | **Dashboard** — overdue work, deadlines and milestones, no AI call |
+| ![Requirements checklist](docs/screenshots/checklist.png) | ![Tasks and milestones](docs/screenshots/tasks.png) |
+| **Checklist** — 16 requirements, files and readiness | **Tasks & dates** — grouped by urgency, with agent proposals to review |
+
+Persian (RTL) with the dark theme:
+
+![Dashboard in Persian, dark theme](docs/screenshots/dashboard-persian-dark.png)
+
+To regenerate them, run the desktop tests with `PROJECTOPS_UI_CAPTURE_DIR` set
+(see [verification](docs/verification.md)); the `sample-*` and `welcome` frames are the ones used here.
+
 ## Download
 
 Each [GitHub release](https://github.com/Afshar07/unnamed-harness/releases) includes a
