@@ -8,6 +8,7 @@ using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Calendar;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -205,7 +206,7 @@ internal sealed class CalendarView : PresentationView
         };
         button.Paint(Button.BackgroundProperty, item.IsOverdue ? "ErrorSoft" : milestone ? "AccentSoft" : "BackgroundTrack");
         Bind(button, control => { AutomationProperties.SetName(control, $"{item.Title} · {item.ProjectName} · {Due(item.DueAt)}"); ToolTip.SetTip(control, $"{item.Title} · {item.ProjectName} · {Due(item.DueAt)}"); });
-        button.Click += async (_, _) => await Context.ActAsync(button, () => OpenProjectAsync(item.ProjectId, 2));
+        button.Click += async (_, _) => await Context.ActAsync(button, () => OpenProjectAsync(item.ProjectId, ProjectTab.Tasks));
         return button;
     }
 

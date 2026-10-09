@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -126,7 +127,7 @@ internal sealed class DocumentsView : PresentationView
             if (project is null || requirement is null || file is null) { ShowError("validation.projectUnavailable"); return; }
             requirement.Files.Remove(file);
             await SaveAsync(project);
-            await Context.Shell.NavigateAsync("documents");
+            await Context.Shell.NavigateAsync(AppPage.Documents);
         }, "ghost");
         actions.Children.Add(open); actions.Children.Add(reveal); actions.Children.Add(unlink);
         panel.Children.Add(actions);

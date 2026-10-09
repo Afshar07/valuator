@@ -7,6 +7,7 @@ using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Calendar;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 using ProjectOperations.Desktop.Updates;
 
 namespace ProjectOperations.Desktop;
@@ -17,8 +18,8 @@ public sealed record DesktopEnvironment(bool AgentConfigured = true, string? End
 /// <summary>Shell operations available to screens. <see cref="MainWindow"/> owns navigation, locking and the assistant panel.</summary>
 internal interface IShell
 {
-    Task OpenProjectAsync(Guid id, int tab);
-    Task NavigateAsync(string page);
+    Task OpenProjectAsync(Guid id, ProjectTab tab);
+    Task NavigateAsync(AppPage page, bool newProject = false);
     /// <summary>Reloads the open project on its current tab (after reviews or runs); the assistant keeps its controls.</summary>
     Task RefreshProjectAsync();
     Task ActAsync(Button button, Func<Task> action);
@@ -64,23 +65,26 @@ internal sealed class UiState
 
 /// <summary>Shared services and localized control factories handed to views and components by the shell.</summary>
 internal sealed class PresentationContext(
-    ProjectService projects, AgentService agents, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
-    string configuration, Func<string>? configurationText, DesktopEnvironment environment, IShell shell, UpdateController updates)
+    WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
+    LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates)
 {
     public UpdateController Updates { get; } = updates;
-    public ProjectService Projects { get; set; } = projects;
-    public AgentService Agents { get; set; } = agents;
+    public WorkspaceSession Workspace { get; } = workspace;
+    public ProjectService Projects => Workspace.Projects;
+    public AgentService Agents => Workspace.Agents;
     public LocaleContext Locale { get; } = locale;
     public AppearanceContext Appearance { get; } = appearance;
     public LocalizationService Text { get; } = text;
     public LocalizedControls Localized { get; } = localized;
-    public DesktopEnvironment Environment { get; set; } = environment;
+    /// <summary>Bindable strings for XAML views hosted by the shell.</summary>
+    public LocalizedStrings Strings { get; } = strings;
+    public DesktopEnvironment Environment => Workspace.Environment;
     public IShell Shell { get; } = shell;
     public UiState State { get; } = new();
     /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
-    public IExternalCalendarSource Calendar { get; set; } = new NoExternalCalendar();
+    public IExternalCalendarSource Calendar => Workspace.Calendar;
     public string ConfigurationText() => configurationText?.Invoke() ?? configuration;
-    public Task OpenProjectAsync(Guid id, int tab = 0) => Shell.OpenProjectAsync(id, tab);
+    public Task OpenProjectAsync(Guid id, ProjectTab tab = ProjectTab.Overview) => Shell.OpenProjectAsync(id, tab);
     public Task ActAsync(Button button, Func<Task> action) => Shell.ActAsync(button, action);
     public void ShowError(string key) => Shell.ShowError(key);
 

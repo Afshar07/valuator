@@ -234,13 +234,13 @@ public sealed class MainWindowTests
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
-    public void Blank_date_is_optional(string value) => Assert.Null(MainWindow.ParseLocalDate(value));
+    public void Blank_date_is_optional(string value) => Assert.Null(LocalDateInput.Parse(value));
 
     [Theory]
     [InlineData("10/14/2030")]
     [InlineData("2030-02-30 09:30")]
     [InlineData("not a date")]
-    public void Invalid_date_is_rejected(string value) => Assert.Throws<FormatException>(() => MainWindow.ParseLocalDate(value));
+    public void Invalid_date_is_rejected(string value) => Assert.Throws<FormatException>(() => LocalDateInput.Parse(value));
 
     private static IEnumerable<T> Controls<T>(Window window) where T : Control => window.GetLogicalDescendants().OfType<T>().Distinct();
     private static IEnumerable<Button> Buttons(Window window) => Controls<Button>(window);

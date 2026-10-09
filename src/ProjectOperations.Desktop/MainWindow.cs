@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 using ProjectOperations.Desktop.Updates;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
@@ -19,43 +20,37 @@ public sealed class MainWindow : Window, IShell
 {
     /// <summary>Below this window width the assistant panel slides over the content instead of docking beside it.</summary>
     private const double DockedPanelMinWidth = 1280;
-    private static readonly (string Page, string Key, string Name, string Icon)[] Pages =
+    private static readonly (AppPage Page, string Key, string Name, string Icon)[] Pages =
     [
-        ("dashboard", "navigation.attention", "NavigationDashboard", Icons.BellSimple),
-        ("projects", "navigation.projects", "NavigationProjects", Icons.Folders),
-        ("calendar", "presentation.navigationCalendar", "NavigationCalendar", Icons.CalendarBlank),
-        ("documents", "presentation.navigationDocuments", "NavigationDocuments", Icons.Files),
-        ("settings", "presentation.navigationSettings", "NavigationSettings", Icons.GearSix)
+        (AppPage.Dashboard, "navigation.attention", "NavigationDashboard", Icons.BellSimple),
+        (AppPage.Projects, "navigation.projects", "NavigationProjects", Icons.Folders),
+        (AppPage.Calendar, "presentation.navigationCalendar", "NavigationCalendar", Icons.CalendarBlank),
+        (AppPage.Documents, "presentation.navigationDocuments", "NavigationDocuments", Icons.Files),
+        (AppPage.Settings, "presentation.navigationSettings", "NavigationSettings", Icons.GearSix)
     ];
 
-    private ProjectService _projects => _context.Projects;
+    private ProjectService _projects => _workspace.Projects;
     private readonly ContentControl _page = new() { Name = "ScreenHost" };
-    private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Start, IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _errorBanner;
+    private readonly ErrorBanner _errorBanner;
     private readonly AppSidebar _navigation;
     private readonly AssistantPanel _assistant;
     private readonly Grid _shell;
-    private readonly Panel _dialogLayer = new() { IsVisible = false, ZIndex = 10 };
+    private readonly DialogHost _dialogs = new();
     private TabControl? _projectTabs;
-    private Guid? _currentProject;
-    private CancellationTokenSource? _runCancellation;
-    private Task? _running;
     private bool _closing;
-    private bool _closeRequested;
     private readonly LocaleContext _locale;
     private readonly AppearanceContext _appearance;
     private readonly LocalizationService _text;
     private readonly LocalizedControls _localized;
+    private readonly LocalizedStrings _strings;
     private readonly PresentationContext _context;
-    private string _errorKey = "";
+    private readonly ShellMessages _messages = new();
+    private readonly AgentRunLock _runLock;
+    private readonly Navigator _navigator;
+    private readonly WorkspaceSession _workspace;
     private readonly Panel _overlay = new() { IsVisible = false, ZIndex = 30, Name = "OnboardingOverlay" };
-    private readonly Border _toast;
-    private readonly TextBlock _toastText = new() { TextWrapping = TextWrapping.Wrap, Name = "ToastText" };
-    private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(4.8) };
-    private SampleWorkspace? _sample;
-    private (ProjectService Projects, AgentService Agents, DesktopEnvironment Environment, IExternalCalendarSource Calendar)? _real;
-    private readonly Dictionary<string, bool> _visible = [];
-    private readonly HashSet<string> _fresh = [];
+    private readonly Dictionary<AppPage, bool> _visible = [];
+    private readonly HashSet<AppPage> _fresh = [];
     private bool _shellKnown;
 
     public MainWindow(ProjectService projects, AgentService agents, Func<Task> initialize, string configuration, LocaleContext? locale = null, Func<string>? configurationText = null,
@@ -65,12 +60,13 @@ public sealed class MainWindow : Window, IShell
         _appearance = appearance ?? new AppearanceContext();
         _text = new LocalizationService(_locale);
         _localized = new LocalizedControls(_locale);
-        _context = new PresentationContext(projects, agents, _locale, _appearance, _text, _localized, configuration, configurationText, environment ?? new DesktopEnvironment(), this, new UpdateController(updater ?? new NoAppUpdater()));
-        _context.Calendar = calendar ?? new NoExternalCalendar();
+        _strings = new LocalizedStrings(_locale, _text);
+        _runLock = new AgentRunLock(_messages);
+        _navigator = new Navigator(ShowRouteAsync);
+        _workspace = new WorkspaceSession(projects, agents, environment ?? new DesktopEnvironment(), calendar ?? new NoExternalCalendar());
+        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()));
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
-        PresentationTheme.Typeset(_error, "Small", "TextPrimary");
-        _localized.Bind(_error, control => control.Text = _errorKey.Length == 0 ? "" : _text.Get(_errorKey));
         _locale.Changed += LocaleChanged;
         _appearance.Changed += AppearanceChanged;
         _localized.Bind(this, window => window.Title = _text.Get("app.title"));
@@ -82,14 +78,7 @@ public sealed class MainWindow : Window, IShell
         _navigation = new AppSidebar(_context, Pages, page => _ = GuardAsync(() => NavigateAsync(page)));
         _assistant = new AssistantPanel(_context) { Name = "AssistantPanel", IsVisible = false, Width = 360 };
 
-        var dismiss = new Button { Content = Icons.Glyph(Icons.X, 14, "TextSecondary"), VerticalAlignment = VerticalAlignment.Top }; dismiss.Classes.Add("icon");
-        _localized.Bind(dismiss, control => Avalonia.Automation.AutomationProperties.SetName(control, _text.Get("action.close")));
-        dismiss.Click += (_, _) => HideError();
-        var errorRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
-        var errorIcon = Icons.Glyph(Icons.WarningCircle, 17, "Error"); errorIcon.VerticalAlignment = VerticalAlignment.Top; errorIcon.Margin = new Thickness(0, 1, 0, 0);
-        errorRow.Children.Add(errorIcon); Grid.SetColumn(_error, 1); errorRow.Children.Add(_error); Grid.SetColumn(dismiss, 2); errorRow.Children.Add(dismiss);
-        _errorBanner = new Border { Name = "ErrorBanner", IsVisible = false, Padding = new Thickness(14, 8, 8, 8), Margin = new Thickness(32, 16, 32, 0), CornerRadius = new CornerRadius(PresentationTheme.RadiusMedium), BorderThickness = new Thickness(1), Child = errorRow }
-            .Paint(Border.BackgroundProperty, "ErrorSoft").Paint(Border.BorderBrushProperty, "Error");
+        _errorBanner = new ErrorBanner(_messages, _text, _localized);
 
         var body = new DockPanel { Name = "WorkspaceBody" };
         DockPanel.SetDock(_errorBanner, Dock.Top); body.Children.Add(_errorBanner);
@@ -99,61 +88,43 @@ public sealed class MainWindow : Window, IShell
         _shell.Children.Add(_navigation);
         Grid.SetColumn(body, 1); _shell.Children.Add(body);
         _shell.Children.Add(_assistant);
-        Grid.SetColumnSpan(_dialogLayer, 3); _shell.Children.Add(_dialogLayer);
+        Grid.SetColumnSpan(_dialogs, 3); _shell.Children.Add(_dialogs);
         Grid.SetColumnSpan(_overlay, 3); _shell.Children.Add(_overlay);
-        PresentationTheme.Typeset(_toastText, "Small", "BackgroundApp");
-        var toastRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        toastRow.Children.Add(Icons.Glyph(Icons.Info, 16, "BackgroundApp", IconWeight.Fill)); _toastText.VerticalAlignment = VerticalAlignment.Center; toastRow.Children.Add(_toastText);
-        _toast = new Border
-        {
-            Name = "Toast",
-            IsVisible = false,
-            ZIndex = 40,
-            IsHitTestVisible = false,
-            MaxWidth = 540,
-            Padding = new Thickness(14, 10),
-            CornerRadius = new CornerRadius(PresentationTheme.RadiusMedium),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(20, 0, 20, 20),
-            Child = toastRow
-        }
-            .Paint(Border.BackgroundProperty, "TextPrimary").RaisedShadowed();
-        Grid.SetColumnSpan(_toast, 3); _shell.Children.Add(_toast);
-        _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); _toast.IsVisible = false; };
+        var toast = new ToastView(_messages, _text);
+        Grid.SetColumnSpan(toast, 3); _shell.Children.Add(toast);
         Content = _shell;
         PlaceAssistant();
         SizeChanged += (_, _) => PlaceAssistant();
-        KeyDown += (_, e) => { if (e.Key == Key.Escape && _dialogLayer.IsVisible) { CloseModal(); e.Handled = true; } };
+        KeyDown += (_, e) => { if (e.Key == Key.Escape && _dialogs.IsOpen) { CloseModal(); e.Handled = true; } };
 
-        Closed += (_, _) => { _locale.Changed -= LocaleChanged; _appearance.Changed -= AppearanceChanged; _localized.Dispose(); };
+        Closed += (_, _) => { _locale.Changed -= LocaleChanged; _appearance.Changed -= AppearanceChanged; _localized.Dispose(); _strings.Dispose(); _workspace.Dispose(); };
         Opened += async (_, _) =>
         {
             SetNavigationEnabled(false);
             try { await GuardAsync(async () => { await initialize(); await StartAsync(); }); }
             finally { SetNavigationEnabled(true); }
         };
+        _runLock.LockChanged += (_, _) => ApplyLock(_runLock.IsLocked);
         Closing += async (_, e) =>
         {
-            if (_closing || _running is null) return;
-            e.Cancel = true; _closeRequested = true;
-            _runCancellation?.Cancel();
-            await GuardAsync(async () => { await _running; _closing = true; Close(); });
+            if (_closing || _runLock.RequestClose() is not { } running) return;
+            e.Cancel = true;
+            await GuardAsync(async () => { await running; _closing = true; Close(); });
         };
     }
 
-    public bool IsAgentRunning => _running is not null;
+    public bool IsAgentRunning => _runLock.IsRunning;
 
     private void SetNavigationEnabled(bool enabled) => _navigation.IsEnabled = enabled;
-    private async Task GuardAsync(Func<Task> action, bool clearError = true)
-    {
-        if (clearError) HideError();
-        try { await action(); }
-        catch (OperationCanceledException) { ShowError("validation.operationCancelled"); }
-        catch (Exception exception) { LastFailure = exception; ShowError("validation.operationFailed"); }
-    }
+    private Task GuardAsync(Func<Task> action, bool clearError = true) => _messages.GuardAsync(action, clearError);
     /// <summary>The most recent exception reported to the user as a generic failure; retained for diagnostics and tests.</summary>
-    public Exception? LastFailure { get; private set; }
+    public Exception? LastFailure => _messages.LastFailure;
+    private void ApplyLock(bool locked)
+    {
+        SetNavigationEnabled(!locked); _page.IsEnabled = !locked;
+        if (_projectTabs is not null)
+            foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = !locked;
+    }
     private void LocaleChanged(object? sender, EventArgs e) => ApplyLocalePresentation();
     private void AppearanceChanged(object? sender, EventArgs e)
     {
@@ -164,8 +135,8 @@ public sealed class MainWindow : Window, IShell
         FlowDirection = _locale.FlowDirection;
         FontFamily = _locale.LanguageCode == "fa" ? PresentationTheme.PersianFontFamily : PresentationTheme.LatinFontFamily;
     }
-    public void ShowError(string key) { _errorKey = key; _error.Text = _text.Get(key); _error.IsVisible = true; _errorBanner.IsVisible = true; }
-    private void HideError() { _error.IsVisible = false; _errorBanner.IsVisible = false; }
+    public void ShowError(string key) => _messages.ShowError(key);
+    private void HideError() => _messages.HideError();
 
     public async Task ActAsync(Button button, Func<Task> action)
     {
@@ -188,43 +159,57 @@ public sealed class MainWindow : Window, IShell
         };
     }
 
-    public async Task NavigateAsync(string page)
+    public Task NavigateAsync(AppPage page, bool newProject = false) => _navigator.GoToAsync(new PageRoute(page, newProject));
+    public Task OpenProjectAsync(Guid id, ProjectTab tab = ProjectTab.Overview) => _navigator.GoToAsync(new ProjectRoute(id, tab));
+
+    private async Task<bool> ShowRouteAsync(Route route)
     {
-        var create = page == "projects:new";
-        if (create) page = "projects";
-        _projectTabs = null; _currentProject = null; _navigation.Select(page);
+        switch (route)
+        {
+            case PageRoute page: await ShowPageAsync(page); return true;
+            case ProjectRoute project: return await ShowProjectAsync(project);
+            default: return false;
+        }
+    }
+
+    private async Task ShowPageAsync(PageRoute route)
+    {
+        var page = route.Page;
+        _projectTabs = null; _navigation.Select(page);
         _fresh.Remove(page); _navigation.SetNew(page, false);
         Control view = page switch
         {
-            "projects" => await Load(new ProjectsView(_context), view => view.LoadAsync()),
-            "calendar" => await Load(new CalendarView(_context), view => view.LoadAsync()),
-            "documents" => await Load(new DocumentsView(_context), view => view.LoadAsync()),
-            "settings" => new SettingsView(_context),
+            AppPage.Projects => await Load(new ProjectsView(_context), view => view.LoadAsync()),
+            AppPage.Calendar => await Load(new CalendarView(_context), view => view.LoadAsync()),
+            AppPage.Documents => await Load(new DocumentsView(_context), view => view.LoadAsync()),
+            AppPage.Settings => new SettingsView(_context),
             _ => await Load(new DashboardView(_context), view => view.LoadAsync())
         };
         Show(view);
         await _assistant.ShowPickerAsync();
         await RefreshAttentionAsync();
-        if (create) ShowWizard(fromWelcome: false);
+        if (route.NewProject) ShowWizard(fromWelcome: false);
     }
 
     private static async Task<T> Load<T>(T view, Func<T, Task> load) where T : Control { await load(view); return view; }
 
-    public async Task OpenProjectAsync(Guid id, int selectedTab = 0)
+    private async Task<bool> ShowProjectAsync(ProjectRoute route)
     {
-        var project = await _projects.GetAsync(id);
-        if (project is null) { ShowError("validation.projectUnavailable"); return; }
-        _navigation.Select("projects");
-        var view = new ProjectDetailView(_context, project); await view.LoadAsync(selectedTab);
-        _projectTabs = view.Tabs; _currentProject = id; Show(view);
+        var project = await _projects.GetAsync(route.ProjectId);
+        if (project is null) { ShowError("validation.projectUnavailable"); return false; }
+        _navigation.Select(AppPage.Projects);
+        var view = new ProjectDetailView(_context, project); await view.LoadAsync(route.Tab);
+        view.Tabs.SelectionChanged += (_, _) => { if (view.Tabs.SelectedIndex >= 0) _navigator.SelectTab((ProjectTab)view.Tabs.SelectedIndex); };
+        _projectTabs = view.Tabs; Show(view);
         await _assistant.ShowProjectAsync(project);
-        if (selectedTab == 3) SetAssistantOpen(true);
+        if (route.Tab == ProjectTab.Delegate) SetAssistantOpen(true);
         await RefreshAttentionAsync();
+        return true;
     }
 
-    public Task RefreshProjectAsync() => _currentProject is { } id ? OpenProjectAsync(id, _projectTabs?.SelectedIndex ?? 0) : Task.CompletedTask;
+    public Task RefreshProjectAsync() => _navigator.Current is ProjectRoute route ? OpenProjectAsync(route.ProjectId, route.Tab) : Task.CompletedTask;
 
-    public bool IsSample => _sample is not null;
+    public bool IsSample => _workspace.IsSample;
     public Task RefreshShellAsync() => UpdateShellAsync();
     private Task RefreshAttentionAsync() => UpdateShellAsync();
 
@@ -233,7 +218,7 @@ public sealed class MainWindow : Window, IShell
     {
         var count = (await _projects.ListAsync()).Count;
         await UpdateShellAsync();
-        await NavigateAsync(_navigation.IsPageVisible("dashboard") ? "dashboard" : "projects");
+        await NavigateAsync(_navigation.IsPageVisible(AppPage.Dashboard) ? AppPage.Dashboard : AppPage.Projects);
         if (count == 0) ShowWelcome();
     }
 
@@ -248,16 +233,16 @@ public sealed class MainWindow : Window, IShell
         var hasDated = projects.Any(project => project.Tasks.Any(task => task.DueAt is not null) || project.Milestones.Any(milestone => milestone.DueAt is not null));
         var hasFile = projects.Any(project => project.Requirements.Any(requirement => requirement.Files.Count > 0));
         var googleConnected = !IsSample && await _context.Calendar.IsConnectedAsync();
-        var shown = new Dictionary<string, bool> { ["dashboard"] = IsSample || hasDated, ["projects"] = true, ["calendar"] = IsSample || hasDated || googleConnected, ["documents"] = IsSample || hasFile, ["settings"] = true };
-        var revealed = new List<string>();
+        var shown = new Dictionary<AppPage, bool> { [AppPage.Dashboard] = IsSample || hasDated, [AppPage.Projects] = true, [AppPage.Calendar] = IsSample || hasDated || googleConnected, [AppPage.Documents] = IsSample || hasFile, [AppPage.Settings] = true };
+        var revealed = new List<AppPage>();
         foreach (var (page, show) in shown)
         {
             if (_shellKnown && !IsSample && show && !_visible.GetValueOrDefault(page)) { _fresh.Add(page); revealed.Add(page); }
             _visible[page] = show; _navigation.SetVisible(page, show); _navigation.SetNew(page, _fresh.Contains(page));
         }
         _shellKnown = true;
-        if (revealed.Contains("dashboard") || (revealed.Contains("calendar") && hasDated)) ShowToast("v3.toastDated");
-        else if (revealed.Contains("documents")) ShowToast("v3.toastDocs");
+        if (revealed.Contains(AppPage.Dashboard) || (revealed.Contains(AppPage.Calendar) && hasDated)) ShowToast("v3.toastDated");
+        else if (revealed.Contains(AppPage.Documents)) ShowToast("v3.toastDocs");
         UpdateGettingStarted(projects);
     }
 
@@ -280,7 +265,7 @@ public sealed class MainWindow : Window, IShell
             _context.Environment.AgentConfigured
         };
         if (done.All(item => item)) { _navigation.SetGettingStarted(null, () => Task.CompletedTask); return; }
-        var target = (_currentProject is { } open ? projects.FirstOrDefault(project => project.Id == open) : null) ?? projects[0];
+        var target = (_navigator.Current is ProjectRoute { ProjectId: var open } ? projects.FirstOrDefault(project => project.Id == open) : null) ?? projects[0];
         var next = target.Requirements.FirstOrDefault(requirement => requirement.Status == RequirementStatus.Missing);
         var document = target.Requirements.FirstOrDefault(requirement => requirement.Type == RequirementType.Document && requirement.Files.Count == 0) ?? target.Requirements.FirstOrDefault();
         Task OpenItem(ProjectRequirement? requirement, bool followUp = false)
@@ -290,7 +275,7 @@ public sealed class MainWindow : Window, IShell
                 state.OpenRequirement = requirement.Id; state.ExpandedGroups.Add($"{target.Id}:{requirement.GroupId}"); state.InitializedProjects.Add(target.Id);
                 if (followUp) state.PendingFollowUp = requirement.Id;
             }
-            return OpenProjectAsync(target.Id, 1);
+            return OpenProjectAsync(target.Id, ProjectTab.Checklist);
         }
         var items = new List<AppSidebar.GettingStartedItem>
         {
@@ -298,15 +283,12 @@ public sealed class MainWindow : Window, IShell
             new("v3.gs1", done[1], false, () => OpenItem(next)),
             new("v3.gs2", done[2], false, () => OpenItem(document)),
             new("v3.gs3", done[3], false, () => OpenItem(next ?? target.Requirements.FirstOrDefault(), followUp: true)),
-            new("v3.gs4", done[4], true, () => NavigateAsync("settings"))
+            new("v3.gs4", done[4], true, () => NavigateAsync(AppPage.Settings))
         };
         _navigation.SetGettingStarted(items, () => { state.GettingStartedHidden = true; _navigation.SetGettingStarted(null, () => Task.CompletedTask); return Task.CompletedTask; });
     }
 
-    public void ShowToast(string key)
-    {
-        _toastText.Text = _text.Get(key); _toast.IsVisible = true; _toastTimer.Stop(); _toastTimer.Start();
-    }
+    public void ShowToast(string key) => _messages.ShowToast(key);
 
     public void ShowWelcome() => ShowOverlay(new WelcomeScreen(_context));
     public void ShowWizard(bool fromWelcome) => ShowOverlay(new WizardScreen(_context, fromWelcome));
@@ -316,30 +298,22 @@ public sealed class MainWindow : Window, IShell
     public async Task OpenCreatedProjectAsync(Guid id)
     {
         _context.State.TipHidden = false; _context.State.GettingStartedHidden = false;
-        await OpenProjectAsync(id, 1);
+        await OpenProjectAsync(id, ProjectTab.Checklist);
         ShowToast("v3.toastCreated");
     }
 
     public async Task StartSampleAsync()
     {
-        if (IsSample) { CloseOverlay(); return; }
-        var workspace = await SampleWorkspace.CreateAsync(_locale.LanguageCode == "fa");
-        _real = (_context.Projects, _context.Agents, _context.Environment, _context.Calendar);
-        _sample = workspace;
-        _context.Projects = workspace.Projects; _context.Agents = workspace.Agents; _context.Environment = _real.Value.Environment with { AgentConfigured = false };
-        _context.Calendar = new NoExternalCalendar(); // the sample never touches the user's Google account
+        if (!await _workspace.StartSampleAsync(_locale.LanguageCode == "fa")) { CloseOverlay(); return; }
         ResetShellFacts(); CloseOverlay();
         await UpdateShellAsync();
-        await NavigateAsync("dashboard");
+        await NavigateAsync(AppPage.Dashboard);
     }
 
     /// <summary>Discards the sample workspace and returns to the user's own data; the caller decides what to show next.</summary>
     public Task ExitSampleAsync()
     {
-        if (_real is not { } real) return Task.CompletedTask;
-        _context.Projects = real.Projects; _context.Agents = real.Agents; _context.Environment = real.Environment; _context.Calendar = real.Calendar;
-        _sample?.Dispose(); _sample = null; _real = null;
-        ResetShellFacts();
+        if (_workspace.ExitSample()) ResetShellFacts();
         return Task.CompletedTask;
     }
 
@@ -377,56 +351,10 @@ public sealed class MainWindow : Window, IShell
         _assistant.SetOverlay(overlay);
     }
 
-    public void ShowModal(Control dialog)
-    {
-        _dialogLayer.Children.Clear();
-        var scrim = new Border().Paint(Border.BackgroundProperty, "Scrim");
-        scrim.PointerPressed += (_, _) => CloseModal();
-        dialog.HorizontalAlignment = HorizontalAlignment.Center; dialog.VerticalAlignment = VerticalAlignment.Center;
-        _dialogLayer.Children.Add(scrim); _dialogLayer.Children.Add(dialog); _dialogLayer.IsVisible = true;
-    }
-    public void CloseModal() { _dialogLayer.IsVisible = false; _dialogLayer.Children.Clear(); }
+    public void ShowModal(Control dialog) => _dialogs.Show(dialog);
+    public void CloseModal() => _dialogs.Close();
 
-    /** Keep navigation, editing and close cancellation locked for the complete runtime lifetime. */
-    public async Task RunAgentAsync(Func<CancellationToken, Task> run, Func<Task> refresh)
-    {
-        _runCancellation = new CancellationTokenSource();
-        SetNavigationEnabled(false); _page.IsEnabled = false;
-        if (_projectTabs is not null)
-            foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = false;
-        _running = GuardAsync(() => run(_runCancellation.Token));
-        try { await _running; }
-        finally
-        {
-            _running = null; _runCancellation.Dispose(); _runCancellation = null;
-            // Reload while still locked: unlocking first would let the user act on screens that the pending reload then replaces.
-            // A window that is closing only waits for the runtime outcome; it does not reload screens.
-            try { if (!_closeRequested) await GuardAsync(refresh, clearError: false); }
-            finally
-            {
-                SetNavigationEnabled(true); _page.IsEnabled = true;
-                if (_projectTabs is not null)
-                    foreach (var item in _projectTabs.Items.OfType<TabItem>()) item.IsEnabled = true;
-            }
-        }
-    }
-    public void CancelRun() => _runCancellation?.Cancel();
-
-    public static DateTimeOffset? ParseLocalDate(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return null;
-        text = ConvertJalaliDatePart(text.Trim());
-        if (!DateTime.TryParseExact(text, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
-            || TimeZoneInfo.Local.IsInvalidTime(date) || TimeZoneInfo.Local.IsAmbiguousTime(date))
-            throw new FormatException("Enter an unambiguous local date as yyyy-MM-dd HH:mm, or leave it empty.");
-        return new DateTimeOffset(date, TimeZoneInfo.Local.GetUtcOffset(date));
-    }
-
-    /// <summary>Rewrites a Jalali date part ("1405/07/17 09:30", Persian digits allowed) as Gregorian "2026-10-09 09:30"; any other text is returned unchanged.</summary>
-    private static string ConvertJalaliDatePart(string text)
-    {
-        var parts = text.Split(' ', 2, StringSplitOptions.TrimEntries);
-        return parts.Length == 2 && JalaliDate.TryParse(parts[0], out var day)
-            ? $"{day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} {JalaliDate.NormalizeDigits(parts[1])}" : text;
-    }
+    /// <summary>Keeps navigation, editing and close cancellation locked for the complete runtime lifetime.</summary>
+    public Task RunAgentAsync(Func<CancellationToken, Task> run, Func<Task> refresh) => _runLock.RunAsync(run, refresh);
+    public void CancelRun() => _runLock.Cancel();
 }

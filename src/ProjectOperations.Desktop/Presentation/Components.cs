@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -389,8 +390,8 @@ internal static class ButtonDecorations
 /// <summary>Application sidebar: brand, navigation, storage note, theme and language controls.</summary>
 internal sealed class AppSidebar : Border
 {
-    private readonly Dictionary<string, Button> _entries = [];
-    private readonly Dictionary<string, Border> _newBadges = [];
+    private readonly Dictionary<AppPage, Button> _entries = [];
+    private readonly Dictionary<AppPage, Border> _newBadges = [];
     private readonly TextBlock _badge;
     private readonly Border _badgeHost;
     private readonly Border _gettingStarted = new() { Name = "GettingStarted", IsVisible = false, Margin = new Thickness(0, 0, 0, 6), Padding = new Thickness(12), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(PresentationTheme.RadiusMedium) };
@@ -398,7 +399,7 @@ internal sealed class AppSidebar : Border
     public Segmented ThemeSelector { get; }
     public Button Language { get; }
 
-    public AppSidebar(PresentationContext context, IReadOnlyList<(string Page, string Key, string Name, string Icon)> pages, Action<string> navigate)
+    public AppSidebar(PresentationContext context, IReadOnlyList<(AppPage Page, string Key, string Name, string Icon)> pages, Action<AppPage> navigate)
     {
         Name = "AppSidebar"; Width = 232; Padding = new Thickness(12, 18, 12, 14); BorderThickness = new Thickness(0, 0, 1, 0);
         this.Paint(BackgroundProperty, "BackgroundSidebar").Paint(BorderBrushProperty, "BorderDefault");
@@ -448,7 +449,7 @@ internal sealed class AppSidebar : Border
             var freshText = context.Label("v3.newBadge", "Micro", "AccentText"); freshText.FontWeight = FontWeight.SemiBold; freshText.TextWrapping = TextWrapping.NoWrap;
             var fresh = new Border { IsVisible = false, Padding = new Thickness(7, 1), CornerRadius = new CornerRadius(PresentationTheme.RadiusPill), Name = "NewBadge", Child = freshText }.Paint(BackgroundProperty, "AccentSoft");
             _newBadges[page] = fresh; badges.Children.Add(fresh);
-            if (page == "dashboard") badges.Children.Add(_badgeHost);
+            if (page == AppPage.Dashboard) badges.Children.Add(_badgeHost);
             Grid.SetColumn(badges, 2); row.Children.Add(badges);
             button.Content = row;
             context.Localized.Bind(button, control => { caption.Text = context.Text.Get(key); AutomationProperties.SetName(control, context.Text.Get(key)); });
@@ -465,7 +466,7 @@ internal sealed class AppSidebar : Border
     private readonly PresentationContext _context;
     private int _count;
 
-    public void Select(string page)
+    public void Select(AppPage page)
     {
         foreach (var (id, button) in _entries)
         {
@@ -475,10 +476,10 @@ internal sealed class AppSidebar : Border
     }
 
     /// <summary>Shows only the sections that have something to show; Projects and Settings are always available.</summary>
-    public void SetVisible(string page, bool visible) { if (_entries.TryGetValue(page, out var button)) button.IsVisible = visible; }
-    public bool IsPageVisible(string page) => _entries.TryGetValue(page, out var button) && button.IsVisible;
+    public void SetVisible(AppPage page, bool visible) { if (_entries.TryGetValue(page, out var button)) button.IsVisible = visible; }
+    public bool IsPageVisible(AppPage page) => _entries.TryGetValue(page, out var button) && button.IsVisible;
     /// <summary>Marks a section that appeared since the app started and has not been opened yet.</summary>
-    public void SetNew(string page, bool isNew) { if (_newBadges.TryGetValue(page, out var badge)) badge.IsVisible = isNew; }
+    public void SetNew(AppPage page, bool isNew) { if (_newBadges.TryGetValue(page, out var badge)) badge.IsVisible = isNew; }
 
     /// <summary>One getting-started step: caption key, completion, optional flag and the action that moves it forward.</summary>
     public sealed record GettingStartedItem(string Key, bool Done, bool Optional, Func<Task>? Go);
