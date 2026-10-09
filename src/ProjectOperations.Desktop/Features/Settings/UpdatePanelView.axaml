@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Settings"
+             x:Class="ProjectOperations.Desktop.Features.Settings.UpdatePanelView"
+             x:DataType="vm:UpdatePanelViewModel">
+  <Border Classes="card" Padding="16,4">
+    <StackPanel>
+      <TextBlock Classes="Heading" Margin="0,12,0,4" Text="{Binding L[updates.title]}" />
+      <Border Classes="rule" Padding="0,12">
+        <StackPanel Name="UpdatePanel" Spacing="10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <TextBlock Name="CurrentVersion" Classes="Body" VerticalAlignment="Center" Text="{Binding CurrentVersionText}" />
+            <Button Grid.Column="1" Name="CheckForUpdates" Classes="ghost" VerticalAlignment="Center" IsVisible="{Binding CanUpdate}"
+                    Command="{Binding CheckCommand}" Content="{Binding L[updates.check]}" />
+          </Grid>
+
+          <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsPortable}" Text="{Binding L[updates.portable]}" />
+          <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsChecking}" Text="{Binding L[updates.checking]}" />
+          <TextBlock Classes="Caption" Foreground="{DynamicResource SuccessBrush}" IsVisible="{Binding IsUpToDate}" Text="{Binding L[updates.upToDate]}" />
+
+          <!-- A release is offered; the download progress and Cancel replace Download once it starts. -->
+          <StackPanel Spacing="10" IsVisible="{Binding IsOffered}">
+            <TextBlock Name="UpdateAvailable" Classes="BodyStrong" Text="{Binding AvailableText}" />
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding HasSize}" Text="{Binding SizeText}" />
+            <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[updates.notes]}" />
+            <TextBox Name="UpdateNotes" IsVisible="{Binding HasNotes}" Text="{Binding Notes, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True"
+                     TextWrapping="Wrap" MinHeight="64" MaxHeight="220" FontSize="12.5" />
+            <TextBlock Classes="Small" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding HasNoNotes}" Text="{Binding L[updates.noNotes]}" />
+            <Button Name="DownloadUpdate" Classes="primary" HorizontalAlignment="Left" IsVisible="{Binding CanDownload}"
+                    Command="{Binding DownloadCommand}" Content="{Binding L[updates.download]}" />
+            <StackPanel Spacing="10" IsVisible="{Binding IsDownloading}">
+              <ProgressBar Name="UpdateProgress" Minimum="0" Maximum="100" Value="{Binding Percent, Mode=OneWay}" MinHeight="6" HorizontalAlignment="Stretch" />
+              <TextBlock Name="UpdatePercent" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding PercentText}" />
+              <Button Name="CancelDownload" Classes="ghost" HorizontalAlignment="Left" Command="{Binding CancelDownloadCommand}" Content="{Binding L[updates.cancel]}" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="10" IsVisible="{Binding IsReady}">
+            <TextBlock Name="UpdateReady" Classes="BodyStrong" Foreground="{DynamicResource SuccessBrush}" Text="{Binding ReadyText}" />
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[updates.restartNote]}" />
+            <Button Name="RestartToUpdate" Classes="primary" HorizontalAlignment="Left" Command="{Binding RestartCommand}" Content="{Binding L[updates.restart]}" />
+          </StackPanel>
+
+          <TextBlock Name="UpdateError" Classes="Caption" Foreground="{DynamicResource ErrorBrush}" IsVisible="{Binding HasError}" Text="{Binding ErrorText}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

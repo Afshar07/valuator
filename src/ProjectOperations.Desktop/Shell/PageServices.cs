@@ -18,6 +18,10 @@ internal interface IPageHost
     void ToggleAssistant();
     /// <summary>Opens the new-project wizard over the current page.</summary>
     void ShowWizard();
+    /// <summary>Shows the first-run welcome screen again.</summary>
+    void ShowWelcome();
+    /// <summary>True while an assistant job holds the application: nothing that closes or restarts it may proceed.</summary>
+    bool IsAgentRunning { get; }
     /// <summary>Re-evaluates what the sidebar offers (sections appear as data arrives) and the getting-started card.</summary>
     Task RefreshShellAsync();
 }

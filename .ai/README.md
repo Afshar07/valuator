@@ -28,7 +28,7 @@ step 7, then follow the route exactly in order.
 - Desktop localization / presentation boundaries: `product.md` → `mvp.md` → `architecture.md` → source.
 - MVP workflow / safety / acceptance: `product.md` → `mvp.md` → `architecture.md` → source.
 - Domain services / scheduling / documents / runtime / persistence / infrastructure: `mvp.md` → `architecture.md` → source.
-- Google Calendar overlay / external calendar / OAuth / calendar tokens: `mvp.md` → `architecture.md` (*Optional Google Calendar overlay*) → `docs/google-calendar.md` → source (`Core/Calendar`, `Infrastructure/Calendar`, `Desktop/Presentation/GoogleCalendarPanel.cs`, `Desktop/Features/Calendar/`); relevant debt: `technical-debt/google-calendar-followups.md`. Events are display-only and must never reach agent context.
+- Google Calendar overlay / external calendar / OAuth / calendar tokens: `mvp.md` → `architecture.md` (*Optional Google Calendar overlay*) → `docs/google-calendar.md` → source (`Core/Calendar`, `Infrastructure/Calendar`, `Desktop/Features/Settings/GoogleCalendarPanel*`, `Desktop/Features/Calendar/`); relevant debt: `technical-debt/google-calendar-followups.md`. Events are display-only and must never reach agent context.
 - Native tests / verification: `testing.md` → `mvp.md` → `architecture.md` → source.
 - First-run / onboarding / sample workspace / sidebar disclosure: `product.md` → `mvp.md` → `architecture.md` → source (`Presentation/OnboardingScreens.cs`, `SampleWorkspace.cs`, `MainWindow.cs`).
 - When an ongoing task crosses one of these boundaries, read that boundary's route before source unless the task document already includes it.

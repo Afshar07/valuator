@@ -46,7 +46,8 @@ public sealed class ChipGroupViewModel<T> : ViewModelBase where T : notnull
         set
         {
             if (!SetProperty(ref _selected, value)) return;
-            foreach (var (option, chip) in _options) chip.IsSelected = EqualityComparer<T>.Default.Equals(option, value);
+            // A listener may have refused the choice and put the previous one back, so the chips follow what is selected now, not the request.
+            foreach (var (option, chip) in _options) chip.IsSelected = EqualityComparer<T>.Default.Equals(option, _selected);
         }
     }
 }
