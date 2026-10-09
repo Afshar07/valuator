@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -214,7 +215,7 @@ internal sealed class AssistantPanel : Border
         {
             var id = project.Id;
             var content = ListRow.Layout(_context, Ui.Initial(project.Name, 26), () => project.Name, string.IsNullOrWhiteSpace(project.CompanyName) ? null : () => project.CompanyName, null, null);
-            var row = new ListRow(_context, content, () => project.Name, () => _context.OpenProjectAsync(id, ProjectDetailView.DelegateTab)) { Padding = new Thickness(8, 6), CornerRadius = new CornerRadius(PresentationTheme.RadiusControl) };
+            var row = new ListRow(_context, content, () => project.Name, () => _context.OpenProjectAsync(id, ProjectTab.Delegate)) { Padding = new Thickness(8, 6), CornerRadius = new CornerRadius(PresentationTheme.RadiusControl) };
             _picker.Children.Add(row);
         }
         if (_picker.Children.Count == 1) _picker.Children.Add(_context.Label("dashboard.empty", "Small", "TextTertiary"));

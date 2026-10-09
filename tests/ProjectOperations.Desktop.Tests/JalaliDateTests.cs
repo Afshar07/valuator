@@ -90,7 +90,7 @@ public sealed class JalaliDateTests
     [InlineData("2026-10-09 09:30", 2026, 10, 9)]
     public void Legacy_text_entry_converts_Jalali_automatically(string text, int year, int month, int day)
     {
-        var parsed = MainWindow.ParseLocalDate(text)!.Value.ToLocalTime();
+        var parsed = LocalDateInput.Parse(text)!.Value.ToLocalTime();
         Assert.Equal(new DateTime(year, month, day, 9, 30, 0), parsed.DateTime);
     }
 

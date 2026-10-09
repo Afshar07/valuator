@@ -4,18 +4,18 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
 /// <summary>Project workspace: header, then Overview, Requirements & files, Tasks & dates, and Delegate & review tabs.</summary>
 internal sealed class ProjectDetailView : PresentationView
 {
-    public const int DelegateTab = 3;
     private readonly Project _project;
     public TabControl Tabs { get; } = new() { Name = "ProjectTabs" };
     public ProjectDetailView(PresentationContext context, Project project) : base(context) { _project = project; Spacing = 16; }
 
-    public async Task LoadAsync(int selectedTab)
+    public async Task LoadAsync(ProjectTab selectedTab)
     {
         var jobs = await _agents.HistoryAsync(_project.Id);
         Children.Add(Header());
@@ -26,8 +26,8 @@ internal sealed class ProjectDetailView : PresentationView
             Tab("tabs.tasks", new TasksView(Context, _project, jobs)),
             Tab("tabs.delegate", new DelegationView(Context, _project, jobs))
         };
-        Tabs.SelectedIndex = selectedTab;
-        Tabs.SelectionChanged += (_, _) => { if (Tabs.SelectedIndex == DelegateTab) Context.Shell.SetAssistantOpen(true); };
+        Tabs.SelectedIndex = (int)selectedTab;
+        Tabs.SelectionChanged += (_, _) => { if (Tabs.SelectedIndex == (int)ProjectTab.Delegate) Context.Shell.SetAssistantOpen(true); };
         // The tab strip's baseline rule sits behind the selected underline.
         var host = new Panel();
         host.Children.Add(new Border { Height = 1, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 35, 0, 0) }.Paint(Border.BackgroundProperty, "BorderDefault"));
@@ -44,7 +44,7 @@ internal sealed class ProjectDetailView : PresentationView
     {
         var summary = ProjectSummaries.Summarize(_project, DateTimeOffset.Now);
         var header = new StackPanel { Spacing = 10, Name = "ProjectHeader" };
-        var back = Context.IconAction("navigation.projects", _locale.LanguageCode == "fa" ? Icons.ArrowRight : Icons.ArrowLeft, () => Context.Shell.NavigateAsync("projects"), "link");
+        var back = Context.IconAction("navigation.projects", _locale.LanguageCode == "fa" ? Icons.ArrowRight : Icons.ArrowLeft, () => Context.Shell.NavigateAsync(AppPage.Projects), "link");
         Bind(back, control => ((TextBlock)((StackPanel)control.Content!).Children[0]).Text = _locale.LanguageCode == "fa" ? Icons.ArrowRight : Icons.ArrowLeft);
         header.Children.Add(back);
 

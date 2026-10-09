@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -104,7 +105,7 @@ internal sealed class OverviewView : PresentationView
         actions.Children.Add(Action("overview.addSave", async () =>
         {
             if (string.IsNullOrWhiteSpace(input.Text)) return;
-            items.Add(input.Text.Trim()); await SaveAsync(_project); await OpenProjectAsync(_project.Id, 0);
+            items.Add(input.Text.Trim()); await SaveAsync(_project); await OpenProjectAsync(_project.Id, ProjectTab.Overview);
         }, "primary"));
         actions.Children.Add(Action("action.cancel", () => { close(); return Task.CompletedTask; }));
         panel.Children.Add(actions);

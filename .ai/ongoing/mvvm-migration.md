@@ -33,7 +33,7 @@ State: `todo` → `in progress` → `done`.
 | --- | --- | --- |
 | 0 | Upgrade Avalonia and Headless to 12 on the current code; fix the C# binding API changes; tests green | done |
 | 1a | Foundation: DI composition root, `ViewModelBase`, view locator, bindable localization, date converters | done |
-| 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | todo |
+| 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | done |
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | todo |
 | 3a | Projects list, Dashboard, Calendar, Documents | todo |
 | 3b | Settings, stage editor, update panel, Google Calendar panel | todo |
@@ -55,5 +55,13 @@ State: `todo` → `in progress` → `done`.
   - Dates in XAML: `MultiBinding` of the date and `L.Dates` with `common:DateConverters.Display|Edit|ShortDate|MonthYear`;
     null dates convert to "" (the view-model decides the "no date" text).
   - Compiled bindings are the default in Desktop and Desktop.Tests. `Desktop.Tests/Mvvm` holds a probe view proving the pipeline.
-  - Not yet wired: the old shell does not hand a `LocalizedStrings` to hosted views; do that in 1b with the navigator.
+- Shell services (1b), in `Desktop/Shell/`:
+  - `Navigator` + `Route` (`PageRoute(AppPage, NewProject)`, `ProjectRoute(id, ProjectTab)`); a route the host cannot show leaves the previous one current.
+    `INavigator` is the interface view-models will take; `MainWindow` supplies the show callback until phase 4.
+  - `ShellMessages` (error key, toast key, `GuardAsync`, `LastFailure`) is rendered by `ErrorBanner`/`ToastView`; `DialogHost` is the modal layer (`IDialogService`).
+  - `AgentRunLock` holds the UI through the job and its reload; closing waits for the job and skips the reload.
+  - `WorkspaceSession` owns real vs sample services (sample: own database, assistant "not configured", no external calendar).
+    `PresentationContext.Projects/Agents/Environment/Calendar` now read from it. `PresentationContext.Strings` is the `LocalizedStrings` for hosted XAML views.
+  - `LocalDateInput.Parse` (Localization) replaces `MainWindow.ParseLocalDate`.
+  - Old code-built views still use `IShell`; it is removed in phase 4.
 - Open questions: —

@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -24,7 +25,7 @@ internal sealed class DashboardView : PresentationView
             var empty = Ui.Card(Column(12));
             var body = (StackPanel)empty.Child!;
             body.Children.Add(Label("dashboard.empty", "Body", "TextSecondary"));
-            body.Children.Add(Context.IconAction("project.new", Icons.Plus, () => Context.Shell.NavigateAsync("projects:new"), "primary", IconWeight.Bold));
+            body.Children.Add(Context.IconAction("project.new", Icons.Plus, () => Context.Shell.NavigateAsync(AppPage.Projects, newProject: true), "primary", IconWeight.Bold));
             Children.Add(empty);
             return;
         }
@@ -86,7 +87,7 @@ internal sealed class DashboardView : PresentationView
         var caret = Icons.Glyph(Icons.CaretRight, 14, "TextTertiary");
         Bind(caret, control => control.Text = _locale.LanguageCode == "fa" ? Icons.CaretLeft : Icons.CaretRight);
         Grid.SetColumn(caret, 3); grid.Children.Add(caret);
-        return new ListRow(Context, grid, () => $"{project.Name} · {F("v3.nOpen", N(open))}", () => OpenProjectAsync(project.Id, 2)) { Name = "PriorityRow", Padding = new Thickness(16, 12) };
+        return new ListRow(Context, grid, () => $"{project.Name} · {F("v3.nOpen", N(open))}", () => OpenProjectAsync(project.Id, ProjectTab.Tasks)) { Name = "PriorityRow", Padding = new Thickness(16, 12) };
     }
 
     private Control AgendaCard(IReadOnlyList<Project> projects, DateTimeOffset now)

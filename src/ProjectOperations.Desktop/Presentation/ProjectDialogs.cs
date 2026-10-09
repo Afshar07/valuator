@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -60,7 +61,7 @@ internal sealed class DeleteProjectDialog : DialogFrame
         {
             await context.Projects.DeleteAsync(project.Id);
             context.Shell.CloseModal();
-            await context.Shell.NavigateAsync("projects");
+            await context.Shell.NavigateAsync(AppPage.Projects);
         }, "danger");
         confirm.Name = "ConfirmDeleteProjectButton";
         Footer(null, cancel, confirm);

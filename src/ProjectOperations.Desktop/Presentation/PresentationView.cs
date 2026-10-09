@@ -5,6 +5,7 @@ using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
 using ProjectOperations.Desktop.Localization;
+using ProjectOperations.Desktop.Shell;
 
 namespace ProjectOperations.Desktop;
 
@@ -17,7 +18,7 @@ internal abstract class PresentationView : StackPanel
     protected LocalizationService _text => Context.Text;
     protected LocaleContext _locale => Context.Locale;
     protected PresentationView(PresentationContext context) { Context = context; Spacing = 20; }
-    protected Task OpenProjectAsync(Guid id, int tab = 0) => Context.OpenProjectAsync(id, tab);
+    protected Task OpenProjectAsync(Guid id, ProjectTab tab = ProjectTab.Overview) => Context.OpenProjectAsync(id, tab);
     protected Task SaveAsync(Project project) => _projects.SaveAsync(project);
     protected string T(string key) => _text.Get(key);
     protected string F(string key, params object?[] values) => _text.Format(key, values);
@@ -106,7 +107,7 @@ internal abstract class PresentationView : StackPanel
     }
     protected bool TryDate(TextBox input, out DateTimeOffset? due)
     {
-        try { due = MainWindow.ParseLocalDate(input.Text); return true; }
+        try { due = LocalDateInput.Parse(input.Text); return true; }
         catch (FormatException) { due = null; ShowError("validation.localDate"); return false; }
     }
 }
