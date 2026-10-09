@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Calendar"
+             x:Class="ProjectOperations.Desktop.Features.Calendar.CalendarView"
+             x:DataType="vm:CalendarViewModel">
+  <StackPanel Spacing="20">
+    <c:PageHeader Title="{Binding L[presentation.navigationCalendar]}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <Button Name="CalendarPrevious" Classes="square" Command="{Binding PreviousCommand}"
+                  AutomationProperties.Name="{Binding L[calendar.previous]}" ToolTip.Tip="{Binding L[calendar.previous]}">
+            <c:IconGlyph Icon="{Binding PreviousIcon}" Size="15" />
+          </Button>
+          <TextBlock Name="CalendarTitle" Classes="BodyStrong" MinWidth="130" TextAlignment="Center" VerticalAlignment="Center" Text="{Binding Title}" />
+          <Button Name="CalendarNext" Classes="square" Command="{Binding NextCommand}"
+                  AutomationProperties.Name="{Binding L[calendar.next]}" ToolTip.Tip="{Binding L[calendar.next]}">
+            <c:IconGlyph Icon="{Binding NextIcon}" Size="15" />
+          </Button>
+        </StackPanel>
+        <Button Name="CalendarToday" MinHeight="30" VerticalAlignment="Center" Command="{Binding TodayCommand}" Content="{Binding L[calendar.today]}" />
+      </StackPanel>
+    </c:PageHeader>
+
+    <StackPanel Orientation="Horizontal" Spacing="16">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border Classes="dot" Width="8" Height="8" CornerRadius="4" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[calendar.legend.task]}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border Classes="dot milestone" Width="8" Height="8" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[calendar.legend.milestone]}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border Classes="dot overdue" Width="8" Height="8" CornerRadius="4" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[calendar.legend.overdue]}" />
+      </StackPanel>
+      <StackPanel Name="CalendarGoogleLegend" Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsGoogleConnected}">
+        <Border Classes="dot external" Width="8" Height="8" CornerRadius="4" />
+        <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding L[calendar.legend.google]}" />
+      </StackPanel>
+    </StackPanel>
+
+    <TextBlock Name="CalendarNotice" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding HasNotice}" Text="{Binding NoticeText}" />
+
+    <Border Name="CalendarGrid" Classes="card">
+      <StackPanel>
+        <Border BorderThickness="0,0,0,1" Background="{DynamicResource BackgroundMutedBrush}" BorderBrush="{DynamicResource BorderDefaultBrush}">
+          <ItemsControl ItemsSource="{Binding Weekdays}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <c:EqualColumnsPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Border Padding="10,8">
+                  <TextBlock Classes="MetaMedium" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding}" />
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Weeks}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Dashboard"
+             x:Class="ProjectOperations.Desktop.Features.Dashboard.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+  <StackPanel Spacing="20">
+    <c:PageHeader Title="{Binding L[dashboard.title]}" Subtitle="{Binding L[dashboard.subtitle]}">
+      <Button Name="AssistantToggle" Classes="ai" MinHeight="34" Command="{Binding ToggleAssistantCommand}" AutomationProperties.Name="{Binding L[agent.assistant]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <c:IconGlyph Icon="{x:Static app:Icons.Sparkle}" Size="14" />
+          <TextBlock VerticalAlignment="Center" Text="{Binding L[agent.assistant]}" />
+        </StackPanel>
+      </Button>
+    </c:PageHeader>
+
+    <Border Name="DashboardEmpty" Classes="card" Padding="16,14" IsVisible="{Binding IsEmpty}">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[dashboard.empty]}" />
+        <Button Classes="primary" HorizontalAlignment="Left" Command="{Binding NewProjectCommand}" AutomationProperties.Name="{Binding L[project.new]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <c:IconGlyph Icon="{x:Static app:Icons.Plus}" Weight="Bold" Size="14" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding L[project.new]}" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <StackPanel Spacing="20" IsVisible="{Binding HasContent}">
+      <app:AdaptiveGrid MinItemWidth="170" Gap="12" StretchRows="True">
+        <c:StatCard Name="DashboardOverdueStat" Label="{Binding L[presentation.stat.overdue]}" Value="{Binding OverdueText}"
+                    Icon="{x:Static app:Icons.WarningCircle}" IconToken="Error" ValueToken="{Binding OverdueToken}" />
+        <c:StatCard Name="DashboardUpcomingStat" Label="{Binding L[presentation.stat.upcoming]}" Value="{Binding UpcomingText}"
+                    Icon="{x:Static app:Icons.Clock}" IconToken="Warning" />
+        <c:StatCard Name="DashboardMilestonesStat" Label="{Binding L[presentation.stat.milestones]}" Value="{Binding MilestonesText}"
+                    Icon="{x:Static app:Icons.Flag}" IconToken="Accent" />
+        <c:StatCard Name="DashboardActiveStat" Label="{Binding L[presentation.stat.active]}" Value="{Binding ActiveText}"
+                    Icon="{x:Static app:Icons.Briefcase}" IconToken="TextSecondary" />
+      </app:AdaptiveGrid>
+
+      <app:AdaptiveGrid MinItemWidth="320">
+        <Border Name="PriorityItems" Classes="card">
+          <StackPanel>
+            <Border Padding="16,12,16,10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" MinHeight="26">
+                <TextBlock Classes="Heading" VerticalAlignment="Center" Text="{Binding L[v3.projOpen]}" />
+                <TextBlock Grid.Column="1" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding PriorityCount}" />
+              </Grid>
+            </Border>
+            <Border Classes="rule" Padding="16,14" IsVisible="{Binding NoPriority}">
+              <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.noOpen]}" />
+            </Border>
+            <ItemsControl ItemsSource="{Binding Priority}" />
+          </StackPanel>
+        </Border>
+
+        <Border Name="AgendaCard" Classes="card sectionCard" Padding="16,14">
+          <StackPanel>
+            <Grid MinHeight="26" Margin="0,0,0,6">
+              <TextBlock Classes="Heading" VerticalAlignment="Center" Text="{Binding L[presentation.agenda]}" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding Agenda}" />
+          </StackPanel>
+        </Border>
+      </app:AdaptiveGrid>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

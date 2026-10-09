@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Documents"
+             x:Class="ProjectOperations.Desktop.Features.Documents.DocumentRowView"
+             x:DataType="vm:DocumentRowViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.marker">
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.marker.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="rule" Classes.first="{Binding IsFirst}">
+    <Button Name="DocumentRow" Classes="row" Classes.selected="{Binding IsSelected}" Padding="16,10,14,10" Command="{Binding SelectCommand}"
+            AutomationProperties.Name="{Binding AccessibleName}">
+      <Border Classes="marker" Classes.selected="{Binding IsSelected}" BorderThickness="3,0,0,0" Margin="-16,0,0,0" Padding="13,0,0,0">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <Border Width="32" Height="32" CornerRadius="8" VerticalAlignment="Center" Background="{DynamicResource BackgroundTrackBrush}">
+            <c:IconGlyph Icon="{Binding Icon}" Size="17" Token="TextSecondary" />
+          </Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <TextBlock Classes="BodyMedium" FlowDirection="LeftToRight" HorizontalAlignment="Left" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding FileName}" />
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Where}" />
+          </StackPanel>
+          <c:Pill Grid.Column="2" Text="{Binding StatusText}" Kind="{Binding StatusKind}" />
+        </Grid>
+      </Border>
+    </Button>
+  </Border>
+</UserControl>

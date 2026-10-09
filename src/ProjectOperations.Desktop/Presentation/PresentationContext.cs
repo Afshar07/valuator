@@ -67,7 +67,7 @@ internal sealed class UiState
 internal sealed class PresentationContext(
     WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
     LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates,
-    IDialogService dialogs, IProjectHost host)
+    IDialogService dialogs, IProjectHost projectHost, IPageHost pageHost, IFileLauncher files, INavigator navigator)
 {
     public UpdateController Updates { get; } = updates;
     public WorkspaceSession Workspace { get; } = workspace;
@@ -84,7 +84,9 @@ internal sealed class PresentationContext(
     public IDialogService Dialogs { get; } = dialogs;
     public TimeProvider Clock { get; } = TimeProvider.System;
     /// <summary>The services handed to view-models of the open project's screens (they follow the sample workspace).</summary>
-    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, host, Clock);
+    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, projectHost, Clock);
+    /// <summary>The services handed to view-models of the top-level pages. They follow the sample workspace, including its (absent) external calendar.</summary>
+    public PageServices Page => new(Projects, Strings, Dialogs, navigator, pageHost, files, Calendar, Clock);
     public UiState State { get; } = new();
     /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
     public IExternalCalendarSource Calendar => Workspace.Calendar;

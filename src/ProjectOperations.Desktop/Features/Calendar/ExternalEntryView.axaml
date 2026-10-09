@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Calendar"
+             x:Class="ProjectOperations.Desktop.Features.Calendar.ExternalEntryView"
+             x:DataType="vm:ExternalEntryViewModel">
+  <!-- A Google event: display only (no click target), with a quiet bordered style distinct from tasks, milestones and overdue work. -->
+  <Border Name="CalendarGoogleEvent" Padding="5,2" CornerRadius="5" BorderThickness="1" Background="{DynamicResource BackgroundMutedBrush}"
+          BorderBrush="{DynamicResource BorderDefaultBrush}" AutomationProperties.Name="{Binding AccessibleName}" ToolTip.Tip="{Binding AccessibleName}">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="5">
+      <Border Classes="dot external" />
+      <TextBlock Grid.Column="1" Classes="Micro" FontWeight="Normal" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+    </Grid>
+  </Border>
+</UserControl>

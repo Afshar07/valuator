@@ -36,4 +36,42 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="Padding" Value="18,12" />
   </Style>
+
+  <!-- Card: the white rounded surface lists and sections sit on. -->
+  <Style Selector="Border.card">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource BackgroundCardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource CardShadow}" />
+  </Style>
+
+  <!-- The rule above a list row; the first row of a card without a heading has none. -->
+  <Style Selector="Border.rule">
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.rule.first">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- Small marker beside an entry: a circle, a square for milestones, red when late, quiet grey for another calendar's events. -->
+  <Style Selector="Border.dot">
+    <Setter Property="Width" Value="6" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="Border.dot.milestone">
+    <Setter Property="CornerRadius" Value="1.5" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.dot.external">
+    <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Border.dot.overdue">
+    <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
+  </Style>
 </Styles>
