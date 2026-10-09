@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Onboarding"
+             x:Class="ProjectOperations.Desktop.Features.Onboarding.WizardView"
+             x:DataType="vm:WizardViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.deck">
+      <Setter Property="Background" Value="{DynamicResource BackgroundMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}" />
+    </Style>
+    <Style Selector="Border.deck.linked">
+      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+    <Style Selector="TextBlock.deckSub.linked">
+      <Setter Property="FlowDirection" Value="LeftToRight" />
+    </Style>
+  </UserControl.Styles>
+  <Border Name="WizardScreen" Background="{DynamicResource BackgroundAppBrush}">
+    <Grid RowDefinitions="Auto,*">
+      <vm:OnboardingTopBar DataContext="{Binding Display}" />
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <Border Padding="24,24,24,64">
+          <StackPanel Spacing="24" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+              <ContentControl Content="{Binding Steps[0]}" />
+              <ContentControl Grid.Column="1" Content="{Binding Steps[1]}" />
+              <ContentControl Grid.Column="2" Content="{Binding Steps[2]}" />
+            </Grid>
+
+            <Border Classes="card" CornerRadius="14" Padding="24" ClipToBounds="False">
+              <StackPanel Spacing="16">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="Dialog" FontSize="20" Text="{Binding HeadingText}" />
+                  <TextBlock Classes="Body" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding SubheadingText}" />
+                </StackPanel>
+
+                <!-- Step 1: name -->
+                <StackPanel Spacing="16" IsVisible="{Binding IsNameStep}">
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.projNameL]}" />
+                    <TextBox Name="WizardName" MinHeight="40" FontSize="14" Padding="12,0" CornerRadius="9" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="{Binding L[v3.namePh]}" />
+                  </StackPanel>
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.company]}" />
+                    <TextBox Name="WizardCompany" MinHeight="40" FontSize="14" Padding="12,0" CornerRadius="9" Text="{Binding Company, Mode=TwoWay}" PlaceholderText="{Binding L[v3.coPh]}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- Step 2: template -->
+                <StackPanel Spacing="16" IsVisible="{Binding IsTemplateStep}">
+                  <ItemsControl ItemsSource="{Binding TemplateOptions}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Spacing="8" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                  </ItemsControl>
+                  <Border IsVisible="{Binding ShowPreview}" BorderThickness="1" CornerRadius="10" ClipToBounds="True" BorderBrush="{DynamicResource BorderDefaultBrush}">
+                    <ItemsControl ItemsSource="{Binding PreviewGroups}" />
+                  </Border>
+                </StackPanel>
+
+                <!-- Step 3: first item -->
+                <StackPanel Spacing="16" IsVisible="{Binding IsFirstItemStep}">
+                  <StackPanel Spacing="16" IsVisible="{Binding ShowDeck}">
+                    <Border Classes="deck" Classes.linked="{Binding HasDeck}" Padding="14" BorderThickness="1" CornerRadius="10">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <c:IconGlyph Icon="{Binding DeckIcon}" Weight="{Binding DeckIconWeight}" Token="{Binding DeckIconToken}" Size="20" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                          <TextBlock Classes="BodyStrong" Text="{Binding DeckTitle}" />
+                          <TextBlock Classes="Caption deckSub" Classes.linked="{Binding HasDeck}" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding DeckSubtitle}" />
+                        </StackPanel>
+                        <c:Pill Grid.Column="2" IsVisible="{Binding HasDeck}" Kind="Success" VerticalAlignment="Center" Text="{Binding L[v3.linked]}" />
+                        <Button Grid.Column="2" Name="WizardChooseFile" MinHeight="32" VerticalAlignment="Center" IsVisible="{Binding !HasDeck}"
+                                Command="{Binding ChooseDeckCommand}" AutomationProperties.Name="{Binding L[v3.chooseFile]}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:IconGlyph Icon="{x:Static app:Icons.FolderOpen}" Size="14" />
+                            <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.chooseFile]}" />
+                          </StackPanel>
+                        </Button>
+                      </Grid>
+                    </Border>
+                    <TextBlock Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[v3.fileNote]}" />
+                  </StackPanel>
+                  <TextBox Name="WizardRequirement" IsVisible="{Binding ShowRequirement}" MinHeight="40" FontSize="14" Padding="12,0" CornerRadius="9"
+                           Text="{Binding Requirement, Mode=TwoWay}" PlaceholderText="{Binding L[v3.reqPh]}" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+              <Button Name="WizardBack" Classes="ghost" MinHeight="36" Command="{Binding BackCommand}" AutomationProperties.Name="{Binding L[v3.back2]}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <c:IconGlyph Icon="{Binding BackIcon}" Size="14" />
+                  <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.back2]}" />
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="2" Name="WizardSkip" MinHeight="36" Padding="14,0" HorizontalAlignment="Left" IsVisible="{Binding ShowSkip}"
+                      Command="{Binding SkipCommand}" Content="{Binding L[v3.skip]}" />
+              <Button Grid.Column="3" Name="WizardPrimary" Classes="primary" MinHeight="36" Padding="18,0" HorizontalAlignment="Left"
+                      IsEnabled="{Binding CanContinue}" Command="{Binding PrimaryCommand}" Content="{Binding PrimaryText}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

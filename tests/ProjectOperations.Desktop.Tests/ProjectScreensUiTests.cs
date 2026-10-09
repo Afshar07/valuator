@@ -121,7 +121,7 @@ public sealed class ProjectScreensUiTests
         UiWait.Pump(() => All<TextBox>(window).Any(box => box.Name == "FollowUpTitle" && UiWait.IsShown(box)));
         Assert.DoesNotContain(All<Button>(window), button => button.Name == "AddFollowUpTask" && UiWait.IsShown(button));
         UiWait.Click(ButtonNamed(window, "AddFollowUpSubmit"));
-        UiWait.Pump(() => All<Button>(window).Any(button => button.Name == "AddFollowUpTask" && UiWait.IsShown(button)));
+        UiWait.Pump(() => fixture.Projects.GetAsync(project.Id).Result!.Tasks.Count == 1);
 
         var task = Assert.Single((await fixture.Projects.GetAsync(project.Id))!.Tasks);
         Assert.StartsWith("Follow up:", task.Title);

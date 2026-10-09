@@ -16,7 +16,7 @@ namespace ProjectOperations.Desktop;
 /// to the exact snapshot on screen. Every run needs: a request, a fresh context preview, and explicit consent.
 /// Proposals are never committed until approved here; committed tasks and proposals are visually distinct.
 /// </summary>
-internal sealed class AssistantPanel : Border
+internal sealed class AssistantPanel : Border, IAssistantPanel
 {
     private readonly PresentationContext _context;
     private readonly TextBlock _title;

@@ -21,7 +21,7 @@ public sealed class OnboardingTests
         window.Show();
         await UntilAsync(() => Nav(window, "NavigationProjects").IsEffectivelyEnabled);
         Assert.True(Controls<Control>(window).Single(control => control.Name == "OnboardingOverlay").IsVisible);
-        Assert.Contains(Controls<Control>(window), control => control.Name == "WelcomeScreen");
+        await UntilAsync(() => Controls<Control>(window).Any(control => control.Name == "WelcomeScreen"));
         Assert.True(Nav(window, "NavigationProjects").IsVisible);
         Assert.True(Nav(window, "NavigationSettings").IsVisible);
         foreach (var hidden in new[] { "NavigationDashboard", "NavigationCalendar", "NavigationDocuments" })
@@ -47,10 +47,10 @@ public sealed class OnboardingTests
         Click(window, "Blank project");
         Capture(window, "wizard-2-blank");
         Click(window, "Continue");
-        Assert.Contains(Controls<Button>(window), button => button.Name == "WizardSkip");
+        Assert.Contains(Controls<Button>(window), button => button.Name == "WizardSkip" && UiWait.IsShown(button));
         Controls<TextBox>(window).Single(box => box.Name == "WizardRequirement").Text = "Customer contracts";
         Dispatcher.UIThread.RunJobs();
-        Assert.DoesNotContain(Controls<Button>(window), button => button.Name == "WizardSkip");
+        Assert.DoesNotContain(Controls<Button>(window), button => button.Name == "WizardSkip" && UiWait.IsShown(button));
         Capture(window, "wizard-3");
         Click(window, "Open project");
         await UntilAsync(() => Controls<TabControl>(window).Any() && Nav(window, "NavigationProjects").IsEffectivelyEnabled);

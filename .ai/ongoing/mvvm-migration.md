@@ -38,7 +38,7 @@ State: `todo` → `in progress` → `done`.
 | 3a | Projects list, Dashboard, Calendar, Documents | done |
 | 3b | Settings, stage editor, update panel, Google Calendar panel | done |
 | 3c | Project detail, Overview, Requirements, remaining project dialogs | done |
-| 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | todo |
+| 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | done |
 | 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | todo |
 | 6 | Cleanup: replace `Components.cs` with styles and controls; update `architecture.md` and `testing.md`; delete this file and its index entry | todo |
 
@@ -137,4 +137,31 @@ State: `todo` → `in progress` → `done`.
   - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Overview, Requirements, Tasks, Delegate and the dashboard (English/Persian, 800 and
     1440 wide) differ by at most 5/255 in shadow pixels; the edit dialog, its error, the open document row, the follow-up form and the add line match, except the dialog title sits 4 px lower
     (the `DialogChrome` header is 4 px taller than the old frame; not compared against the task dialogs). Not checked on Windows or in dark theme.
+- Shell (4), `Desktop/Shell/` and `Desktop/Features/Onboarding/`; phase 5 builds on it:
+  - `MainWindow.axaml` is a thin window over `MainWindowViewModel` (the constructor `MainWindow(projects, agents, initialize, configuration, ...)` is unchanged, so `AppServices` and the tests did not move).
+    The view-model owns the sidebar, the shown page (`Page`), the first-run `Overlay`, `Dialogs` (`DialogService`: `Content`, `IsOpen`), the error banner and toast (through `ShellMessages`; `HasError`, `ErrorText`,
+    `HasToast`, `ToastText`), `IsSidebarEnabled`/`IsPageEnabled`, the run lock, `IsAssistantOpen`, `SampleBanner` and the theme id. It implements `IProjectHost`, `IPageHost`, `IOnboardingHost` and `ISidebarHost`,
+    builds `PageServices`/`SettingsServices`/`ProjectScreenServices` from the workspace session (so they follow the sample), and routes (`ShowRouteAsync`, `NavigateAsync`, `OpenProjectAsync`, `RefreshProjectAsync`).
+  - What stays in `MainWindow.axaml.cs` needs controls: the system file dialogs (`WindowDialogs` is the `IFilePicker` and `IFileLauncher`), mounting the code-built assistant panel and docking or overlaying it
+    (`PlaceAssistant`), resetting the scroll position when `Page` changes (a new page opens at the top, as a fresh scroll viewer did), the toast timer, Escape/scrim closing the modal, and the closing handshake.
+  - `SidebarPolicy` (pure) decides which sections show (`Sections`) and which getting-started steps are done (`GettingStartedDone`). `SidebarViewModel` keeps the state: `Apply` returns the sections that
+    appeared after the first call (flagged New, announced by the shell with a toast), `Reset` forgets them, `MarkSeen` clears a flag. `NavItemViewModel` and `GettingStartedViewModel` feed `NavItemView` and
+    `GettingStartedView`/`GettingStartedItemView`; `NavItemView` sets the button's `Name` (`NavigationDashboard`...) from the view-model. A hidden entry needs its item container hidden too (a style on
+    `ContentPresenter`), or its spacing stays.
+  - `DisplayOptionsViewModel` is the theme chips and language toggle shared by the sidebar and the first-run top bar; an unsaveable choice shows the error and puts the chips back.
+  - First run: `WelcomeViewModel` and `WizardViewModel` (`Features/Onboarding`) take `IOnboardingHost` (`Projects` is read live, because leaving the sample swaps it). The wizard's three steps are all in the view
+    and shown with `IsVisible`; step markers use a `DockPanel` with `HorizontalSpacing` (a grid with an empty column still adds its spacing). `OnboardingTopBar` is a plain user control, not a template,
+    so its buttons stay findable in the logical tree.
+  - Still code-built and still reached through `IShell` and `PresentationContext`: the assistant panel and the Delegate tab (`DelegationView`), which is all phase 5 has left. `IShell` is down to what they use
+    (`OpenProjectAsync`, `RefreshProjectAsync`, `ActAsync`, `ShowError`, `RunAgentAsync`, `CancelRun`, `IsAgentRunning`, `SetAssistantOpen`, `ReviewInAssistantAsync`) and `ShellAdapter` implements it over the view-model.
+    `AssistantPanel` implements `IAssistantPanel` (`ShowPickerAsync`, `ShowProjectAsync`, `ReviewAsync`), which is how the shell talks to it; `DelegationFactory` builds the Delegate tab's stand-in view-model.
+    `UiState` stays: it is shell-owned view state (open checklist row, expanded groups, dismissed hints) that `ProjectScreenServices` hands to the Requirements tab and the getting-started card writes to.
+  - Removed: `AppSidebar`, `Segmented`, `ButtonDecorations`, `DialogFrame`, `OnboardingScreens`, `ShellMessageViews`, the unused `Forms` helpers, `PresentationView.PageHeader`/`AssistantButton`.
+  - Hidden-but-present again: the wizard's Skip button and the other steps' inputs exist while hidden, so a test that means "not offered" asserts `UiWait.IsShown`. Overlay content (welcome, wizard) is created
+    when the layout runs, not when the view-model is set, so tests wait for it (`UntilAsync`) before looking.
+  - Tests: `Mvvm/{SidebarFeatureTests,OnboardingFeatureTests,ShellViewModelTests}` over `Mvvm/ShellScenario` (real SQLite, a refusing runtime, fake updater, calendar, file dialogs and assistant);
+    the window tests are unchanged apart from the two points above.
+  - Checked against the previous commit with `PROJECTOPS_UI_CAPTURE_DIR` (onboarding captures and the designed screens, English/Persian, light/dark, 800 and 1440 wide): the sidebar, welcome and the sample
+    screens are pixel-equal (within 8/255); the wizard differs only in sub-pixel text and caret placement. In the Persian dark capture the theme chip now follows the click at once (the old segmented
+    control lagged one frame). Not checked on Windows.
 

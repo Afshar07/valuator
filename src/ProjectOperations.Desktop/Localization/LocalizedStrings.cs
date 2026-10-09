@@ -45,6 +45,9 @@ public sealed class LocalizedStrings : INotifyPropertyChanged, IDisposable
     /// <summary>Localized title of a requirement; custom requirements keep the user's own title.</summary>
     public string Requirement(ProjectRequirement requirement) => new DomainDisplay(_text).Requirement(requirement);
 
+    /// <summary>Localized title of a built-in requirement by its template id; any other id keeps <paramref name="original"/>.</summary>
+    public string Requirement(string id, string original) => new DomainDisplay(_text).Requirement(id, original);
+
     /// <summary>Localized title of a requirement group; custom groups keep the user's own title.</summary>
     public string Group(string id, string original) => new DomainDisplay(_text).Group(id, original);
 

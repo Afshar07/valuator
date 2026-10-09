@@ -198,10 +198,11 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   tokens as dynamic resources, so Light/Dark/Auto switches live (Auto follows the OS).
   Inter (OFL, Latin subset), IRANYekanX and Phosphor icons (MIT) are bundled under
   `Assets/Fonts` with their licenses. English uses Inter; Persian uses IRANYekanX.
-- `MainWindow` owns the shell: sidebar navigation (Needs attention, All projects,
-  Calendar, Documents, Settings), the page host, a modal layer and the assistant
-  panel. Focused views own screen construction and existing editing flows. This split
-  does not change service boundaries. A migration to MVVM is in progress; see
+- `MainWindowViewModel` (`Desktop/Shell`) is the shell: it routes between pages, owns the sidebar
+  (Needs attention, All projects, Calendar, Documents, Settings; `SidebarPolicy` decides what shows), the
+  first-run overlay, the modal layer, the error banner and toast, the run lock and the sample workspace.
+  `MainWindow.axaml` is a thin view over it, plus the system file dialogs and the code-built assistant
+  panel. This split does not change service boundaries. A migration to MVVM is in progress; see
   `.ai/ongoing/mvvm-migration.md`.
 - The assistant is a project-scoped panel docked at the end edge (it overlays the
   content below 1280 px). It keeps one set of request, preview and consent controls per

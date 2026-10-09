@@ -1,5 +1,5 @@
-using Avalonia.Controls;
-using Avalonia.Layout;
+using CommunityToolkit.Mvvm.ComponentModel;
+using ProjectOperations.Desktop.Common;
 
 namespace ProjectOperations.Desktop.Shell;
 
@@ -7,30 +7,20 @@ namespace ProjectOperations.Desktop.Shell;
 internal interface IDialogService
 {
     bool IsOpen { get; }
-    /// <summary>Shows a dialog control, or a view-model whose view the view locator supplies.</summary>
+    /// <summary>Shows a dialog: a view-model whose view the view locator supplies (or a control, for a screen that is still code-built).</summary>
     void Show(object content);
     void Close();
 }
 
-/// <summary>Modal layer: a scrim (click closes) under a centered dialog.</summary>
-internal sealed class DialogHost : Panel, IDialogService
+/// <summary>The modal layer's state: what is shown, or nothing. <c>MainWindow.axaml</c> draws a scrim under it; a click on the scrim or Escape closes it.</summary>
+internal sealed partial class DialogService : ViewModelBase, IDialogService
 {
-    public DialogHost()
-    {
-        IsVisible = false; ZIndex = 10;
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOpen))]
+    private object? _content;
 
-    public bool IsOpen => IsVisible;
+    public bool IsOpen => Content is not null;
 
-    public void Show(object content)
-    {
-        Children.Clear();
-        var scrim = new Border().Paint(Border.BackgroundProperty, "Scrim");
-        scrim.PointerPressed += (_, _) => Close();
-        var dialog = content as Control ?? new ContentControl { Content = content };
-        dialog.HorizontalAlignment = HorizontalAlignment.Center; dialog.VerticalAlignment = VerticalAlignment.Center;
-        Children.Add(scrim); Children.Add(dialog); IsVisible = true;
-    }
-
-    public void Close() { IsVisible = false; Children.Clear(); }
+    public void Show(object content) => Content = content;
+    public void Close() => Content = null;
 }

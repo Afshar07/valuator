@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:shell="using:ProjectOperations.Desktop.Shell"
+             x:Class="ProjectOperations.Desktop.Shell.GettingStartedView"
+             x:DataType="shell:GettingStartedViewModel">
+  <StackPanel Spacing="8">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Classes="SmallStrong" Text="{Binding L[v3.gsTitle]}" />
+      <TextBlock Grid.Column="1" Classes="Meta" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="NoWrap" Text="{Binding CountText}" />
+    </Grid>
+    <c:ProgressTrack Name="GettingStartedProgress" Height="4" Value="{Binding Percent}" />
+    <ItemsControl ItemsSource="{Binding Items}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="1" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+    </ItemsControl>
+    <Button Name="GettingStartedHide" Classes="link" Padding="4,0" FontSize="11.5" HorizontalAlignment="Left"
+            Command="{Binding HideCommand}" Content="{Binding L[v3.hide]}" />
+  </StackPanel>
+</UserControl>
