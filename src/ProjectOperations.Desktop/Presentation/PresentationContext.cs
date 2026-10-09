@@ -6,6 +6,7 @@ using Avalonia.Media;
 using ProjectOperations.Core.Agents;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Calendar;
+using ProjectOperations.Desktop.Features.Settings;
 using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Shell;
 using ProjectOperations.Desktop.Updates;
@@ -87,6 +88,8 @@ internal sealed class PresentationContext(
     public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, projectHost, Clock);
     /// <summary>The services handed to view-models of the top-level pages. They follow the sample workspace, including its (absent) external calendar.</summary>
     public PageServices Page => new(Projects, Strings, Dialogs, navigator, pageHost, files, Calendar, Clock);
+    /// <summary>The services handed to the Settings page: the page services plus the preferences, runtime facts and updater only it shows.</summary>
+    public SettingsServices Settings => new(Page, Locale, Appearance, Environment, Updates);
     public UiState State { get; } = new();
     /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
     public IExternalCalendarSource Calendar => Workspace.Calendar;

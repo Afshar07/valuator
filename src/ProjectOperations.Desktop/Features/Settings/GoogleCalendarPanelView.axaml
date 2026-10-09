@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Settings"
+             x:Class="ProjectOperations.Desktop.Features.Settings.GoogleCalendarPanelView"
+             x:DataType="vm:GoogleCalendarPanelViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.status">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.status.on">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="card" Padding="16,4">
+    <StackPanel>
+      <TextBlock Classes="Heading" Margin="0,12,0,4" Text="{Binding L[google.title]}" />
+      <Border Classes="rule" Padding="0,12">
+        <StackPanel Name="GoogleCalendarPanel" Spacing="10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+              <TextBlock Name="GoogleCalendarStatus" Classes="Meta status" Classes.on="{Binding IsConnected}" Text="{Binding StatusText}" />
+              <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding NoteText}" />
+            </StackPanel>
+            <!-- Exactly one action is offered. Cancel and the others deliberately do not lock the page: a sign-in can wait on the browser for minutes. -->
+            <Panel Grid.Column="1" VerticalAlignment="Center">
+              <Button Name="GoogleCalendarConnect" Classes="primary" HorizontalAlignment="Left" IsVisible="{Binding CanConnect}"
+                      Command="{Binding ConnectCommand}" Content="{Binding L[google.connect]}" />
+              <Button Name="GoogleCalendarCancel" HorizontalAlignment="Left" IsVisible="{Binding IsSigningIn}"
+                      Command="{Binding CancelSignInCommand}" Content="{Binding L[google.cancel]}" />
+              <Button Name="GoogleCalendarDisconnect" HorizontalAlignment="Left" IsVisible="{Binding CanDisconnect}"
+                      Command="{Binding DisconnectCommand}" Content="{Binding L[google.disconnect]}" />
+            </Panel>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

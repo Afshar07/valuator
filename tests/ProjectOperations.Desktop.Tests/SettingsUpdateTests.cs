@@ -23,7 +23,7 @@ public sealed class SettingsUpdateTests
         Assert.Equal(0, fixture.Updater.DownloadCalls);
         Click(fixture.Window, "CheckForUpdates");
         Assert.Equal(1, fixture.Updater.CheckCalls);
-        Assert.False(Named<Button>(fixture.Window, "CheckForUpdates").IsEnabled);
+        Assert.False(Named<Button>(fixture.Window, "CheckForUpdates").IsEffectivelyEnabled);
         Assert.Null(Find<Button>(fixture.Window, "DownloadUpdate"));
         fixture.Updater.CheckRelease.SetResult(Release);
         await UntilAsync(() => Find<Button>(fixture.Window, "DownloadUpdate") is not null);
@@ -63,7 +63,7 @@ public sealed class SettingsUpdateTests
         await fixture.OpenAsync();
         Click(fixture.Window, "CheckForUpdates");
         fixture.Updater.CheckRelease.SetResult(null);
-        await UntilAsync(() => Named<Button>(fixture.Window, "CheckForUpdates").IsEnabled);
+        await UntilAsync(() => Named<Button>(fixture.Window, "CheckForUpdates").IsEffectivelyEnabled);
         Assert.Null(Find<Button>(fixture.Window, "DownloadUpdate"));
         Assert.Null(Find<Control>(fixture.Window, "UpdateReady"));
         Assert.Null(Find<Control>(fixture.Window, "UpdateError"));
@@ -106,7 +106,7 @@ public sealed class SettingsUpdateTests
         Click(fixture.Window, "DownloadUpdate");
         Assert.Same(Release, fixture.Updater.DownloadedUpdate);
         Assert.Equal(0, Named<ProgressBar>(fixture.Window, "UpdateProgress").Value);
-        Assert.False(Named<Button>(fixture.Window, "CheckForUpdates").IsEnabled);
+        Assert.False(Named<Button>(fixture.Window, "CheckForUpdates").IsEffectivelyEnabled);
         var cancel = Named<Button>(fixture.Window, "CancelDownload");
         fixture.Updater.Progress!.Report(37);
         await UntilAsync(() => Named<ProgressBar>(fixture.Window, "UpdateProgress").Value == 37);
@@ -167,7 +167,7 @@ public sealed class SettingsUpdateTests
         Click(fixture.Window, "CheckForUpdates");
         fixture.Updater.CheckRelease.SetException(new InvalidOperationException("Synthetic check failure"));
         await UntilAsync(() => Find<TextBlock>(fixture.Window, "UpdateError") is not null);
-        Assert.True(Named<Button>(fixture.Window, "CheckForUpdates").IsEnabled);
+        Assert.True(Named<Button>(fixture.Window, "CheckForUpdates").IsEffectivelyEnabled);
         Assert.Null(Find<Button>(fixture.Window, "DownloadUpdate"));
         fixture.Updater.CheckRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Click(fixture.Window, "CheckForUpdates");
@@ -204,7 +204,9 @@ public sealed class SettingsUpdateTests
         Assert.Same(Release, fixture.Updater.RestartedUpdate);
     }
 
-    private static T? Find<T>(Window window, string name) where T : Control => window.GetLogicalDescendants().OfType<T>().SingleOrDefault(control => control.Name == name);
+    /// <summary>The named control as the user sees it: a control the panel keeps in the tree but hides counts as absent.</summary>
+    private static T? Find<T>(Window window, string name) where T : Control =>
+        window.GetLogicalDescendants().OfType<T>().SingleOrDefault(control => control.Name == name && control.IsEffectivelyVisible);
     private static T Named<T>(Window window, string name) where T : Control => Assert.IsAssignableFrom<T>(Find<T>(window, name));
     private static void Click(Window window, string name) => UiWait.Click(window, button => button.Name == name, name);
 

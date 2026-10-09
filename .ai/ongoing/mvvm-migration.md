@@ -36,7 +36,7 @@ State: `todo` → `in progress` → `done`.
 | 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | done |
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | done |
 | 3a | Projects list, Dashboard, Calendar, Documents | done |
-| 3b | Settings, stage editor, update panel, Google Calendar panel | todo |
+| 3b | Settings, stage editor, update panel, Google Calendar panel | done |
 | 3c | Project detail, Overview, Requirements, remaining project dialogs | todo |
 | 4 | Shell: `MainWindowViewModel` + XAML, sidebar policy, getting started, onboarding, sample workspace; remove `IShell`, `PresentationContext`, and `UiState` where possible | todo |
 | 5 | Assistant: port its tests to view-model tests first, then `AssistantPanel` and `DelegationView` | todo |
@@ -97,4 +97,22 @@ State: `todo` → `in progress` → `done`.
     `StatValue`, `CalendarEvent`, `CalendarGoogleEvent`, `CalendarGoogleLegend`, `CalendarNotice`, `DocumentRow`, `DocumentPath`.
   - Tests: `Mvvm/{Projects,Dashboard,Calendar,Documents}FeatureTests` over `Mvvm/PageScenario`. `PresentationTests` presses the delete buttons with `UiWait.Click` because they are bound commands now.
   - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` (English/Persian, light/dark, 800 and 1440 wide): same layout. Not checked on Windows.
-  - Still code-built and still reached through `IShell`: Settings, the project detail, the assistant panel, onboarding. `ListCard`, `TableHeader`, `SectionCard` and `ListRow` stay in `Components.cs` for them until phase 6.
+  - Still code-built and still reached through `IShell`: the project detail, the assistant panel, onboarding. `ListCard`, `TableHeader`, `SectionCard` and `ListRow` stay in `Components.cs` for them until phase 6.
+- Settings (3b), `Desktop/Features/Settings/`; copy this for 3c and for anything with several independent sections:
+  - Seam: `SettingsServices` (`PresentationContext.Settings`) is `PageServices` plus `LocaleContext`, `AppearanceContext`, `DesktopEnvironment` and `UpdateController`. `IPageHost` gained
+    `ShowWelcome()` and `IsAgentRunning`. `SettingsViewModel.LoadAsync` reads the stages and the Google connection first, so the page opens complete.
+  - Layout: `SettingsView` holds appearance, assistant and data inline; the other cards are child view-models shown by the locator, each view owning its own card and heading:
+    `UpdatePanel`, `GoogleCalendarPanel` (the property is null when the source is unavailable, so the card is absent, not hidden) and `StageEditor` with `StageRow` and `StageColor` views.
+  - Page lifetime: a page view-model may be `IDisposable`. `MainWindow.Show(control, model)` disposes the previous page's model (and the current one on close). Settings uses it to abandon a pending Google
+    sign-in, and to stop listening to `UpdateController` and the theme. This replaces `AttachedToLogicalTree`/`DetachedFromLogicalTree` hooks; new page view-models with a subscription or a pending operation should do the same.
+  - Segmented controls in XAML: `Border.segmented` and `Button.segment(.selected)` in `Styles.axaml`, an `ItemsControl` over `ChipGroupViewModel<string>.Options`, and a small item template kept in `SettingsView`
+    and `StageEditorView`. The code-built `Segmented` stays for the sidebar and onboarding until phase 4. `ChipGroupViewModel.Selected` now marks chips from the final selection, so a listener that refuses a choice
+    and reverts it (a failed theme or language save) leaves the right chip lit.
+  - `Common/ColorSwatch` draws a user colour (a stage colour, not a theme token). The stage colour picker is a `Popup` bound to the row's `IsColorOpen`. A title commits on Enter (`KeyBinding`) and on focus loss
+    (a one-line handler in `StageRowView.axaml.cs`); the old commit flag was set even for a no-op, so a later edit in the same box was silently dropped, which is fixed.
+  - Behaviour kept: Connect does not use the page lock, Add/Move/Delete do (`Host.RunAsync`), rename and colour are guarded and reload on failure, the update buttons never lock the page and progress ticks only
+    move the bar. Small changes: the theme chips here now follow a change made in the sidebar; the Open-folder button goes through `IFileLauncher`; the Delete tooltip explaining why it is disabled survives a language switch.
+  - Tests: `Mvvm/SettingsFeatureTests` (plain xUnit over `PageScenario`, which gained `Appearance`, `Environment`, `FakeUpdater`, `SettingsServices(...)` and a richer `FakeCalendar`) and `SettingsPageUiTests`.
+    Update/Google UI tests now treat a hidden control as absent (`IsEffectivelyVisible`) and read a command-disabled button with `IsEffectivelyEnabled`.
+  - Checked against the old screens with `PROJECTOPS_UI_CAPTURE_DIR` from a worktree of the previous commit: Settings (English light, English dark at 800, Persian dark) and the Google-connected, update-offered and
+    download-in-progress states in English light and Persian dark are pixel-identical. Not checked on Windows.

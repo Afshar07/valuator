@@ -93,7 +93,7 @@ public sealed class GoogleCalendarUiTests
             await UntilAsync(() => Nav(window, "NavigationSettings").IsEffectivelyEnabled);
             Click(Nav(window, "NavigationSettings"));
             await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Name == "GoogleCalendarStatus" && block.Text == "Not connected"));
-            Assert.Contains(Controls<Button>(window), button => button.Name == "GoogleCalendarConnect");
+            Assert.Contains(Controls<Button>(window), button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible);
 
             Click(Nav(window, "NavigationCalendar"));
             await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "CalendarEvent"));
@@ -120,8 +120,8 @@ public sealed class GoogleCalendarUiTests
             Assert.False(Nav(window, "NavigationCalendar").IsVisible);
 
             Click(Nav(window, "NavigationSettings"));
-            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect"));
-            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarConnect"));
+            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible));
+            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible));
             await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Name == "GoogleCalendarStatus" && block.Text == "Connected"));
             Assert.Equal(1, calendar.ConnectCalls);
             await UntilAsync(() => Nav(window, "NavigationCalendar").IsVisible);
@@ -136,8 +136,8 @@ public sealed class GoogleCalendarUiTests
             Assert.DoesNotContain(Controls<Button>(window), button => button.Name == "CalendarEvent");
 
             Click(Nav(window, "NavigationSettings"));
-            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarDisconnect"));
-            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarDisconnect"));
+            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarDisconnect" && button.IsEffectivelyVisible));
+            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarDisconnect" && button.IsEffectivelyVisible));
             await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Name == "GoogleCalendarStatus" && block.Text == "Not connected"));
             Assert.False(calendar.Connected);
         }
@@ -157,15 +157,15 @@ public sealed class GoogleCalendarUiTests
             window.Show();
             await UntilAsync(() => Nav(window, "NavigationSettings").IsEffectivelyEnabled);
             Click(Nav(window, "NavigationSettings"));
-            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect"));
-            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarConnect"));
+            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible));
+            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible));
 
             // While the browser sign-in is pending the page stays usable and Cancel is offered.
-            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarCancel"));
+            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarCancel" && button.IsEffectivelyVisible));
             Assert.True(Nav(window, "NavigationCalendar").IsEffectivelyEnabled);
-            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarCancel"));
+            Click(Controls<Button>(window).Single(button => button.Name == "GoogleCalendarCancel" && button.IsEffectivelyVisible));
 
-            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect"));
+            await UntilAsync(() => Controls<Button>(window).Any(button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible));
             Assert.False(calendar.Connected);
             Assert.Contains(Controls<TextBlock>(window), block => block.Name == "GoogleCalendarStatus" && block.Text == "Not connected");
             Assert.Null(window.LastFailure);
@@ -254,7 +254,7 @@ public sealed class GoogleCalendarUiTests
             await UntilAsync(() => Nav(window, "NavigationSettings").IsEffectivelyEnabled);
             Click(Nav(window, "NavigationSettings"));
             await UntilAsync(() => Controls<TextBlock>(window).Any(block => block.Name == "GoogleCalendarStatus" && block.Text == "متصل نیست"));
-            Assert.Contains(Controls<Button>(window), button => button.Name == "GoogleCalendarConnect" && MainWindowTests.ButtonText(button) == "اتصال به تقویم گوگل");
+            Assert.Contains(Controls<Button>(window), button => button.Name == "GoogleCalendarConnect" && button.IsEffectivelyVisible && MainWindowTests.ButtonText(button) == "اتصال به تقویم گوگل");
         }
         finally { window.Close(); }
     }

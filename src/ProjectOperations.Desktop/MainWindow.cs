@@ -11,6 +11,7 @@ using ProjectOperations.Desktop.Features.Calendar;
 using ProjectOperations.Desktop.Features.Dashboard;
 using ProjectOperations.Desktop.Features.Documents;
 using ProjectOperations.Desktop.Features.Projects;
+using ProjectOperations.Desktop.Features.Settings;
 using ProjectOperations.Desktop.Localization;
 using ProjectOperations.Desktop.Shell;
 using ProjectOperations.Desktop.Updates;
@@ -42,6 +43,8 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
     private readonly Grid _shell;
     private readonly DialogHost _dialogs = new();
     private TabControl? _projectTabs;
+    /// <summary>The shown page's view-model when it holds something to release (a pending sign-in, an event subscription); disposed when the page is replaced.</summary>
+    private IDisposable? _pageModel;
     private bool _closing;
     private readonly LocaleContext _locale;
     private readonly AppearanceContext _appearance;
@@ -102,7 +105,12 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
         SizeChanged += (_, _) => PlaceAssistant();
         KeyDown += (_, e) => { if (e.Key == Key.Escape && _dialogs.IsOpen) { CloseModal(); e.Handled = true; } };
 
-        Closed += (_, _) => { _locale.Changed -= LocaleChanged; _appearance.Changed -= AppearanceChanged; _localized.Dispose(); _strings.Dispose(); _workspace.Dispose(); };
+        Closed += (_, _) =>
+        {
+            _locale.Changed -= LocaleChanged; _appearance.Changed -= AppearanceChanged;
+            _pageModel?.Dispose(); _pageModel = null;
+            _localized.Dispose(); _strings.Dispose(); _workspace.Dispose();
+        };
         Opened += async (_, _) =>
         {
             SetNavigationEnabled(false);
@@ -158,9 +166,13 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
         finally { button.IsEnabled = true; }
     }
 
-    /// <summary>Hosts a screen in a scrollable, readable-width column that follows the inherited flow direction.</summary>
-    private void Show(Control control)
+    /// <summary>
+    /// Hosts a screen in a scrollable, readable-width column that follows the inherited flow direction. The screen it replaces releases what it
+    /// holds; <paramref name="model"/> is released in turn when this one is replaced.
+    /// </summary>
+    private void Show(Control control, IDisposable? model = null)
     {
+        _pageModel?.Dispose(); _pageModel = model;
         control.HorizontalAlignment = HorizontalAlignment.Stretch;
         var content = new StackPanel { Spacing = 20 };
         if (IsSample) content.Children.Add(SampleBanner());
@@ -192,15 +204,16 @@ public sealed class MainWindow : Window, IShell, IProjectHost, IPageHost, IFileL
         _fresh.Remove(page); _navigation.SetNew(page, false);
         var services = _context.Page;
         CalendarViewModel? calendar = null;
+        SettingsViewModel? settings = null;
         Control view = page switch
         {
             AppPage.Projects => new ContentControl { Content = await ProjectsViewModel.LoadAsync(services) },
             AppPage.Calendar => new ContentControl { Content = calendar = await CalendarViewModel.LoadAsync(services) },
             AppPage.Documents => new ContentControl { Content = await DocumentsViewModel.LoadAsync(services) },
-            AppPage.Settings => new SettingsView(_context),
+            AppPage.Settings => new ContentControl { Content = settings = await SettingsViewModel.LoadAsync(_context.Settings) },
             _ => new ContentControl { Content = await DashboardViewModel.LoadAsync(services) }
         };
-        Show(view);
+        Show(view, settings);
         // The opt-in external overlay loads after the page is shown and does nothing unless Google Calendar is connected.
         if (calendar is not null) _ = calendar.StartAsync();
         await _assistant.ShowPickerAsync();

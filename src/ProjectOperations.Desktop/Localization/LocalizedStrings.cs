@@ -44,6 +44,9 @@ public sealed class LocalizedStrings : INotifyPropertyChanged, IDisposable
     /// <summary>Localized title of a requirement; custom requirements keep the user's own title.</summary>
     public string Requirement(ProjectRequirement requirement) => new DomainDisplay(_text).Requirement(requirement);
 
+    /// <summary>Localized name of a project template; only the built-in one is translated.</summary>
+    public string Template(ProjectTemplate template) => new DomainDisplay(_text).Template(template);
+
     public string Number(int value) => value.ToString("N0", Culture);
 
     /// <summary>The date and time, or "No date".</summary>

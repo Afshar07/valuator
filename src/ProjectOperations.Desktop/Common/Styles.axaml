@@ -37,6 +37,19 @@
     <Setter Property="Padding" Value="18,12" />
   </Style>
 
+  <!-- Segmented control: a track holding two to four Button.segment options (theme, language, stage template). -->
+  <Style Selector="Border.segmented">
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Background" Value="{DynamicResource BackgroundTrackBrush}" />
+  </Style>
+  <Style Selector="Button.segment.selected">
+    <Setter Property="Effect">
+      <DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="1" Opacity="0.08" />
+    </Setter>
+  </Style>
+
   <!-- Card: the white rounded surface lists and sections sit on. -->
   <Style Selector="Border.card">
     <Setter Property="BorderThickness" Value="1" />

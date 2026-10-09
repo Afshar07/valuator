@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Settings"
+             x:Class="ProjectOperations.Desktop.Features.Settings.StageColorView"
+             x:DataType="vm:StageColorViewModel">
+  <Button Name="StageColorChoice" Classes="icon" Width="24" Height="24" MinHeight="24" Padding="0"
+          Command="{Binding PickCommand}" AutomationProperties.Name="{Binding Color}">
+    <c:ColorSwatch Color="{Binding Color}" Size="16" />
+  </Button>
+</UserControl>

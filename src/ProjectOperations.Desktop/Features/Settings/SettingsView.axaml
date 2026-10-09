@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Settings"
+             x:Class="ProjectOperations.Desktop.Features.Settings.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <UserControl.Styles>
+    <!-- The assistant status is a dot and a word that are quiet until the runtime is configured. -->
+    <Style Selector="StackPanel.agent > TextBlock.Meta">
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    </Style>
+    <Style Selector="StackPanel.agent.on > TextBlock.Meta">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="StackPanel.agent.on > Border.dot">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <UserControl.Resources>
+    <DataTemplate x:Key="SegmentTemplate" x:DataType="c:ChipOptionViewModel">
+      <Button Classes="segment" Classes.selected="{Binding IsSelected}" Margin="1,0" MinWidth="72" Command="{Binding SelectCommand}"
+              Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <StackPanel Spacing="20">
+    <c:PageHeader Title="{Binding L[presentation.navigationSettings]}" />
+
+    <StackPanel Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+      <Border Classes="card" Padding="16,4">
+        <StackPanel>
+          <TextBlock Classes="Heading" Margin="0,12,0,4" Text="{Binding L[settings.appearance]}" />
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <TextBlock Classes="Body" VerticalAlignment="Center" Text="{Binding L[settings.theme]}" />
+              <Border Grid.Column="1" Name="SettingsTheme" Classes="segmented" VerticalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding Theme.Options}" ItemTemplate="{StaticResource SegmentTemplate}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                </ItemsControl>
+              </Border>
+            </Grid>
+          </Border>
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="Body" Text="{Binding L[settings.language]}" />
+                <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[settings.languageNote]}" />
+              </StackPanel>
+              <Border Grid.Column="1" Name="SettingsLanguage" Classes="segmented" VerticalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding Language.Options}" ItemTemplate="{StaticResource SegmentTemplate}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                </ItemsControl>
+              </Border>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <ContentControl Content="{Binding Updates}" />
+
+      <!-- Opt-in: only offered when a Google OAuth client is configured, so default installs see no change here. -->
+      <ContentControl Content="{Binding Google}" IsVisible="{Binding HasGoogle}" />
+
+      <ContentControl Content="{Binding Stages}" />
+
+      <Border Classes="card" Padding="16,4,16,14">
+        <StackPanel>
+          <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,4">
+            <TextBlock Classes="Heading" Text="{Binding L[settings.agent]}" />
+            <StackPanel Grid.Column="1" Classes="agent" Classes.on="{Binding AgentConfigured}" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Border Classes="dot" Width="7" Height="7" CornerRadius="3.5" />
+              <TextBlock Classes="Meta" TextWrapping="NoWrap" Text="{Binding AgentStatusText}" />
+            </StackPanel>
+          </Grid>
+          <Border Padding="0,0,0,10">
+            <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[settings.agentNote]}" />
+          </Border>
+          <Border Classes="rule" Padding="0,12,0,0">
+            <app:AdaptiveGrid MinItemWidth="240" Gap="12">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding EndpointLabel}" />
+                <TextBox Name="Setting_PROJECTOPS_OPENCODE_URL" IsReadOnly="True" FlowDirection="LeftToRight"
+                         Text="{Binding Endpoint, Mode=OneWay}" PlaceholderText="{Binding L[settings.notSetEnv]}" />
+              </StackPanel>
+              <StackPanel Spacing="5">
+                <TextBlock Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding ConfigDirectoryLabel}" />
+                <TextBox Name="Setting_PROJECTOPS_OPENCODE_CONFIG_DIR" IsReadOnly="True" FlowDirection="LeftToRight"
+                         Text="{Binding ConfigDirectory, Mode=OneWay}" PlaceholderText="{Binding L[settings.notSetEnv]}" />
+              </StackPanel>
+            </app:AdaptiveGrid>
+          </Border>
+          <Border Margin="0,12,0,0" CornerRadius="10" Padding="14,10" Background="{DynamicResource BackgroundMutedBrush}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <c:IconGlyph Icon="{x:Static app:Icons.Info}" Size="17" Token="TextSecondary" VerticalAlignment="Top" Margin="0,1,0,0" />
+              <TextBlock Grid.Column="1" Classes="Small" VerticalAlignment="Center"><Run FontWeight="SemiBold" Text="{Binding SentTitle}" /><Run Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[settings.sentBody]}" /></TextBlock>
+            </Grid>
+          </Border>
+          <Border Margin="0,10,0,0">
+            <TextBlock Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[settings.envNote]}" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" Padding="16,4">
+        <StackPanel>
+          <TextBlock Classes="Heading" Margin="0,12,0,4" Text="{Binding L[settings.data]}" />
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="Body" Text="{Binding DatabaseLabel}" />
+                <TextBlock Name="DatabasePath" Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}" FlowDirection="LeftToRight"
+                           HorizontalAlignment="Left" Text="{Binding DatabaseText}" />
+              </StackPanel>
+              <Button Grid.Column="1" Name="OpenDatabaseFolder" VerticalAlignment="Center" Command="{Binding OpenFolderCommand}" Content="{Binding L[settings.openFolder]}" />
+            </Grid>
+          </Border>
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <c:IconGlyph Icon="{x:Static app:Icons.CloudArrowUp}" Size="16" Token="TextTertiary" />
+                <TextBlock Classes="Body" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[settings.backup]}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="Meta" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" Text="{Binding L[settings.notBuilt]}" />
+            </Grid>
+          </Border>
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <c:IconGlyph Icon="{x:Static app:Icons.LockKey}" Size="16" Token="TextTertiary" />
+                <TextBlock Classes="Body" Foreground="{DynamicResource TextTertiaryBrush}" Text="{Binding L[settings.encryption]}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="Meta" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" Text="{Binding L[settings.notBuilt]}" />
+            </Grid>
+          </Border>
+          <Border Classes="rule" Padding="0,12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <TextBlock Classes="Body" VerticalAlignment="Center" Text="{Binding L[v3.restartL]}" />
+              <Button Grid.Column="1" Name="ShowWelcomeAgain" VerticalAlignment="Center" Command="{Binding ShowWelcomeCommand}" Content="{Binding L[v3.restart]}" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

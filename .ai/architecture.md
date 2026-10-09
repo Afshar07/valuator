@@ -153,7 +153,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
 - **Failure behavior:** a revoked or expired sign-in clears the stored token and shows a notice with a pointer to Settings; a
   network failure shows a notice. Project dates always render regardless. The sidebar offers Calendar when something is dated or
   Google is connected.
-- **Sign-in UI:** `GoogleCalendarPanel` (Settings). Connect waits for the browser up to five minutes and deliberately does not use
+- **Sign-in UI:** `GoogleCalendarPanelViewModel` and its view in `Features/Settings` (shown only when the source is available). Connect waits for the browser up to five minutes and deliberately does not use
   the shell's page lock, so Cancel and navigation stay available. Disconnect revokes with Google on a best-effort basis and always
   clears the local token.
 
@@ -249,7 +249,7 @@ Opt-in and read-only. A user who never connects sees exactly the internal Calend
   project stores `StageId` (FK, `ON DELETE RESTRICT`); the repository fills `Project.Stage` on load. A stage used by a
   project cannot be deleted (`StageInUseException`; Settings disables the button and shows the usage count), nor can the
   last stage of a template. Projects may move to any stage. Databases older than version 3 are discarded, not migrated.
-  Stages are managed in Settings (`StageEditor`) and shown with `Ui.StagePill` in the header, list, dashboard and overview.
+  Stages are managed in Settings (`Features/Settings/StageEditor*`) and shown with `Ui.StagePill` in the header, list, dashboard and overview.
 - **Project deletion UI.** The only entry point is the trash icon in the last column of the All projects
   table (`Features/Projects/ProjectsView.axaml`; also kept in the compact layout). It opens
   `DeleteProjectDialogView`, which names the project and states that deletion is permanent and linked files
