@@ -47,4 +47,44 @@ public sealed class LocalizationLayoutTests
         Assert.True(Position(Find("All projects")) < Position(Heading("What needs your attention?")));
         window.Close();
     }
+
+    [AvaloniaFact]
+    public void Single_line_inputs_detect_their_alignment_so_the_caret_follows_the_text_and_multi_line_ones_start_at_the_edge()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        var single = new TextBox { TextWrapping = TextWrapping.NoWrap };
+        var notes = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap };
+        var window = fixture.Window;
+        window.Content = new StackPanel { Children = { single, notes } };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // A no-wrap right-to-left box with a fixed alignment puts its caret far from the text.
+        Assert.Equal(TextAlignment.DetectFromContent, single.TextAlignment);
+        Assert.Equal(TextAlignment.Start, notes.TextAlignment);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Add_requirement_input_is_wide_enough_to_type_in_Persian()
+    {
+        using var fixture = new MainWindowTests.Fixture();
+        await fixture.InitializeAsync();
+        await fixture.Projects.CreateBlankAsync("Blank deal", "", ProjectStatus.Active, "", "");
+        fixture.Locale.SetLanguage("fa");
+        var window = fixture.Window;
+        window.Show();
+        UiWait.Pump(() => window.GetLogicalDescendants().OfType<Button>().Any(button => button.IsEffectivelyEnabled && MainWindowTests.ButtonText(button).StartsWith("Blank deal")));
+        UiWait.Click(window, button => MainWindowTests.ButtonText(button).StartsWith("Blank deal"), "Blank deal");
+        UiWait.Pump(() => window.GetLogicalDescendants().OfType<TabControl>().Any());
+        window.GetLogicalDescendants().OfType<TabControl>().Distinct().Single().SelectedIndex = 1;
+        Dispatcher.UIThread.RunJobs();
+        UiWait.Click(window, button => button.Name == "AddRequirement", "Add requirement");
+        UiWait.Pump(() => window.GetLogicalDescendants().OfType<TextBox>().Any(box => box.Name == "NewRequirementTitle"));
+        window.UpdateLayout();
+
+        var input = window.GetLogicalDescendants().OfType<TextBox>().Distinct().Single(box => box.Name == "NewRequirementTitle");
+        Assert.True(input.Bounds.Width >= 320, $"The input was only {input.Bounds.Width:0} px wide.");
+        window.Close();
+    }
 }

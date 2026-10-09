@@ -548,7 +548,6 @@ internal static class Forms
     {
         Text = value,
         TextWrapping = TextWrapping.NoWrap,
-        TextAlignment = TextAlignment.Start,
         MinHeight = height,
         VerticalContentAlignment = VerticalAlignment.Center,
         HorizontalAlignment = HorizontalAlignment.Stretch

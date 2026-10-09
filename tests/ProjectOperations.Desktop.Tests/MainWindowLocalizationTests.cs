@@ -42,7 +42,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Equal(window.FontFamily, Controls<TextBlock>(window).Single(block => block.Text == "نام پروژه").FontFamily);
         foreach (var weight in new[] { "Regular", "Bold" })
             Assert.True(Avalonia.Platform.AssetLoader.Exists(new Uri($"avares://ProjectOperations.Desktop/Assets/Fonts/IRANYekanX/IRANYekanX-{weight}.ttf")));
-        Assert.Equal(TextAlignment.Start, inputs[0].TextAlignment);
+        Assert.Equal(TextAlignment.DetectFromContent, inputs[0].TextAlignment); // not Start: a fixed alignment misplaces the caret of a no-wrap right-to-left box
         Assert.Equal("Unsaved synthetic project", inputs[0].Text);
         Assert.Contains(Controls<TextBlock>(window), block => block.Text == "نام پروژه" && block.TextAlignment == TextAlignment.Start);
         Assert.Contains(Buttons(window), button => MainWindowTests.ButtonText(button) == "ادامه");

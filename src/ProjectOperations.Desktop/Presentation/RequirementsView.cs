@@ -58,7 +58,7 @@ internal sealed class RequirementsView : PresentationView
             var link = Context.IconAction("v3.addRequirement", Icons.Plus, () => { _adding = true; _newRequirement = ""; Rebuild(); return Task.CompletedTask; }, "link");
             link.Name = "AddRequirement"; link.Paint(Button.ForegroundProperty, "AccentText"); return link;
         }
-        var input = Forms.Input(_newRequirement, 36); input.Name = "NewRequirementTitle";
+        var input = Forms.Input(_newRequirement, 36); input.Name = "NewRequirementTitle"; input.MinWidth = 320;
         Bind(input, control => control.PlaceholderText = T("v3.requirementPh"));
         input.TextChanged += (_, _) => _newRequirement = input.Text ?? "";
         input.AttachedToVisualTree += (_, _) => input.Focus();
@@ -299,7 +299,7 @@ internal sealed class RequirementsView : PresentationView
     private Control TaskForm(ProjectRequirement requirement)
     {
         var form = new StackPanel { Spacing = 10 };
-        var input = Forms.Input(_taskTitle, 34); input.Name = "FollowUpTitle"; input.Background = null;
+        var input = Forms.Input(_taskTitle, 34); input.Name = "FollowUpTitle"; input.MinWidth = 320; input.Background = null;
         input.Paint(TextBox.BackgroundProperty, "BackgroundMuted");
         Bind(input, control => control.PlaceholderText = T("v3.taskPh"));
         input.TextChanged += (_, _) => _taskTitle = input.Text ?? "";

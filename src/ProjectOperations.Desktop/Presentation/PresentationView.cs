@@ -61,7 +61,6 @@ internal abstract class PresentationView : StackPanel
         Text = value,
         AcceptsReturn = multiline,
         TextWrapping = TextWrapping.Wrap,
-        TextAlignment = TextAlignment.Start,
         MinHeight = multiline ? 76 : 34,
         VerticalContentAlignment = multiline ? VerticalAlignment.Top : VerticalAlignment.Center,
         HorizontalAlignment = HorizontalAlignment.Stretch
