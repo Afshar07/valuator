@@ -97,9 +97,10 @@ public sealed class MainWindowLocalizationTests
         await UntilAsync(() => Controls<ComboBox>(window).Any(control => control.SelectedItem is ProjectStage));
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
         Assert.Equal(portfolio.Id, ((ProjectStage)stage.SelectedItem!).Id);
-        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
+        // The combo box draws its selected item after a layout pass, which on a slow machine is later than this line.
+        await UntilAsync(() => stage.GetVisualDescendants().OfType<TextBlock>().Any(control => control.Text == "Portfolio"));
         fixture.Locale.SetLanguage("en");
-        Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");
+        await UntilAsync(() => stage.GetVisualDescendants().OfType<TextBlock>().Any(control => control.Text == "Portfolio"));
         Click(window, "Cancel");
         fixture.Locale.SetLanguage("fa");
         tabs.SelectedIndex = 1;
