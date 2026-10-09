@@ -85,7 +85,7 @@ public sealed class DesignedSectionsTests
         await UntilAsync(() => Controls<TabControl>(window).Any() && Nav(window, "NavigationProjects").IsEffectivelyEnabled);
         Controls<TabControl>(window).Single().SelectedIndex = 2;
         Dispatcher.UIThread.RunJobs();
-        Assert.Contains(Controls<Control>(window), control => control.Name == "PendingProposalsBanner");
+        Assert.Contains(Controls<Control>(window), control => control.Name == "PendingProposalsBanner" && control.IsEffectivelyVisible);
         Click(Controls<Button>(window).First(button => MainWindowTests.ButtonText(button) == text.Get("tasks.review")));
         await UntilAsync(() => Controls<Control>(window).Single(control => control.Name == "AssistantPanel").IsVisible
             && Controls<Control>(window).Any(control => control.Name == "ProposalTray"));

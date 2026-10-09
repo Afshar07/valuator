@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             x:Class="ProjectOperations.Desktop.Common.DateFieldView"
+             x:DataType="c:DateFieldViewModel">
+  <StackPanel Spacing="8">
+    <ItemsControl Name="DateChips" ItemsSource="{Binding Chips}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel ItemSpacing="6" LineSpacing="6" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+    </ItemsControl>
+    <StackPanel Orientation="Horizontal" Spacing="10">
+      <!-- One picker per calendar system; both edit the same day, so a language switch keeps the chosen date. -->
+      <CalendarDatePicker Name="DialogDate" MinHeight="36" MinWidth="160" HorizontalAlignment="Left" FlowDirection="LeftToRight"
+                          SelectedDate="{Binding Date, Mode=TwoWay}" IsVisible="{Binding !IsPersian}" />
+      <c:JalaliDatePicker Name="DialogJalaliDate" Strings="{Binding L}" AllowEmpty="{Binding AllowNone}"
+                          SelectedDate="{Binding Date, Mode=TwoWay}" IsVisible="{Binding IsPersian}" />
+      <TextBlock Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding RelativeText}" />
+    </StackPanel>
+    <TextBlock Name="DateConverted" Classes="Small" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding ConvertedText}" />
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             xmlns:app="using:ProjectOperations.Desktop"
+             xmlns:vm="using:ProjectOperations.Desktop.Features.Tasks"
+             x:Class="ProjectOperations.Desktop.Features.Tasks.TaskDialogView"
+             x:DataType="vm:TaskDialogViewModel">
+  <c:DialogChrome Name="TaskDialog" Title="{Binding Heading}" CloseCommand="{Binding CancelCommand}" CloseLabel="{Binding L[action.close]}">
+    <StackPanel>
+      <StackPanel Spacing="16" Margin="18,12,18,18">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.titleL]}" />
+          <TextBox Name="TaskTitleInput" MinHeight="36" Text="{Binding Title, Mode=TwoWay}" PlaceholderText="{Binding L[v3.taskPh]}" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.dueDate]}" />
+          <ContentControl Content="{Binding Date}" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[field.status]}" />
+          <ItemsControl Name="TaskStatusChips" ItemsSource="{Binding Status.Options}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel ItemSpacing="6" LineSpacing="6" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="CaptionMedium" Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding L[v3.linkReq]}" />
+          <ComboBox Name="TaskRequirement" MinHeight="36" HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding Requirements}" SelectedItem="{Binding SelectedRequirement, Mode=TwoWay}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:RequirementOptionViewModel">
+                <TextBlock Classes="Body" Text="{Binding Title}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </StackPanel>
+      <Border Classes="dialogFooter">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+          <Button Name="DeleteTaskButton" Classes="dangerGhost" HorizontalAlignment="Left" IsVisible="{Binding CanDelete}"
+                  Command="{Binding DeleteCommand}" AutomationProperties.Name="{Binding L[v3.del]}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <c:IconGlyph Icon="{x:Static app:Icons.Trash}" Size="14" />
+              <TextBlock VerticalAlignment="Center" Text="{Binding L[v3.del]}" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="2" HorizontalAlignment="Left" Content="{Binding L[action.cancel]}" Command="{Binding CancelCommand}" />
+          <Button Grid.Column="3" Name="SaveTaskButton" Classes="primary" HorizontalAlignment="Left" Content="{Binding SaveText}" Command="{Binding SaveCommand}" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </c:DialogChrome>
+</UserControl>

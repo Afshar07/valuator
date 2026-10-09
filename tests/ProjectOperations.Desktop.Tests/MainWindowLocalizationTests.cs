@@ -85,7 +85,7 @@ public sealed class MainWindowLocalizationTests
         Assert.Equal(new DateTime(2031, 2, 3), picker.SelectedDate);
         Assert.Equal(FlowDirection.LeftToRight, picker.FlowDirection);
         var inProgress = new LocalizationService(fixture.Locale).Get("task.status.inProgress");
-        Assert.Contains(Controls<WrapPanel>(window).Single(panel => panel.Name == "TaskStatusChips").Children.OfType<Button>(),
+        Assert.Contains(Controls<ItemsControl>(window).Single(chips => chips.Name == "TaskStatusChips").GetLogicalDescendants().OfType<Button>(),
             chip => chip.Classes.Contains("selected") && Equals(chip.Content, inProgress));
         Click(window, "انصراف");
         Assert.DoesNotContain(Controls<Control>(window), control => control.Name == "TaskDialog");

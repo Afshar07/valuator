@@ -3,48 +3,54 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Desktop.Localization;
 
-namespace ProjectOperations.Desktop;
+namespace ProjectOperations.Desktop.Common;
 
 /// <summary>
 /// Jalali date picker: a text box that accepts a typed Jalali or Gregorian date (converted automatically) and a month popup.
-/// It exposes a Gregorian <see cref="SelectedDate"/>, so storage and the rest of the app are unaffected.
+/// It exposes a Gregorian, two-way bindable <see cref="SelectedDate"/>, so storage and the rest of the app are unaffected.
+/// Its texts come from <see cref="Strings"/> and follow language switches while the picker is on screen.
 /// </summary>
 internal sealed class JalaliDatePicker : Grid
 {
     // Saturday-first single-letter weekday headings (ش ی د س چ پ ج).
     private static readonly string[] WeekdayLetters = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
 
-    private readonly PresentationContext _context;
+    public static readonly StyledProperty<DateTime?> SelectedDateProperty =
+        AvaloniaProperty.Register<JalaliDatePicker, DateTime?>(nameof(SelectedDate), defaultBindingMode: BindingMode.TwoWay);
+    public static readonly StyledProperty<bool> AllowEmptyProperty = AvaloniaProperty.Register<JalaliDatePicker, bool>(nameof(AllowEmpty));
+    public static readonly StyledProperty<LocalizedStrings?> StringsProperty = AvaloniaProperty.Register<JalaliDatePicker, LocalizedStrings?>(nameof(Strings));
+
     private readonly TextBox _text = Forms.Input("", 36);
     private readonly Button _open = new() { Name = "JalaliDateOpen" };
     private readonly Popup _popup = new() { IsLightDismissEnabled = true, Placement = PlacementMode.Bottom, Name = "JalaliDatePopup" };
-    private readonly bool _allowEmpty;
-    private DateTime? _selected;
+    private LocalizedStrings? _subscribed;
     private DateTime _view;
     private bool _syncing;
 
-    public event EventHandler? SelectedDateChanged;
-
-    public JalaliDatePicker(PresentationContext context, bool allowEmpty)
+    static JalaliDatePicker()
     {
-        _context = context; _allowEmpty = allowEmpty;
-        Name = "DialogJalaliDate"; MinWidth = 190; HorizontalAlignment = HorizontalAlignment.Left;
+        SelectedDateProperty.Changed.AddClassHandler<JalaliDatePicker>((picker, _) => picker.ShowSelected());
+        StringsProperty.Changed.AddClassHandler<JalaliDatePicker>((picker, _) => picker.OnStringsReplaced());
+    }
+
+    public JalaliDatePicker()
+    {
+        MinWidth = 190; HorizontalAlignment = HorizontalAlignment.Left;
         ColumnDefinitions = new ColumnDefinitions("*,Auto"); ColumnSpacing = 6; FlowDirection = FlowDirection.LeftToRight;
 
         _text.Name = "JalaliDateText"; _text.MinWidth = 130;
-        context.Localized.Bind(_text, control => control.PlaceholderText = context.Text.Get("date.jalaliPlaceholder"));
         _text.TextChanged += (_, _) => OnTyped();
         _text.LostFocus += (_, _) => Commit();
         _text.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Commit(); e.Handled = true; } };
 
         _open.Classes.Add("square"); _open.Height = 36; _open.Width = 36;
         _open.Content = Icons.Glyph(Icons.CalendarBlank, 16, "TextPrimary");
-        context.Localized.Bind(_open, control => { AutomationProperties.SetName(control, context.Text.Get("date.pick")); ToolTip.SetTip(control, context.Text.Get("date.pick")); });
         _open.Click += (_, _) => Toggle();
         SetColumn(_open, 1);
 
@@ -52,11 +58,49 @@ internal sealed class JalaliDatePicker : Grid
         Children.Add(_text); Children.Add(_open); Children.Add(_popup);
     }
 
-    /// <summary>The chosen day (Gregorian), or null when empty. Setting it updates the text without raising <see cref="SelectedDateChanged"/>.</summary>
-    public DateTime? SelectedDate
+    /// <summary>The chosen day (Gregorian), or null when empty.</summary>
+    public DateTime? SelectedDate { get => GetValue(SelectedDateProperty); set => SetValue(SelectedDateProperty, value); }
+    /// <summary>Whether the day may be cleared (an empty text box then means no date).</summary>
+    public bool AllowEmpty { get => GetValue(AllowEmptyProperty); set => SetValue(AllowEmptyProperty, value); }
+    /// <summary>Source of the picker's texts; they are re-read whenever the language switches.</summary>
+    public LocalizedStrings? Strings { get => GetValue(StringsProperty); set => SetValue(StringsProperty, value); }
+
+    private DateTime? Selected => SelectedDate?.Date;
+    private string Text(string key) => Strings?[key] ?? key;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        get => _selected;
-        set { _selected = value?.Date; ShowSelected(); }
+        base.OnAttachedToVisualTree(e);
+        Subscribe();
+        ApplyStrings(); // the language may have switched while the picker was detached
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        Unsubscribe();
+    }
+
+    private void Subscribe()
+    {
+        Unsubscribe();
+        if (Strings is not { } strings) return;
+        _subscribed = strings; strings.PropertyChanged += OnStringsChanged;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_subscribed is { } strings) strings.PropertyChanged -= OnStringsChanged;
+        _subscribed = null;
+    }
+
+    private void OnStringsReplaced() { if (TopLevel.GetTopLevel(this) is not null) Subscribe(); ApplyStrings(); }
+    private void OnStringsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => ApplyStrings();
+
+    private void ApplyStrings()
+    {
+        _text.PlaceholderText = Text("date.jalaliPlaceholder");
+        AutomationProperties.SetName(_open, Text("date.pick")); ToolTip.SetTip(_open, Text("date.pick"));
     }
 
     private void ShowSelected()
@@ -64,10 +108,10 @@ internal sealed class JalaliDatePicker : Grid
         // While the user types a date that already means the selected day, leave their text (and caret) alone.
         if (_text.IsFocused)
         {
-            var meansSelected = string.IsNullOrWhiteSpace(_text.Text) ? _selected is null : JalaliDate.TryParse(_text.Text, out var typed) && typed == _selected;
+            var meansSelected = string.IsNullOrWhiteSpace(_text.Text) ? Selected is null : JalaliDate.TryParse(_text.Text, out var typed) && typed == Selected;
             if (meansSelected) return;
         }
-        _syncing = true; _text.Text = _selected is { } day ? JalaliDate.Format(day) : ""; _syncing = false;
+        _syncing = true; _text.Text = Selected is { } day ? JalaliDate.Format(day) : ""; _syncing = false;
     }
 
     private void OnTyped()
@@ -75,29 +119,27 @@ internal sealed class JalaliDatePicker : Grid
         if (_syncing) return;
         if (string.IsNullOrWhiteSpace(_text.Text))
         {
-            if (_allowEmpty && _selected is not null) Select(null);
+            if (AllowEmpty && Selected is not null) Select(null);
             return;
         }
-        if (JalaliDate.TryParse(_text.Text, out var date) && date != _selected) Select(date);
+        if (JalaliDate.TryParse(_text.Text, out var date) && date != Selected) Select(date);
     }
 
     /// <summary>On blur or Enter: rewrite what was typed as the normalized Jalali date, or restore the last good value.</summary>
     private void Commit()
     {
-        if (string.IsNullOrWhiteSpace(_text.Text) && _allowEmpty) { if (_selected is not null) Select(null); }
-        else if (JalaliDate.TryParse(_text.Text, out var date) && date != _selected) Select(date);
-        _syncing = true; _text.Text = _selected is { } day ? JalaliDate.Format(day) : ""; _syncing = false;
+        if (string.IsNullOrWhiteSpace(_text.Text) && AllowEmpty) { if (Selected is not null) Select(null); }
+        else if (JalaliDate.TryParse(_text.Text, out var date) && date != Selected) Select(date);
+        _syncing = true; _text.Text = Selected is { } day ? JalaliDate.Format(day) : ""; _syncing = false;
     }
 
-    private void Select(DateTime? date)
-    {
-        _selected = date; SelectedDateChanged?.Invoke(this, EventArgs.Empty);
-    }
+    /// <summary>A day the user chose: written with <c>SetCurrentValue</c> so a two-way binding or style still owns the property.</summary>
+    private void Select(DateTime? date) => SetCurrentValue(SelectedDateProperty, date?.Date);
 
     private void Toggle()
     {
         if (_popup.IsOpen) { _popup.IsOpen = false; return; }
-        var anchor = _selected ?? DateTime.Today;
+        var anchor = Selected ?? DateTime.Today;
         _view = JalaliDate.IsSupported(anchor) ? JalaliDate.MonthStart(anchor) : JalaliDate.MonthStart(DateTime.Today);
         _popup.Child = BuildMonth(); _popup.IsOpen = true;
     }
@@ -109,7 +151,7 @@ internal sealed class JalaliDatePicker : Grid
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
         var previous = Step(Icons.CaretRight, "calendar.previous", -1); // Right-to-left: "previous" sits at the leading (right) edge.
         var next = Step(Icons.CaretLeft, "calendar.next", 1); Grid.SetColumn(next, 2);
-        var title = _context.Label(() => JalaliDate.MonthYear(_view), "BodyStrong");
+        var title = PresentationTheme.Typeset(new TextBlock { Text = JalaliDate.MonthYear(_view) }, "BodyStrong");
         title.TextAlignment = TextAlignment.Center; title.VerticalAlignment = VerticalAlignment.Center; title.Name = "JalaliMonthTitle";
         Grid.SetColumn(title, 1);
         header.Children.Add(previous); header.Children.Add(title); header.Children.Add(next);
@@ -118,7 +160,7 @@ internal sealed class JalaliDatePicker : Grid
         var names = new UniformGrid { Columns = 7 };
         foreach (var letter in WeekdayLetters)
         {
-            var label = _context.Label(() => letter, "Micro", "TextSecondary"); label.TextAlignment = TextAlignment.Center; label.HorizontalAlignment = HorizontalAlignment.Center;
+            var label = PresentationTheme.Typeset(new TextBlock { Text = letter }, "Micro", "TextSecondary"); label.TextAlignment = TextAlignment.Center; label.HorizontalAlignment = HorizontalAlignment.Center;
             names.Children.Add(label);
         }
         root.Children.Add(names);
@@ -138,7 +180,7 @@ internal sealed class JalaliDatePicker : Grid
         Button Step(string glyph, string key, int months)
         {
             var button = new Button { Content = Icons.Glyph(glyph, 15, "TextPrimary") }; button.Classes.Add("square");
-            AutomationProperties.SetName(button, _context.Text.Get(key)); ToolTip.SetTip(button, _context.Text.Get(key));
+            AutomationProperties.SetName(button, Text(key)); ToolTip.SetTip(button, Text(key));
             button.Click += (_, _) => { _view = JalaliDate.AddMonths(_view, months); _popup.Child = BuildMonth(); };
             return button;
         }
@@ -146,7 +188,7 @@ internal sealed class JalaliDatePicker : Grid
 
     private Button Day(DateTime date, int number)
     {
-        var selected = date == _selected; var today = date == DateTime.Today;
+        var selected = date == Selected; var today = date == DateTime.Today;
         var label = new TextBlock { Text = number.ToString(CultureInfo.InvariantCulture), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         PresentationTheme.Typeset(label, "Caption", selected ? "OnAccent" : today ? "Accent" : "TextPrimary");
         label.FontWeight = selected || today ? FontWeight.Bold : FontWeight.Normal;
@@ -165,7 +207,7 @@ internal sealed class JalaliDatePicker : Grid
         };
         if (selected) button.Paint(Button.BackgroundProperty, "Accent"); else button.Background = Brushes.Transparent;
         AutomationProperties.SetName(button, $"{number} {JalaliDate.MonthNames[JalaliDate.FromGregorian(date).Month - 1]} {JalaliDate.FromGregorian(date).Year}");
-        button.Click += (_, _) => { _popup.IsOpen = false; SelectedDate = date; Select(date); };
+        button.Click += (_, _) => { _popup.IsOpen = false; Select(date); };
         return button;
     }
 }

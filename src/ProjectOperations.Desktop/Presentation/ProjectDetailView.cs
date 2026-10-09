@@ -23,7 +23,7 @@ internal sealed class ProjectDetailView : PresentationView
         {
             Tab("tabs.overview", new OverviewView(Context, _project)),
             Tab("tabs.requirements", new RequirementsView(Context, _project)),
-            Tab("tabs.tasks", new TasksView(Context, _project, jobs)),
+            Tab("tabs.tasks", new ContentControl { Content = new Features.Tasks.TasksViewModel(_project, jobs, Context.ProjectScreen) }),
             Tab("tabs.delegate", new DelegationView(Context, _project, jobs))
         };
         Tabs.SelectedIndex = (int)selectedTab;

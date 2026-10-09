@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using ProjectOperations.Desktop.Localization;
 
 namespace ProjectOperations.Desktop.Common;
 
@@ -6,4 +7,13 @@ namespace ProjectOperations.Desktop.Common;
 /// Base for view-models. View-models reference no Avalonia controls and are tested with plain xUnit; domain rules
 /// (urgency, readiness, attention) stay in Core.
 /// </summary>
-public abstract class ViewModelBase : ObservableObject;
+public abstract class ViewModelBase : ObservableObject, ILanguageAware
+{
+    /// <summary>
+    /// Re-reads every property of this view-model when the language switches, so text computed from <paramref name="strings"/> follows
+    /// the language in place. <paramref name="strings"/> holds this view-model weakly: one that is no longer shown is simply collected.
+    /// </summary>
+    protected void RefreshOnLanguageChange(LocalizedStrings strings) => strings.Register(this);
+
+    void ILanguageAware.OnLanguageChanged() => OnPropertyChanged(string.Empty);
+}

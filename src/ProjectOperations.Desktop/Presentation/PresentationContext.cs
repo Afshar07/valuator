@@ -66,7 +66,8 @@ internal sealed class UiState
 /// <summary>Shared services and localized control factories handed to views and components by the shell.</summary>
 internal sealed class PresentationContext(
     WorkspaceSession workspace, LocaleContext locale, AppearanceContext appearance, LocalizationService text, LocalizedControls localized,
-    LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates)
+    LocalizedStrings strings, string configuration, Func<string>? configurationText, IShell shell, UpdateController updates,
+    IDialogService dialogs, IProjectHost host)
 {
     public UpdateController Updates { get; } = updates;
     public WorkspaceSession Workspace { get; } = workspace;
@@ -80,6 +81,10 @@ internal sealed class PresentationContext(
     public LocalizedStrings Strings { get; } = strings;
     public DesktopEnvironment Environment => Workspace.Environment;
     public IShell Shell { get; } = shell;
+    public IDialogService Dialogs { get; } = dialogs;
+    public TimeProvider Clock { get; } = TimeProvider.System;
+    /// <summary>The services handed to view-models of the open project's screens (they follow the sample workspace).</summary>
+    public ProjectScreenServices ProjectScreen => new(Projects, Strings, Dialogs, host, Clock);
     public UiState State { get; } = new();
     /// <summary>Optional read-only external calendar. Display only: it is never given to <see cref="AgentService"/> or stored with a project.</summary>
     public IExternalCalendarSource Calendar => Workspace.Calendar;
@@ -101,26 +106,14 @@ internal sealed class PresentationContext(
     }
 
     public string EnumText<T>(T value) where T : struct, Enum => new DomainDisplay(Text).Enum(value);
-    public string Due(DateTimeOffset? date) => date is null ? Text.Get("date.none") : new LocaleDateFormatter(Locale).Display(date);
-    public string ShortDate(DateTimeOffset? date) => date is null ? Text.Get("date.none") : ShortDate(date.Value.ToLocalTime().DateTime);
+    public string Due(DateTimeOffset? date) => Strings.Due(date);
+    public string ShortDate(DateTimeOffset? date) => Strings.ShortDate(date);
     public string ShortDate(DateTime date) => new LocaleDateFormatter(Locale).ShortDate(date);
     public string MonthYear(DateTime date) => new LocaleDateFormatter(Locale).MonthYear(date);
-    public string Number(int value) => value.ToString("N0", Locale.Culture);
+    public string Number(int value) => Strings.Number(value);
 
     /// <summary>Whole local days from today to the date, as friendly relative text. Open work past its date reads "late", closed work "ago".</summary>
-    public string Relative(DateTimeOffset? date, bool open)
-    {
-        if (date is null) return "";
-        var days = (date.Value.ToLocalTime().Date - DateTime.Today).Days;
-        return days switch
-        {
-            0 => Text.Get("v3.relToday"),
-            1 => Text.Get("v3.relTomorrow"),
-            -1 => open ? Text.Get("v3.relLateOne") : Text.Get("v3.relYesterday"),
-            > 0 => Text.Format("v3.relIn", Number(days)),
-            _ => Text.Format(open ? "v3.relLate" : "v3.relAgo", Number(-days))
-        };
-    }
+    public string Relative(DateTimeOffset? date, bool open) => Strings.Relative(date, open, DateTime.Today);
 
     public TextBlock Label(string key, string style = "Body", string color = "TextPrimary") => Label(() => Text.Get(key), style, color);
     public TextBlock Label(Func<string> text, string style = "Body", string color = "TextPrimary")

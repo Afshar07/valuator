@@ -1,0 +1,8 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:ProjectOperations.Desktop.Common"
+             x:Class="ProjectOperations.Desktop.Common.ChipOptionView"
+             x:DataType="c:ChipOptionViewModel">
+  <Button Classes="chip" Classes.selected="{Binding IsSelected}" Height="28" MinHeight="28" Padding="11,0"
+          Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" Command="{Binding SelectCommand}" />
+</UserControl>

@@ -16,7 +16,7 @@ using ProjectOperations.Core.Domain;
 
 namespace ProjectOperations.Desktop;
 
-public sealed class MainWindow : Window, IShell
+public sealed class MainWindow : Window, IShell, IProjectHost
 {
     /// <summary>Below this window width the assistant panel slides over the content instead of docking beside it.</summary>
     private const double DockedPanelMinWidth = 1280;
@@ -64,7 +64,7 @@ public sealed class MainWindow : Window, IShell
         _runLock = new AgentRunLock(_messages);
         _navigator = new Navigator(ShowRouteAsync);
         _workspace = new WorkspaceSession(projects, agents, environment ?? new DesktopEnvironment(), calendar ?? new NoExternalCalendar());
-        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()));
+        _context = new PresentationContext(_workspace, _locale, _appearance, _text, _localized, _strings, configuration, configurationText, this, new UpdateController(updater ?? new NoAppUpdater()), _dialogs, this);
         PresentationTheme.Apply(this);
         this.Paint(BackgroundProperty, "BackgroundApp");
         _locale.Changed += LocaleChanged;
@@ -138,11 +138,18 @@ public sealed class MainWindow : Window, IShell
     public void ShowError(string key) => _messages.ShowError(key);
     private void HideError() => _messages.HideError();
 
+    public async Task RunAsync(Func<Task> action)
+    {
+        SetNavigationEnabled(false); _page.IsEnabled = false;
+        try { await GuardAsync(action); }
+        finally { SetNavigationEnabled(!IsAgentRunning); _page.IsEnabled = !IsAgentRunning; }
+    }
+
     public async Task ActAsync(Button button, Func<Task> action)
     {
-        button.IsEnabled = false; SetNavigationEnabled(false); _page.IsEnabled = false;
-        try { await GuardAsync(action); }
-        finally { button.IsEnabled = true; SetNavigationEnabled(!IsAgentRunning); _page.IsEnabled = !IsAgentRunning; }
+        button.IsEnabled = false;
+        try { await RunAsync(action); }
+        finally { button.IsEnabled = true; }
     }
 
     /// <summary>Hosts a screen in a scrollable, readable-width column that follows the inherited flow direction.</summary>
