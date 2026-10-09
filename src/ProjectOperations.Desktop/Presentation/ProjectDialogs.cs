@@ -140,7 +140,7 @@ internal sealed class TaskDialog : DialogFrame
         : base(context, "TaskDialog", () => context.Text.Get(isNew ? "v3.newTaskT" : "v3.editTaskT"))
     {
         var title = Forms.Input(task.Title); title.Name = "TaskTitleInput";
-        context.Localized.Bind(title, control => control.Watermark = context.Text.Get("v3.taskPh"));
+        context.Localized.Bind(title, control => control.PlaceholderText = context.Text.Get("v3.taskPh"));
         var status = isNew ? ProjectTaskStatus.Todo : task.Status;
         var display = new Localization.DomainDisplay(context.Text);
         var options = new List<RequirementOption> { new(null, "") };
@@ -192,7 +192,7 @@ internal sealed class MilestoneDialog : DialogFrame
         : base(context, "MilestoneDialog", () => context.Text.Get(isNew ? "v3.newMsT" : "v3.editMsT"))
     {
         var title = Forms.Input(milestone.Title); title.Name = "MilestoneTitleInput";
-        context.Localized.Bind(title, control => control.Watermark = context.Text.Get("v3.msPh"));
+        context.Localized.Bind(title, control => control.PlaceholderText = context.Text.Get("v3.msPh"));
         var date = new DateRow(context, isNew ? DateTimeOffset.Now.AddDays(7) : milestone.DueAt, allowNone: false);
         var reached = new CheckBox { IsChecked = milestone.IsComplete, Name = "MilestoneReached" };
         context.Localized.Bind(reached, control => control.Content = context.Text.Get("v3.reachedL"));

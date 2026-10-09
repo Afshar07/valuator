@@ -37,7 +37,7 @@ internal sealed class JalaliDatePicker : Grid
         ColumnDefinitions = new ColumnDefinitions("*,Auto"); ColumnSpacing = 6; FlowDirection = FlowDirection.LeftToRight;
 
         _text.Name = "JalaliDateText"; _text.MinWidth = 130;
-        context.Localized.Bind(_text, control => control.Watermark = context.Text.Get("date.jalaliPlaceholder"));
+        context.Localized.Bind(_text, control => control.PlaceholderText = context.Text.Get("date.jalaliPlaceholder"));
         _text.TextChanged += (_, _) => OnTyped();
         _text.LostFocus += (_, _) => Commit();
         _text.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Commit(); e.Handled = true; } };

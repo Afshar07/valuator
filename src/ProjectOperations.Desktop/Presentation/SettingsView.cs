@@ -103,7 +103,7 @@ internal sealed class SettingsView : PresentationView
         var group = new StackPanel { Spacing = 5 };
         group.Children.Add(Label(() => $"{T(labelKey)} · ⁦{variable}⁩", "Caption", "TextSecondary"));
         var box = new TextBox { Text = string.IsNullOrWhiteSpace(value) ? "" : value, IsReadOnly = true, FlowDirection = FlowDirection.LeftToRight, Name = "Setting_" + variable };
-        Bind(box, control => control.Watermark = T("settings.notSetEnv"));
+        Bind(box, control => control.PlaceholderText = T("settings.notSetEnv"));
         group.Children.Add(box);
         return group;
     }

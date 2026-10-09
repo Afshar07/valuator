@@ -10,8 +10,8 @@
     <AvaloniaResource Include="Assets/Fonts/**/*.ttf" />
     <AvaloniaResource Include="Assets/Icons/app.ico;Assets/Icons/*.png" />
     <EmbeddedResource Include="Localization/Resources/*.json" WithCulture="false" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
     <PackageReference Include="Velopack" Version="1.2.161" />
     <ProjectReference Include="../ProjectOperations.Core/ProjectOperations.Core.csproj" />
     <ProjectReference Include="../ProjectOperations.Infrastructure/ProjectOperations.Infrastructure.csproj" />

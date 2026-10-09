@@ -59,7 +59,7 @@ internal sealed class RequirementsView : PresentationView
             link.Name = "AddRequirement"; link.Paint(Button.ForegroundProperty, "AccentText"); return link;
         }
         var input = Forms.Input(_newRequirement, 36); input.Name = "NewRequirementTitle";
-        Bind(input, control => control.Watermark = T("v3.requirementPh"));
+        Bind(input, control => control.PlaceholderText = T("v3.requirementPh"));
         input.TextChanged += (_, _) => _newRequirement = input.Text ?? "";
         input.AttachedToVisualTree += (_, _) => input.Focus();
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, MaxWidth = 560, HorizontalAlignment = HorizontalAlignment.Left };
@@ -228,7 +228,7 @@ internal sealed class RequirementsView : PresentationView
         else
         {
             var input = Forms.Input(_draftFor == requirement.Id ? _draft : requirement.Value, 34); input.Name = "RequirementValue";
-            Bind(input, control => control.Watermark = T("v3.valuePh"));
+            Bind(input, control => control.PlaceholderText = T("v3.valuePh"));
             input.TextChanged += (_, _) => { _draft = input.Text ?? ""; _draftFor = requirement.Id; };
             var save = Action("v3.saveV", async () =>
             {
@@ -301,7 +301,7 @@ internal sealed class RequirementsView : PresentationView
         var form = new StackPanel { Spacing = 10 };
         var input = Forms.Input(_taskTitle, 34); input.Name = "FollowUpTitle"; input.Background = null;
         input.Paint(TextBox.BackgroundProperty, "BackgroundMuted");
-        Bind(input, control => control.Watermark = T("v3.taskPh"));
+        Bind(input, control => control.PlaceholderText = T("v3.taskPh"));
         input.TextChanged += (_, _) => _taskTitle = input.Text ?? "";
         form.Children.Add(input);
 

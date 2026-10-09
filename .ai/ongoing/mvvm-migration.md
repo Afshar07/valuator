@@ -31,7 +31,7 @@ State: `todo` → `in progress` → `done`.
 
 | # | Task | State |
 | --- | --- | --- |
-| 0 | Upgrade Avalonia and Headless to 12 on the current code; fix the C# binding API changes; tests green | todo |
+| 0 | Upgrade Avalonia and Headless to 12 on the current code; fix the C# binding API changes; tests green | done |
 | 1a | Foundation: DI composition root, `ViewModelBase`, view locator, bindable localization, date converters | todo |
 | 1b | Extract from `MainWindow`: navigator with typed routes, dialog/toast/error service, agent run lock, workspace session (real/sample); move `ParseLocalDate` to Localization | todo |
 | 2 | Pilot: Tasks tab, task and milestone dialogs; move urgency buckets to Core. **Gate: user review before phase 3** | todo |
@@ -44,5 +44,5 @@ State: `todo` → `in progress` → `done`.
 
 ## Notes
 
-- Exact Avalonia version: —
+- Avalonia 12.1.3 (Headless.XUnit 12 requires xunit.v3, so the desktop test project uses `xunit.v3` 3.2.2; `xUnit1051` is silenced there). Not visually checked on Windows.
 - Open questions: —

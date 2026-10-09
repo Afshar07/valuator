@@ -98,7 +98,7 @@ internal sealed class OverviewView : PresentationView
     private Control AddLine(string titleKey, List<string> items, Action close)
     {
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 10, 0, 0) };
-        var input = Input(); Bind(input, control => control.Watermark = T(titleKey));
+        var input = Input(); Bind(input, control => control.PlaceholderText = T(titleKey));
         panel.Children.Add(input);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         actions.Children.Add(Action("overview.addSave", async () =>

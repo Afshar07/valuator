@@ -26,7 +26,7 @@ internal sealed class ProjectsView : PresentationView
         searchRow.Children.Add(Icons.Glyph(Icons.MagnifyingGlass, 14, "TextTertiary"));
         _filter.Resources["TextControlBackgroundFocused"] = Brushes.Transparent; _filter.Resources["TextControlBackgroundPointerOver"] = Brushes.Transparent;
         _filter.Resources["TextControlBorderThemeThicknessFocused"] = new Thickness(0);
-        Bind(_filter, control => { control.Watermark = T("projects.filter"); AutomationProperties.SetName(control, T("projects.filter")); });
+        Bind(_filter, control => { control.PlaceholderText = T("projects.filter"); AutomationProperties.SetName(control, T("projects.filter")); });
         _filter.TextChanged += (_, _) => ApplyFilter();
         Grid.SetColumn(_filter, 1); searchRow.Children.Add(_filter); search.Child = searchRow;
         var create = Context.IconAction("project.new", Icons.Plus, () => { ShowCreate(); return Task.CompletedTask; }, "primary", IconWeight.Bold);

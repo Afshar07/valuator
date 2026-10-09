@@ -158,9 +158,9 @@ internal sealed class WizardScreen : OnboardingScreen
             case 0:
                 content.Children.Add(Heading("v3.w1Title", () => T("v3.w1Sub")));
                 var name = Field(_name, value => { _name = value; RenderActions(); }, "WizardName");
-                Context.Localized.Bind(name, box => box.Watermark = T("v3.namePh"));
+                Context.Localized.Bind(name, box => box.PlaceholderText = T("v3.namePh"));
                 var company = Field(_company, value => _company = value, "WizardCompany");
-                Context.Localized.Bind(company, box => box.Watermark = T("v3.coPh"));
+                Context.Localized.Bind(company, box => box.PlaceholderText = T("v3.coPh"));
                 content.Children.Add(Forms.Field(Context, "v3.projNameL", name));
                 content.Children.Add(Forms.Field(Context, "v3.company", company));
                 name.AttachedToVisualTree += (_, _) => name.Focus();
@@ -183,7 +183,7 @@ internal sealed class WizardScreen : OnboardingScreen
                 else
                 {
                     var first = Field(_requirement, value => { _requirement = value; RenderActions(); }, "WizardRequirement");
-                    Context.Localized.Bind(first, box => box.Watermark = T("v3.reqPh"));
+                    Context.Localized.Bind(first, box => box.PlaceholderText = T("v3.reqPh"));
                     content.Children.Add(first);
                 }
                 break;

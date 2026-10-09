@@ -84,7 +84,7 @@ internal static class PresentationTheme
     };
 
     /// <summary>Dynamic brush binding for a color token; follows the active theme variant.</summary>
-    public static IBinding Dynamic(string token) => new DynamicResourceExtension(token + "Brush");
+    public static BindingBase Dynamic(string token) => new DynamicResourceExtension(token + "Brush");
 
     /// <summary>Binds a brush property to a color token.</summary>
     public static T Paint<T>(this T target, AvaloniaProperty property, string token) where T : AvaloniaObject
