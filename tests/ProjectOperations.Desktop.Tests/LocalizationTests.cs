@@ -127,7 +127,7 @@ public sealed class LocalizationTests
     }
 
     [Fact]
-    public void Dates_display_local_Gregorian_time_and_edit_invariantly_in_both_languages()
+    public void Dates_edit_invariantly_in_both_languages_and_keep_a_Gregorian_calendar_culture()
     {
         var locale = new LocaleContext();
         var formatter = new LocaleDateFormatter(locale);
@@ -138,8 +138,7 @@ public sealed class LocalizationTests
         {
             locale.SetLanguage(language);
             Assert.IsType<GregorianCalendar>(locale.Culture.DateTimeFormat.Calendar);
-            Assert.Equal(instant.ToLocalTime().ToString("g", locale.Culture), formatter.Display(instant));
-            Assert.Contains("2030", formatter.Display(instant));
+            Assert.Contains(language == "fa" ? JalaliDate.Format(instant.ToLocalTime().DateTime) : "2030", formatter.Display(instant));
             Assert.Equal(expectedEdit, formatter.Edit(instant));
             Assert.Equal("", formatter.Display(null));
             Assert.Equal("", formatter.Edit(null));

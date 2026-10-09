@@ -150,9 +150,11 @@ application-owned job history. No cloud hosting or multi-user infrastructure is 
 - Localization owns inherited window RTL/LTR (Persian RTL, English LTR). Language
   switching updates the existing controls without discarding unsaved form values.
   Technical previews, paths and date-entry fields remain readable in LTR.
-- Persist dates as timezone-safe `DateTimeOffset` instants. Format display dates
-  according to locale; date entry remains explicit Gregorian `yyyy-MM-dd HH:mm`.
-  Jalali display is deferred and belongs in the presentation date formatter.
+- Persist dates as timezone-safe Gregorian `DateTimeOffset` instants. Persian
+  displays and enters Jalali dates through the presentation layer only
+  (`JalaliDate`, `LocaleDateFormatter`, `JalaliDatePicker`); typed Jalali or
+  Gregorian input is converted automatically. Core, SQLite and agent contracts stay
+  Gregorian and language-neutral.
 - Agent response language is an explicit preference derived from the selected
   locale, separate from stable internal instructions, action identifiers and the
   structured output contract. Never translate structured JSON after generation.

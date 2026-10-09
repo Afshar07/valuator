@@ -93,6 +93,8 @@ public sealed class MainWindowLocalizationTests
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
         UiWait.Click(Controls<Button>(window).Single(button => button.Name == "EditProjectButton"));
+        // The dialog opens after an awaited stage query, so wait for it instead of assuming one dispatcher pass is enough.
+        await UntilAsync(() => Controls<ComboBox>(window).Any(control => control.SelectedItem is ProjectStage));
         var stage = Controls<ComboBox>(window).Single(control => control.SelectedItem is ProjectStage);
         Assert.Equal(portfolio.Id, ((ProjectStage)stage.SelectedItem!).Id);
         Assert.Contains(stage.GetVisualDescendants().OfType<TextBlock>(), control => control.Text == "Portfolio");

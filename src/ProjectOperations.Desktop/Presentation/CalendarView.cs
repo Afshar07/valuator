@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ProjectOperations.Core.Application;
 using ProjectOperations.Core.Domain;
+using ProjectOperations.Desktop.Localization;
 
 namespace ProjectOperations.Desktop;
 
@@ -19,13 +20,13 @@ internal sealed class CalendarView : PresentationView
 
     public CalendarView(PresentationContext context) : base(context)
     {
-        var today = DateTime.Today; _month = new DateTime(today.Year, today.Month, 1);
+        _month = MonthStart(DateTime.Today);
     }
 
     public async Task LoadAsync()
     {
         _all = await _projects.ListAsync();
-        var title = Label(() => _month.ToString("MMMM yyyy", _locale.Culture), "BodyStrong"); title.MinWidth = 130; title.TextAlignment = TextAlignment.Center; title.VerticalAlignment = VerticalAlignment.Center;
+        var title = Label(() => Context.MonthYear(CurrentMonth()), "BodyStrong"); title.MinWidth = 130; title.TextAlignment = TextAlignment.Center; title.VerticalAlignment = VerticalAlignment.Center;
         var previous = Context.IconAction("calendar.previous", Icons.CaretLeft, () => Shift(-1, title), "square", iconOnly: true);
         var next = Context.IconAction("calendar.next", Icons.CaretRight, () => Shift(1, title), "square", iconOnly: true);
         // Caret glyphs do not mirror on their own; point them along the reading direction.
@@ -33,7 +34,7 @@ internal sealed class CalendarView : PresentationView
         Bind(next, control => ((TextBlock)control.Content!).Text = _locale.LanguageCode == "fa" ? Icons.CaretLeft : Icons.CaretRight);
         var pager = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         pager.Children.Add(previous); pager.Children.Add(title); pager.Children.Add(next);
-        var today = Action("calendar.today", () => { var now = DateTime.Today; _month = new DateTime(now.Year, now.Month, 1); title.Text = _month.ToString("MMMM yyyy", _locale.Culture); Render(); return Task.CompletedTask; });
+        var today = Action("calendar.today", () => { _month = MonthStart(DateTime.Today); title.Text = Context.MonthYear(_month); Render(); return Task.CompletedTask; });
         today.MinHeight = 30;
         Children.Add(PageHeader("presentation.navigationCalendar", null, pager, today));
 
@@ -51,15 +52,26 @@ internal sealed class CalendarView : PresentationView
 
     private Task Shift(int months, TextBlock title)
     {
-        _month = _month.AddMonths(months); title.Text = _month.ToString("MMMM yyyy", _locale.Culture); Render(); return Task.CompletedTask;
+        _month = AddMonths(CurrentMonth(), months); title.Text = Context.MonthYear(_month); Render(); return Task.CompletedTask;
     }
+
+    private bool Jalali => _locale.LanguageCode == "fa";
+
+    /// <summary>First day of the calendar month containing <paramref name="date"/>: a Jalali month in Persian, a Gregorian month otherwise.</summary>
+    private DateTime MonthStart(DateTime date) => Jalali ? JalaliDate.MonthStart(date) : new DateTime(date.Year, date.Month, 1);
+
+    private DateTime AddMonths(DateTime monthStart, int months) => Jalali ? JalaliDate.AddMonths(monthStart, months) : monthStart.AddMonths(months);
+
+    /// <summary>Re-anchors the shown month to the active calendar system (the language can change while the page is open).</summary>
+    private DateTime CurrentMonth() => _month = MonthStart(_month.AddDays(14));
 
     private void Render()
     {
+        var month = CurrentMonth();
         var firstDay = _locale.LanguageCode == "fa" ? DayOfWeek.Saturday : DayOfWeek.Monday;
-        var lead = ((int)_month.DayOfWeek - (int)firstDay + 7) % 7;
-        var start = _month.AddDays(-lead);
-        var weeks = (int)Math.Ceiling((lead + DateTime.DaysInMonth(_month.Year, _month.Month)) / 7.0);
+        var lead = ((int)month.DayOfWeek - (int)firstDay + 7) % 7;
+        var start = month.AddDays(-lead);
+        var weeks = (int)Math.Ceiling((lead + (Jalali ? JalaliDate.DaysInMonth(month) : DateTime.DaysInMonth(month.Year, month.Month))) / 7.0);
         var startInstant = new DateTimeOffset(start, TimeZoneInfo.Local.GetUtcOffset(start));
         var items = ProjectSummaries.Schedule(_all, startInstant, startInstant.AddDays(weeks * 7), DateTimeOffset.Now);
 
@@ -81,9 +93,9 @@ internal sealed class CalendarView : PresentationView
         var today = DateTime.Today;
         for (var index = 0; index < weeks * 7; index++)
         {
-            var date = start.AddDays(index); var inMonth = date.Month == _month.Month; var isToday = date == today;
+            var date = start.AddDays(index); var inMonth = MonthStart(date) == month; var isToday = date == today;
             var cell = new StackPanel { Spacing = 3 };
-            var number = PresentationTheme.Typeset(new TextBlock { Text = date.Day.ToString(_locale.Culture), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+            var number = PresentationTheme.Typeset(new TextBlock { Text = (Jalali ? JalaliDate.FromGregorian(date).Day : date.Day).ToString(_locale.Culture), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
                 "Caption", isToday ? "OnAccent" : inMonth ? "TextPrimary" : "TextTertiary");
             number.FontWeight = isToday ? FontWeight.Bold : FontWeight.Medium;
             var badge = new Border { MinWidth = 22, Height = 22, Padding = new Thickness(5, 0), CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Left, Child = number };

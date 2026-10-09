@@ -67,6 +67,17 @@ window, the OS file picker and the Windows date picker popup were **not** exerci
 (headless only). With `PROJECTOPS_UI_CAPTURE_DIR` set, `OnboardingTests` captures the welcome,
 wizard, checklist and sample screens (English/light and Persian/dark).
 
+### Jalali dates (2026-10-09)
+
+Verified on 2026-10-09 with .NET SDK 10.0.112 on Linux (cloud container, headless only):
+`dotnet test` **77 passed** in the desktop project (26 new in `JalaliDateTests`: conversions incl.
+leap-year Esfand 30, Persian/Arabic digits, Jalali/Gregorian auto-detection, rejection of impossible
+dates, month navigation, formatter output, and the Persian task dialog typing/popup/save flow).
+With `PROJECTOPS_UI_CAPTURE_DIR` set, the Persian dashboard, calendar (Mehr 1405) and the
+date-picker popup were reviewed visually. **Not verified:** a native window, real keyboard focus
+behaviour in the picker, and the conversion accuracy of `PersianCalendar` outside the years the
+tests cover. Holiday and Persian-digit display are not implemented (Latin digits are shown).
+
 ## Please verify the desktop workflow
 
 For a manual visual check, run:
@@ -115,8 +126,9 @@ English restores LTR. Restart to confirm the language selection is restored from
 
 Check navigation, project tabs, requirements, task forms, consent and review cards
 in both directions. Paths, technical context previews and explicit Gregorian date
-inputs remain LTR. Display dates are locale-aware Gregorian; Jalali display is not
-implemented. Enter dates as `yyyy-MM-dd HH:mm` in either language.
+inputs remain LTR. In Persian, display dates are Jalali and the task and milestone
+dialogs use a Jalali date picker (type `1405/07/17` or `2026-10-09`, or pick from the
+month popup; the Gregorian equivalent is shown beneath). English keeps Gregorian.
 
 Language changes must not modify project names, notes, stored enum values, file
 paths, timestamps or task/proposal data. Agent prose follows the selected language,

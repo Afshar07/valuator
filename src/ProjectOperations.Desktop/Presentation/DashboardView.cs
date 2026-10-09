@@ -106,7 +106,7 @@ internal sealed class DashboardView : PresentationView
             var date = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             date.Children.Add(Label(() => _locale.LanguageCode == "fa" ? _locale.Culture.DateTimeFormat.GetDayName(day.DayOfWeek) : _locale.Culture.DateTimeFormat.GetAbbreviatedDayName(day.DayOfWeek),
                 "Micro", isToday ? "Accent" : "TextSecondary"));
-            var number = Label(() => day.ToString("MMM d", _locale.Culture), "BodyStrong", isToday ? "Accent" : "TextSecondary"); number.FontSize = 15; number.TextWrapping = TextWrapping.NoWrap; date.Children.Add(number);
+            var number = Label(() => Context.ShortDate(day), "BodyStrong", isToday ? "Accent" : "TextSecondary"); number.FontSize = 15; number.TextWrapping = TextWrapping.NoWrap; date.Children.Add(number);
             row.Children.Add(date);
             var list = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
             if (entries.Count == 0) list.Children.Add(Label(() => "—", "Body", "TextTertiary"));

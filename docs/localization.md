@@ -17,9 +17,17 @@ disabled during agent work to keep the request language fixed for that job.
 - Window `FlowDirection` controls inherited layout direction. Do not manually
   reverse rows or navigation. Keep paths, protocol previews and technical details
   explicitly LTR; freeform user prose follows the selected locale.
-- The date formatter owns display formatting. Dates remain `DateTimeOffset`
-  instants in SQLite. Entry uses unambiguous local Gregorian
-  `yyyy-MM-dd HH:mm`, regardless of locale. Jalali display is deferred.
+- The date formatter owns display formatting. Dates remain Gregorian `DateTimeOffset`
+  instants in SQLite. Persian displays Jalali (Solar Hijri) dates and English
+  Gregorian; `JalaliDate` converts at the entry/display boundary only, using the
+  framework `PersianCalendar` (no extra dependency). The Persian task and milestone
+  dialogs use `JalaliDatePicker`, which accepts typed Jalali or Gregorian dates
+  (Persian/Arabic-Indic digits, `/ - .` separators; years below 1700 read as Jalali)
+  and shows the Gregorian equivalent. The Calendar page uses Jalali months in Persian.
+  `ParseLocalDate` accepts `yyyy-MM-dd HH:mm` and the same text with a Jalali date.
+  Avalonia ignores Unicode directional isolates, so number runs inside RTL text use
+  left-to-right marks (`JalaliDate.KeepLeftToRight`) and the short date a leading
+  right-to-left mark.
 - Agent response-language instructions are separate from UI resources. Localized
   predefined action labels use stable action IDs; internal prompts stay stable.
   The model is instructed to localize prose (including proposal titles/descriptions)
